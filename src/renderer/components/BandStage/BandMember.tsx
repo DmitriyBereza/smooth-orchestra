@@ -1,8 +1,8 @@
 import React from 'react';
 import { AgentRole, useStore, ROLE_COLORS } from '../../store/sessionStore';
-import { Spotlight } from './effects/Spotlight';
-import { FloatingNotes } from './effects/FloatingNotes';
-import { StatusBubble } from './effects/StatusBubble';
+import Spotlight from './effects/Spotlight';
+import FloatingNotes from './effects/FloatingNotes';
+import StatusBubble from './effects/StatusBubble';
 import { Conductor } from './members/Conductor';
 import { Pianist } from './members/Pianist';
 import { LeadGuitarist } from './members/LeadGuitarist';
@@ -95,10 +95,10 @@ export const BandMember: React.FC<BandMemberProps> = ({ role, x, y, onClick }) =
         x={x + memberWidth / 2}
         y={y + memberHeight + 16}
         textAnchor="middle"
-        fill={playing ? color : 'var(--text-muted)'}
+        fill={playing ? '#ffd700' : '#5c5470'}
         fontSize={11}
         fontWeight={playing ? 600 : 400}
-        fontFamily="var(--font-sans)"
+        fontFamily="'Poiret One', sans-serif"
         style={{ transition: 'fill 0.3s ease' }}
       >
         {ROLE_LABELS[role]}
