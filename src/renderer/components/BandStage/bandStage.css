@@ -34,7 +34,7 @@
 /* --- Effects --- */
 
 @keyframes float-note {
-  0%   { transform: translateY(0); opacity: 1; }
+  0%   { transform: translateY(0); opacity: 0.8; }
   100% { transform: translateY(-80px); opacity: 0; }
 }
 
@@ -136,13 +136,14 @@
 
 /* Floating musical note */
 .floating-note {
-  animation: float-note 2s ease-out forwards;
+  animation: float-note 2.5s ease-out infinite;
   pointer-events: none;
 }
 
 /* Spotlight cone */
 .spotlight {
   animation: spotlight-sway 4s ease-in-out infinite;
+  transform-origin: top center;
 }
 
 /* Glow effect for active elements */
