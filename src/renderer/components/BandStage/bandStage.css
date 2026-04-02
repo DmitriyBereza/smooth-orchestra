@@ -1,51 +1,52 @@
 /* ============================================================
    Band Stage Animations & Classes
-   Phase 3 — Gamified Band UI
+   Midnight Blue Noir Edition
    ============================================================ */
 
-/* --- Band member playing animations --- */
+/* --- Band member playing animations (dramatic noir) --- */
 
 @keyframes conduct {
-  0%, 100% { transform: rotate(-15deg) translateX(-4px); }
-  50%      { transform: rotate(15deg) translateX(4px); }
+  0%, 100% { transform: rotate(-25deg) translateX(-6px) translateY(2px); }
+  50%      { transform: rotate(25deg) translateX(6px) translateY(-1px); }
 }
 
 @keyframes play-keys {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(3px); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30%      { transform: translateY(5px) rotate(0.5deg); }
+  70%      { transform: translateY(3px) rotate(-0.5deg); }
 }
 
 @keyframes strum-guitar {
-  0%, 100% { transform: rotate(-5deg) translateX(-3px); }
-  50%      { transform: rotate(5deg) translateX(3px); }
+  0%, 100% { transform: rotate(-8deg) translateX(-5px); }
+  50%      { transform: rotate(8deg) translateX(5px); }
 }
 
 @keyframes drum-hit {
-  0%, 100% { transform: translateY(0); }
-  40%      { transform: translateY(6px); }
-  60%      { transform: translateY(-2px); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35%      { transform: translateY(10px) rotate(2deg); }
+  55%      { transform: translateY(-3px) rotate(-1deg); }
 }
 
 @keyframes play-bass {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(2px); }
+  50%      { transform: translateY(4px); }
 }
 
 /* --- Effects --- */
 
 @keyframes float-note {
   0%   { transform: translateY(0); opacity: 0.8; }
-  100% { transform: translateY(-80px); opacity: 0; }
+  100% { transform: translateY(-120px); opacity: 0; }
 }
 
 @keyframes sway-idle {
-  0%, 100% { transform: rotate(-1deg); }
-  50%      { transform: rotate(1deg); }
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50%      { transform: rotate(2deg) translateY(1px); }
 }
 
 @keyframes spotlight-sway {
-  0%, 100% { transform: translateX(-8px); }
-  50%      { transform: translateX(8px); }
+  0%, 100% { transform: translateX(-4px); }
+  50%      { transform: translateX(4px); }
 }
 
 @keyframes glow-pulse {
@@ -69,20 +70,20 @@
    CSS Classes
    ============================================================ */
 
-/* Idle members gently sway */
+/* Idle members: synchronized jazz bop */
 .member-idle {
-  animation: sway-idle 3s ease-in-out infinite;
+  animation: sway-idle 2.5s ease-in-out infinite;
   animation-play-state: running;
 }
 
-/* Playing members — sway is overridden by the specific playing animation */
+/* Playing members — instrument animation overrides sway */
 .member-playing {
   animation: none;
 }
 
-/* Conductor baton arm — only animates inside a playing member */
+/* Conductor baton arm */
 .conductor-baton-arm {
-  animation: conduct 1.2s ease-in-out infinite;
+  animation: conduct 1.6s ease-in-out infinite;
   animation-play-state: paused;
 }
 .member-playing .conductor-baton-arm {
@@ -107,9 +108,9 @@
   animation-play-state: running;
 }
 
-/* Drummer arms — offset delays for alternating hits */
+/* Drummer arms — offset delays for alternating brush strokes */
 .drummer-right-arm {
-  animation: drum-hit 0.4s ease-in-out infinite;
+  animation: drum-hit 0.5s ease-in-out infinite;
   animation-play-state: paused;
 }
 .member-playing .drummer-right-arm {
@@ -117,8 +118,8 @@
 }
 
 .drummer-left-arm {
-  animation: drum-hit 0.4s ease-in-out infinite;
-  animation-delay: 0.2s;
+  animation: drum-hit 0.5s ease-in-out infinite;
+  animation-delay: 0.25s;
   animation-play-state: paused;
 }
 .member-playing .drummer-left-arm {
@@ -127,7 +128,7 @@
 
 /* Bassist plucking hand */
 .bassist-pluck-hand {
-  animation: play-bass 1s ease-in-out infinite;
+  animation: play-bass 1.2s ease-in-out infinite;
   animation-play-state: paused;
 }
 .member-playing .bassist-pluck-hand {
@@ -142,7 +143,7 @@
 
 /* Spotlight cone */
 .spotlight {
-  animation: spotlight-sway 4s ease-in-out infinite;
+  animation: spotlight-sway 6s ease-in-out infinite;
   transform-origin: top center;
 }
 

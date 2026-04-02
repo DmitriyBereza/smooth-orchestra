@@ -68,11 +68,11 @@ export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
 };
 
 export const ROLE_COLORS: Record<AgentRole, string> = {
-  po: '#3B82F6',
-  architect: '#8B5CF6',
-  'tech-lead': '#F97316',
-  developer: '#22C55E',
-  qa: '#EF4444',
+  po: '#ffd700',
+  architect: '#9b59b6',
+  'tech-lead': '#ff4500',
+  developer: '#ffd700',
+  qa: '#e8dcc8',
 };
 
 export const STAGE_DISPLAY: Record<PipelineStage, string> = {

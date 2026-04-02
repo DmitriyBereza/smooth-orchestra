@@ -1,83 +1,73 @@
 import React from 'react';
 
 interface StatusBubbleProps {
-  text: string;
-  visible: boolean;
-  color: string;
   x: number;
   y: number;
+  text: string;
+  color: string;
+  visible: boolean;
 }
 
-const MAX_CHARS = 25;
-const BUBBLE_HEIGHT = 22;
-const BUBBLE_RX = 6;
-const POINTER_SIZE = 5;
-const PADDING_X = 8;
-const FONT_SIZE = 10;
+const FONT_SIZE = 11;
+const PADDING_X = 10;
+const PADDING_Y = 6;
+const POINTER_SIZE = 6;
 
-function truncate(text: string): string {
-  if (text.length <= MAX_CHARS) return text;
-  return text.slice(0, MAX_CHARS - 1) + '\u2026';
-}
-
-export const StatusBubble: React.FC<StatusBubbleProps> = ({
-  text,
-  visible,
-  color,
-  x,
-  y,
-}) => {
-  const displayText = truncate(text);
-  // Estimate width: ~6px per character + padding
-  const estimatedWidth = Math.min(displayText.length * 6 + PADDING_X * 2, 120);
-  const halfWidth = estimatedWidth / 2;
-
-  const rectX = x - halfWidth;
-  const rectY = y - BUBBLE_HEIGHT;
-
-  // Triangle pointer at bottom center
-  const pointerPath = `M${x - POINTER_SIZE},${y} L${x},${y + POINTER_SIZE} L${x + POINTER_SIZE},${y}`;
+const StatusBubble: React.FC<StatusBubbleProps> = ({ x, y, text, color: _color, visible }) => {
+  const textWidth = text.length * FONT_SIZE * 0.55;
+  const boxWidth = textWidth + PADDING_X * 2;
+  const boxHeight = FONT_SIZE + PADDING_Y * 2;
+  const boxX = x - boxWidth / 2;
+  const boxY = y - boxHeight - POINTER_SIZE;
 
   return (
     <g
-      className={visible ? 'status-bubble-visible' : undefined}
-      style={{
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible ? 'auto' : 'none',
-        transition: 'opacity 0.3s ease',
-      }}
+      opacity={visible ? 1 : 0}
+      style={{ transition: 'opacity 0.3s ease' }}
     >
+      {/* Bubble background */}
       <rect
-        x={rectX}
-        y={rectY}
-        width={estimatedWidth}
-        height={BUBBLE_HEIGHT}
-        rx={BUBBLE_RX}
-        fill="#1e293b"
-        stroke={color}
-        strokeWidth={1}
+        x={boxX}
+        y={boxY}
+        width={boxWidth}
+        height={boxHeight}
+        rx={4}
+        ry={4}
+        fill="#0f0f23"
+        stroke="#ffd700"
+        strokeWidth={0.5}
       />
-      <path d={pointerPath} fill="#1e293b" stroke={color} strokeWidth={1} />
-      {/* Small rect to cover the stroke where pointer meets bubble */}
-      <rect
-        x={x - POINTER_SIZE + 1}
-        y={y - 1}
-        width={POINTER_SIZE * 2 - 2}
-        height={2}
-        fill="#1e293b"
+
+      {/* Pointer triangle */}
+      <polygon
+        points={`${x - POINTER_SIZE},${boxY + boxHeight} ${x + POINTER_SIZE},${boxY + boxHeight} ${x},${boxY + boxHeight + POINTER_SIZE}`}
+        fill="#0f0f23"
+        stroke="#ffd700"
+        strokeWidth={0.5}
       />
+      {/* Cover the stroke line between rect and pointer */}
+      <line
+        x1={x - POINTER_SIZE + 1}
+        y1={boxY + boxHeight}
+        x2={x + POINTER_SIZE - 1}
+        y2={boxY + boxHeight}
+        stroke="#0f0f23"
+        strokeWidth={1.5}
+      />
+
+      {/* Status text */}
       <text
         x={x}
-        y={rectY + BUBBLE_HEIGHT / 2}
+        y={boxY + boxHeight / 2 + FONT_SIZE * 0.35}
         textAnchor="middle"
-        dominantBaseline="central"
-        fill="#f1f5f9"
         fontSize={FONT_SIZE}
-        fontFamily="var(--font-sans)"
-        style={{ pointerEvents: 'none' }}
+        fill="#e8dcc8"
+        fontFamily="'Special Elite', 'Courier Prime', monospace"
       >
-        {displayText}
+        {text}
       </text>
     </g>
   );
 };
+
+export default StatusBubble;

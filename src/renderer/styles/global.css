@@ -5,29 +5,33 @@
 }
 
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-card: #1e293b;
-  --border-color: #475569;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent-blue: #3b82f6;
-  --accent-purple: #8b5cf6;
-  --accent-orange: #f97316;
-  --accent-green: #22c55e;
-  --accent-red: #ef4444;
-  --accent-yellow: #eab308;
-  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Noir Palette */
+  --bg-primary: #050505;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #16213e;
+  --bg-card: #0f0f23;
+  --border-color: #2a2a4a;
+  --text-primary: #e8dcc8;
+  --text-secondary: #a0937d;
+  --text-muted: #5c5470;
+  --accent-blue: #ffd700;
+  --accent-purple: #9b59b6;
+  --accent-orange: #ff4500;
+  --accent-green: #ffd700;
+  --accent-red: #ff4500;
+  --accent-yellow: #ffd700;
 
-  /* Band Stage theme */
-  --stage-floor: #1a1205;
-  --stage-curtain: #2d0a0a;
-  --stage-spotlight: rgba(255, 248, 220, 0.15);
-  --stage-wall: #0a0a14;
-  --note-color: rgba(255, 255, 255, 0.6);
+  /* Typography */
+  --font-sans: 'Poiret One', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Courier Prime', 'Special Elite', monospace;
+  --font-typewriter: 'Special Elite', 'Courier Prime', monospace;
+
+  /* Stage theme */
+  --stage-floor: #1a0f05;
+  --stage-curtain: #1a0a1a;
+  --stage-spotlight: rgba(255, 215, 0, 0.12);
+  --stage-wall: #050510;
+  --note-color: rgba(255, 215, 0, 0.7);
 }
 
 body {
@@ -44,6 +48,12 @@ body {
   flex-direction: column;
 }
 
+/* Selection */
+::selection {
+  background: rgba(255, 215, 0, 0.25);
+  color: #ffd700;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
@@ -51,21 +61,39 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: #0a0a14;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+  background: #2a2a4a;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
+  background: #3a3a5a;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(10, 10, 20, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 215, 0, 0.08);
+  border-radius: 12px;
+}
+
+/* Neon glow utility */
+.neon-glow {
+  text-shadow: 0 0 7px #ffd700, 0 0 10px #ffd700, 0 0 21px #ffd700;
+}
+
+.neon-glow-violet {
+  text-shadow: 0 0 7px #9b59b6, 0 0 10px #9b59b6, 0 0 21px #9b59b6;
 }
 
 /* Animation for pulsing items needing attention */
 @keyframes pulse-border {
-  0%, 100% { border-color: var(--accent-yellow); }
+  0%, 100% { border-color: #ffd700; }
   50% { border-color: transparent; }
 }
 
@@ -82,12 +110,36 @@ body {
 }
 
 .status-dot.idle { background: var(--text-muted); }
-.status-dot.running { background: var(--accent-blue); animation: pulse 1.5s infinite; }
-.status-dot.completed { background: var(--accent-green); }
-.status-dot.failed { background: var(--accent-red); }
-.status-dot.killed { background: var(--accent-orange); }
+.status-dot.running { background: #ffd700; animation: pulse 1.5s infinite; }
+.status-dot.completed { background: #ffd700; }
+.status-dot.failed { background: #ff4500; }
+.status-dot.killed { background: #ff4500; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* Neon flicker for "On Air" signs */
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  8% { opacity: 0.85; }
+  12% { opacity: 1; }
+  32% { opacity: 0.9; }
+  36% { opacity: 1; }
+  68% { opacity: 0.92; }
+  72% { opacity: 1; }
+}
+
+/* Light bulb glow pulse */
+@keyframes bulb-glow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.85; }
+}
+
+/* Smoke drift */
+@keyframes smoke-drift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(8px); }
+  100% { transform: translateX(0); }
 }
