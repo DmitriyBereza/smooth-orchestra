@@ -95,6 +95,14 @@ interface OrchestraStore {
   // Event log
   events: Array<{ timestamp: string; message: string; type: string }>;
   addEvent: (message: string, type: string) => void;
+
+  // Event filters
+  eventFilters: {
+    category: string | null;
+    role: string | null;
+    search: string;
+  };
+  setEventFilter: (filters: Partial<{ category: string | null; role: string | null; search: string }>) => void;
 }
 
 export const useStore = create<OrchestraStore>((set) => ({
@@ -148,5 +156,12 @@ export const useStore = create<OrchestraStore>((set) => ({
         { timestamp: new Date().toISOString(), message, type },
         ...state.events,
       ].slice(0, 200), // Keep last 200 events
+    })),
+
+  // Event filters
+  eventFilters: { category: null, role: null, search: '' },
+  setEventFilter: (filters) =>
+    set((state) => ({
+      eventFilters: { ...state.eventFilters, ...filters },
     })),
 }));

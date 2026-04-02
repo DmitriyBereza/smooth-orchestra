@@ -6,6 +6,7 @@ import { eventBus } from './EventBus';
 import { SessionManager } from './SessionManager';
 import { AgentPool } from './AgentPool';
 import { AuthService, SignupError, LoginError } from './AuthService';
+import { EventLogger } from './EventLogger';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ export class SocketServer {
     private agentPool: AgentPool,
     private authService?: AuthService,
     private port: number = Number(process.env.AUTH_PORT) || 3333,
+    private eventLogger?: EventLogger,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
@@ -100,6 +102,19 @@ export class SocketServer {
     // Mount auth REST routes (only when AuthService is injected)
     if (this.authService) {
       app.use('/auth', buildAuthRouter(this.authService));
+    }
+
+    if (this.eventLogger) {
+      const eventLogger = this.eventLogger;
+      app.get('/api/events', (req: Request, res: Response) => {
+        const filters = {
+          category: req.query.category as string | undefined,
+          role: req.query.role as string | undefined,
+          taskId: req.query.taskId as string | undefined,
+          limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 100,
+        };
+        res.json(eventLogger.getEvents(filters));
+      });
     }
 
     // Socket.io JWT middleware — runs BEFORE any event handler
