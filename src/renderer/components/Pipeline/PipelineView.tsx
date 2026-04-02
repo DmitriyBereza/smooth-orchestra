@@ -6,18 +6,26 @@ const PIPELINE_STEPS: { stage: PipelineStage; label: string; color: string }[] =
   { stage: 'awaiting_user_review', label: 'Review', color: '#eab308' },
   { stage: 'architect', label: 'Architect', color: ROLE_COLORS.architect },
   { stage: 'tech-lead', label: 'Tech Lead', color: ROLE_COLORS['tech-lead'] },
-  { stage: 'developer', label: 'Developer', color: ROLE_COLORS.developer },
+  { stage: 'developer', label: 'Dev', color: ROLE_COLORS.developer },
+  { stage: 'tl-code-review', label: 'Code Review', color: ROLE_COLORS['tech-lead'] },
   { stage: 'qa', label: 'QA', color: ROLE_COLORS.qa },
+  { stage: 'awaiting_merge_approval', label: 'Merge', color: '#eab308' },
   { stage: 'done', label: 'Done', color: '#22c55e' },
 ];
 
-const STAGE_ORDER = ['idle', 'po', 'awaiting_user_review', 'architect', 'tech-lead', 'developer', 'qa', 'done'];
+const STAGE_ORDER: PipelineStage[] = [
+  'idle', 'po', 'awaiting_user_review', 'architect', 'tech-lead',
+  'developer', 'parallel-dev', 'tl-code-review', 'qa',
+  'awaiting_rejection_routing', 'awaiting_merge_approval', 'done',
+];
 
 export const PipelineView: React.FC = () => {
   const session = useStore((s) => s.session);
   const currentStage = session?.currentStage || 'idle';
 
-  const currentIdx = STAGE_ORDER.indexOf(currentStage);
+  // Map parallel-dev to developer step position for visual display
+  const effectiveStage = currentStage === 'parallel-dev' ? 'developer' : currentStage;
+  const effectiveIdx = STAGE_ORDER.indexOf(effectiveStage);
 
   return (
     <div style={styles.container}>
@@ -25,9 +33,13 @@ export const PipelineView: React.FC = () => {
       <div style={styles.steps}>
         {PIPELINE_STEPS.map((step, i) => {
           const stepIdx = STAGE_ORDER.indexOf(step.stage);
-          const isActive = step.stage === currentStage;
-          const isCompleted = currentIdx > stepIdx && currentStage !== 'failed';
+          const isActive = step.stage === effectiveStage
+            || (step.stage === 'qa' && currentStage === 'awaiting_rejection_routing');
+          const isCompleted = effectiveIdx > stepIdx && currentStage !== 'failed';
           const isFailed = currentStage === 'failed';
+          const isRejected = step.stage === 'qa' && currentStage === 'awaiting_rejection_routing';
+
+          const stepColor = isRejected ? 'var(--accent-red)' : step.color;
 
           return (
             <React.Fragment key={step.stage}>
@@ -35,7 +47,7 @@ export const PipelineView: React.FC = () => {
                 <div
                   style={{
                     ...styles.connector,
-                    backgroundColor: isCompleted ? step.color : 'var(--bg-tertiary)',
+                    backgroundColor: isCompleted ? stepColor : 'var(--bg-tertiary)',
                   }}
                 />
               )}
@@ -43,14 +55,14 @@ export const PipelineView: React.FC = () => {
                 style={{
                   ...styles.step,
                   borderColor: isActive
-                    ? step.color
+                    ? stepColor
                     : isCompleted
-                    ? step.color
+                    ? stepColor
                     : 'var(--bg-tertiary)',
                   backgroundColor: isActive
-                    ? `${step.color}22`
+                    ? `${stepColor}22`
                     : isCompleted
-                    ? `${step.color}11`
+                    ? `${stepColor}11`
                     : 'var(--bg-secondary)',
                   opacity: isFailed && !isCompleted && !isActive ? 0.4 : 1,
                 }}
@@ -60,9 +72,9 @@ export const PipelineView: React.FC = () => {
                   style={{
                     ...styles.dot,
                     backgroundColor: isActive
-                      ? step.color
+                      ? stepColor
                       : isCompleted
-                      ? step.color
+                      ? stepColor
                       : 'var(--text-muted)',
                   }}
                 />
@@ -83,6 +95,26 @@ export const PipelineView: React.FC = () => {
           {currentStage === 'awaiting_user_review' && (
             <span style={{ color: 'var(--accent-yellow)' }} className="needs-attention">
               Awaiting your review
+            </span>
+          )}
+          {currentStage === 'parallel-dev' && (
+            <span style={{ color: ROLE_COLORS.developer }}>
+              Parallel development in progress
+            </span>
+          )}
+          {currentStage === 'tl-code-review' && (
+            <span style={{ color: ROLE_COLORS['tech-lead'] }}>
+              Code review in progress
+            </span>
+          )}
+          {currentStage === 'awaiting_rejection_routing' && (
+            <span style={{ color: 'var(--accent-red)' }} className="needs-attention">
+              QA rejected — action required
+            </span>
+          )}
+          {currentStage === 'awaiting_merge_approval' && (
+            <span style={{ color: 'var(--accent-yellow)' }} className="needs-attention">
+              Ready for merge approval
             </span>
           )}
         </div>
