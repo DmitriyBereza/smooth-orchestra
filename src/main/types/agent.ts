@@ -21,6 +21,10 @@ export interface AgentInfo {
     input: number;
     output: number;
   };
+  /** Unique identifier for this agent instance. */
+  agentId?: string;
+  /** Subtask identifier when running as one of multiple concurrent agents. */
+  subtaskId?: string;
 }
 
 export const AGENT_ROLES: AgentRole[] = ['po', 'architect', 'tech-lead', 'developer', 'qa'];

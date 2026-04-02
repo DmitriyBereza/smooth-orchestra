@@ -20,8 +20,12 @@ export class AgentProcess {
   constructor(
     public readonly role: AgentRole,
     public readonly taskId: string,
+    /** Optional subtask identifier for concurrent multi-instance agents. */
+    public readonly subtaskId?: string,
   ) {
-    this.id = `${role}-${uuid().slice(0, 8)}`;
+    this.id = subtaskId
+      ? `${role}-${subtaskId}-${uuid().slice(0, 8)}`
+      : `${role}-${uuid().slice(0, 8)}`;
   }
 
   /**
@@ -60,6 +64,7 @@ export class AgentProcess {
       role: this.role,
       pid: this.pid!,
       taskId: this.taskId,
+      agentId: this.id,
     });
 
     eventBus.emit('agent:status-changed', {
@@ -94,6 +99,7 @@ export class AgentProcess {
         role: this.role,
         exitCode,
         taskId: this.taskId,
+        agentId: this.id,
       });
 
       eventBus.emit('agent:status-changed', {
@@ -111,6 +117,7 @@ export class AgentProcess {
         role: this.role,
         exitCode: 1,
         taskId: this.taskId,
+        agentId: this.id,
       });
 
       eventBus.emit('agent:status-changed', {

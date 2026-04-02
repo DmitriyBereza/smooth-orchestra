@@ -5,8 +5,8 @@ export interface OrchestraEventMap {
   // Agent events
   'agent:output': (message: AgentMessage) => void;
   'agent:status-changed': (data: { role: AgentRole; status: AgentStatus; taskId: string }) => void;
-  'agent:spawned': (data: { role: AgentRole; pid: number; taskId: string }) => void;
-  'agent:exited': (data: { role: AgentRole; exitCode: number | null; taskId: string }) => void;
+  'agent:spawned': (data: { role: AgentRole; pid: number; taskId: string; agentId: string }) => void;
+  'agent:exited': (data: { role: AgentRole; exitCode: number | null; taskId: string; agentId: string }) => void;
 
   // Session/pipeline events
   'session:created': (session: SessionState) => void;
