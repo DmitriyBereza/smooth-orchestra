@@ -35,7 +35,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
-    backgroundColor: 'var(--bg-primary)',
+    backgroundColor: '#050505',
   },
   main: {
     display: 'flex',

@@ -1,159 +1,137 @@
 import React from 'react';
-import { useStore, PipelineStage, ROLE_COLORS } from '../../store/sessionStore';
+import { useStore, PipelineStage } from '../../store/sessionStore';
 
-interface SetlistStep {
-  label: string;
-  stage: PipelineStage | 'awaiting_merge_approval' | 'parallel-dev';
-  color: string;
-}
-
-const SETLIST_STEPS: SetlistStep[] = [
-  { label: 'Overture', stage: 'po', color: ROLE_COLORS.po },
-  { label: 'Review', stage: 'awaiting_user_review', color: '#eab308' },
-  { label: 'Arrangement', stage: 'architect', color: ROLE_COLORS.architect },
-  { label: 'Lead Solo', stage: 'tech-lead', color: ROLE_COLORS['tech-lead'] },
-  { label: 'Rhythm Section', stage: 'developer', color: ROLE_COLORS.developer },
-  { label: 'Code Review', stage: 'tl-code-review' as PipelineStage, color: ROLE_COLORS['tech-lead'] },
-  { label: 'Sound Check', stage: 'qa', color: ROLE_COLORS.qa },
-  { label: 'Encore', stage: 'awaiting_merge_approval' as PipelineStage, color: '#eab308' },
-  { label: 'Final Bow', stage: 'done', color: '#22c55e' },
+/* ── Setlist steps (noir palette) ───────────────────────────── */
+const SETLIST_STEPS: { stage: PipelineStage; label: string; color: string }[] = [
+  { stage: 'po',                    label: 'Overture',        color: '#ffd700' },
+  { stage: 'awaiting_user_review',  label: 'Review',          color: '#ffd700' },
+  { stage: 'architect',             label: 'Arrangement',     color: '#9b59b6' },
+  { stage: 'tech-lead',             label: 'Lead Solo',       color: '#ff4500' },
+  { stage: 'developer',             label: 'Rhythm Section',  color: '#ffd700' },
+  { stage: 'qa',                    label: 'Sound Check',     color: '#e8dcc8' },
+  { stage: 'done',                  label: 'Encore',          color: '#ffd700' },
 ];
 
-// Order used to determine completed / future steps
-const STAGE_ORDER: string[] = [
-  'idle',
-  'po',
-  'awaiting_user_review',
-  'architect',
-  'tech-lead',
-  'developer',
-  'parallel-dev',
-  'tl-code-review',
-  'qa',
-  'awaiting_rejection_routing',
-  'awaiting_merge_approval',
-  'done',
+const STAGE_ORDER = [
+  'idle', 'po', 'awaiting_user_review', 'architect',
+  'tech-lead', 'developer', 'qa', 'done',
 ];
 
-function resolveStageIndex(stage: string): number {
-  // Map parallel-dev to developer position
-  if (stage === 'parallel-dev') return STAGE_ORDER.indexOf('developer');
-  const idx = STAGE_ORDER.indexOf(stage);
-  return idx >= 0 ? idx : -1;
+/* ── Helpers (logic unchanged) ──────────────────────────────── */
+
+function resolveStageIndex(stage: PipelineStage): number {
+  return STAGE_ORDER.indexOf(stage);
 }
 
-function getStatusMessage(currentStage: string, error: string | null): string | null {
-  switch (currentStage) {
-    case 'awaiting_user_review':
-      return 'Awaiting your review';
-    case 'awaiting_merge_approval':
-      return 'Awaiting merge approval';
-    case 'awaiting_rejection_routing':
-      return 'QA rejected \u2014 action required';
-    case 'failed':
-      return error ? `Failed: ${error}` : 'Pipeline failed';
-    case 'done':
-      return 'Task completed successfully';
-    case 'rejected':
-      return 'Changes rejected';
-    default:
-      return null;
-  }
+function getStatusMessage(stage: PipelineStage, error: string | null): string {
+  if (stage === 'idle')                  return 'Waiting in the wings';
+  if (stage === 'failed')                return `Off-key: ${error ?? 'unknown'}`;
+  if (stage === 'rejected')              return 'Encore denied';
+  if (stage === 'done')                  return 'Standing ovation';
+  if (stage === 'awaiting_user_review')  return 'Awaiting your review';
+  return 'Now playing\u2026';
 }
 
-function getStatusColor(currentStage: string): string {
-  switch (currentStage) {
-    case 'awaiting_user_review':
-    case 'awaiting_merge_approval':
-      return 'var(--accent-yellow)';
-    case 'awaiting_rejection_routing':
-    case 'failed':
-    case 'rejected':
-      return 'var(--accent-red)';
-    case 'done':
-      return 'var(--accent-green)';
-    default:
-      return 'var(--text-secondary)';
-  }
+function getStatusColor(stage: PipelineStage): string {
+  if (stage === 'idle')                  return '#5c5470';
+  if (stage === 'failed')               return '#ff4500';
+  if (stage === 'rejected')             return '#ff4500';
+  if (stage === 'done')                 return '#ffd700';
+  if (stage === 'awaiting_user_review') return '#ffd700';
+  return '#e8dcc8';
 }
 
-function needsPulse(currentStage: string, stepStage: string): boolean {
-  if (
-    currentStage === 'awaiting_user_review' &&
-    stepStage === 'awaiting_user_review'
-  )
-    return true;
-  if (
-    currentStage === 'awaiting_merge_approval' &&
-    stepStage === 'awaiting_merge_approval'
-  )
-    return true;
-  return false;
+function needsPulse(stage: PipelineStage): boolean {
+  return stage !== 'idle' && stage !== 'done' && stage !== 'failed' && stage !== 'rejected';
 }
+
+/* ── Component ──────────────────────────────────────────────── */
 
 export const SetlistBar: React.FC = () => {
-  const session = useStore((s) => s.session);
-  const currentStage: string = session?.currentStage || 'idle';
+  const session  = useStore((s) => s.session);
+  const currentStage: PipelineStage = session?.currentStage || 'idle';
   const currentIdx = resolveStageIndex(currentStage);
-  const isFailed = currentStage === 'failed';
-  const isRejectionRouting = currentStage === 'awaiting_rejection_routing';
+  const isLive = needsPulse(currentStage);
 
-  const statusMsg = getStatusMessage(currentStage, session?.error ?? null);
+  const statusMsg   = getStatusMessage(currentStage, session?.error ?? null);
+  const statusColor = getStatusColor(currentStage);
 
   return (
     <div style={styles.container}>
-      <div style={styles.steps}>
-        {SETLIST_STEPS.map((step, i) => {
-          const stepIdx = resolveStageIndex(step.stage);
-          const isActive =
-            step.stage === currentStage ||
-            (currentStage === 'parallel-dev' && step.stage === 'developer');
-          const isCompleted = !isFailed && currentIdx > stepIdx && stepIdx >= 0;
-          const isFuture = !isActive && !isCompleted;
-          const showRed =
-            (isFailed && isActive) ||
-            (isRejectionRouting && step.stage === 'qa');
-          const pulse = needsPulse(currentStage, step.stage);
+      {/* ON AIR label */}
+      <span
+        className={isLive ? 'neon-flicker' : undefined}
+        style={{
+          ...styles.onAir,
+          textShadow: isLive
+            ? '0 0 8px #ff4500, 0 0 16px #ff4500'
+            : 'none',
+        }}
+      >
+        ON AIR
+      </span>
 
-          const chipColor = showRed
-            ? 'var(--accent-red)'
-            : isActive
+      {/* Bulb strip */}
+      <div style={styles.bulbStrip}>
+        {SETLIST_STEPS.map((step, i) => {
+          const stepIdx     = resolveStageIndex(step.stage);
+          const isActive    = step.stage === currentStage;
+          const isCompleted = currentIdx > stepIdx && currentStage !== 'failed';
+          const isFailed    = currentStage === 'failed' && step.stage === currentStage;
+
+          /* Bulb appearance */
+          let bulbBg: string;
+          let bulbShadow: string;
+          let bulbBorder: string | undefined;
+          let bulbClass: string | undefined;
+
+          if (isFailed) {
+            bulbBg     = '#ff4500';
+            bulbShadow = '0 0 8px 2px #ff4500, 0 0 16px 4px #ff4500';
+          } else if (isActive) {
+            bulbBg     = step.color;
+            bulbShadow = `0 0 8px 2px ${step.color}, 0 0 16px 4px ${step.color}`;
+            bulbClass  = 'bulb-glow';
+          } else if (isCompleted) {
+            bulbBg     = step.color;
+            bulbShadow = 'none';
+          } else {
+            bulbBg     = '#1a1a2e';
+            bulbShadow = 'none';
+            bulbBorder = '1px solid #2a2a4a';
+          }
+
+          /* Label color */
+          const labelColor = isActive
             ? step.color
             : isCompleted
-            ? step.color
-            : 'var(--text-muted)';
+              ? '#a0937d'
+              : '#5c5470';
 
           return (
-            <React.Fragment key={step.label}>
-              {i > 0 && (
+            <React.Fragment key={step.stage}>
+              {/* Wire connector */}
+              {i > 0 && <div style={styles.wire} />}
+
+              {/* Bulb + label column */}
+              <div style={styles.bulbColumn}>
                 <div
+                  className={bulbClass}
                   style={{
-                    ...styles.connector,
-                    backgroundColor: isCompleted
-                      ? step.color
-                      : 'var(--bg-tertiary)',
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    backgroundColor: bulbBg,
+                    boxShadow: bulbShadow,
+                    border: bulbBorder,
+                    opacity: isCompleted && !isActive ? 0.5 : 1,
+                    flexShrink: 0,
                   }}
                 />
-              )}
-              <div
-                className={pulse ? 'needs-attention' : undefined}
-                style={{
-                  ...styles.chip,
-                  borderColor: isActive || showRed ? chipColor : 'transparent',
-                  backgroundColor: isActive
-                    ? `${chipColor}22`
-                    : isCompleted
-                    ? `${chipColor}11`
-                    : 'var(--bg-secondary)',
-                  opacity: isFuture && !showRed ? 0.45 : 1,
-                }}
-              >
-                {isCompleted && <span style={styles.checkmark}>&#10003;</span>}
                 <span
                   style={{
-                    ...styles.chipLabel,
-                    color: isActive || showRed ? '#fff' : isCompleted ? chipColor : 'var(--text-muted)',
-                    textDecoration: isCompleted ? 'line-through' : 'none',
+                    ...styles.stepLabel,
+                    color: labelColor,
                   }}
                 >
                   {step.label}
@@ -164,70 +142,69 @@ export const SetlistBar: React.FC = () => {
         })}
       </div>
 
-      {statusMsg && (
-        <div
-          className={
-            currentStage === 'awaiting_user_review' ||
-            currentStage === 'awaiting_merge_approval'
-              ? 'needs-attention'
-              : undefined
-          }
-          style={{
-            ...styles.statusInfo,
-            color: getStatusColor(currentStage),
-          }}
-        >
-          {statusMsg}
-        </div>
-      )}
+      {/* Status message */}
+      <span
+        style={{
+          ...styles.statusMsg,
+          color: statusColor,
+          textShadow: `0 0 6px ${statusColor}44`,
+        }}
+      >
+        {statusMsg}
+      </span>
     </div>
   );
 };
+
+/* ── Styles ─────────────────────────────────────────────────── */
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
-    padding: '8px 16px',
-    fontFamily: 'var(--font-sans)',
+    gap: 20,
+    backgroundColor: '#0a0a14',
+    borderTop: '1px solid rgba(255, 215, 0, 0.08)',
+    padding: '8px 20px',
   },
-  steps: {
+  onAir: {
+    fontFamily: 'var(--font-typewriter)',
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#ff4500',
+    letterSpacing: '0.12em',
+    flexShrink: 0,
+  },
+  bulbStrip: {
     display: 'flex',
     alignItems: 'center',
-    gap: 0,
     flex: 1,
   },
-  connector: {
+  wire: {
     width: 16,
-    height: 2,
+    height: 1,
+    backgroundColor: '#2a2a4a',
     flexShrink: 0,
   },
-  chip: {
+  bulbColumn: {
     display: 'flex',
+    flexDirection: 'column' as const,
     alignItems: 'center',
     gap: 4,
-    padding: '3px 8px',
-    borderRadius: 10,
-    border: '1px solid',
     flexShrink: 0,
-    whiteSpace: 'nowrap' as const,
   },
-  chipLabel: {
-    fontSize: 11,
-    fontWeight: 500,
-    lineHeight: 1,
-  },
-  checkmark: {
+  stepLabel: {
+    fontFamily: 'var(--font-typewriter)',
     fontSize: 9,
-    lineHeight: 1,
-    color: 'var(--accent-green)',
+    textAlign: 'center' as const,
+    lineHeight: 1.2,
+    maxWidth: 56,
   },
-  statusInfo: {
+  statusMsg: {
+    fontFamily: 'var(--font-typewriter)',
     fontSize: 11,
-    fontWeight: 500,
-    marginLeft: 'auto',
     flexShrink: 0,
+    marginLeft: 'auto',
     whiteSpace: 'nowrap' as const,
   },
 };
