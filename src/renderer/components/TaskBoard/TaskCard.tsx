@@ -6,6 +6,8 @@ interface TaskCardProps {
   onApprove?: () => void;
   onReject?: (feedback: string) => void;
   onAbort?: () => void;
+  onApproveMerge?: () => void;
+  onRejectMerge?: (feedback: string) => void;
 }
 
 function getStageColor(stage: PipelineStage): string {
@@ -14,15 +16,19 @@ function getStageColor(stage: PipelineStage): string {
     case 'failed': return 'var(--accent-red)';
     case 'rejected': return 'var(--accent-red)';
     case 'awaiting_user_review': return 'var(--accent-yellow)';
+    case 'awaiting_merge_approval': return 'var(--accent-yellow)';
     default: return 'var(--accent-blue)';
   }
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject, onAbort }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject, onAbort, onApproveMerge, onRejectMerge }) => {
   const [feedback, setFeedback] = React.useState('');
   const [showReject, setShowReject] = React.useState(false);
+  const [showMergeReject, setShowMergeReject] = React.useState(false);
+  const [mergeFeedback, setMergeFeedback] = React.useState('');
 
   const isAwaitingReview = session.currentStage === 'awaiting_user_review';
+  const isAwaitingMergeApproval = session.currentStage === 'awaiting_merge_approval';
   const isActive = !['done', 'failed', 'idle'].includes(session.currentStage);
   const elapsed = getElapsed(session.startedAt);
 
@@ -32,7 +38,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         ...styles.card,
         borderLeftColor: getStageColor(session.currentStage),
       }}
-      className={isAwaitingReview ? 'needs-attention' : ''}
+      className={isAwaitingReview || isAwaitingMergeApproval ? 'needs-attention' : ''}
     >
       <div style={styles.header}>
         <span style={styles.taskId}>{session.task.id}</span>
@@ -57,7 +63,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         )}
       </div>
 
-      {/* Approval gate */}
+      {/* Spec approval gate */}
       {isAwaitingReview && (
         <div style={styles.actions}>
           {!showReject ? (
@@ -93,6 +99,51 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
                 <button
                   style={styles.cancelBtn}
                   onClick={() => setShowReject(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Merge approval gate */}
+      {isAwaitingMergeApproval && (
+        <div style={styles.actions}>
+          {!showMergeReject ? (
+            <>
+              <button style={styles.approveBtn} onClick={onApproveMerge}>
+                Approve Merge
+              </button>
+              <button style={styles.rejectBtn} onClick={() => setShowMergeReject(true)}>
+                Request Changes
+              </button>
+            </>
+          ) : (
+            <div style={styles.feedbackBox}>
+              <textarea
+                placeholder="What needs to change before merge?"
+                value={mergeFeedback}
+                onChange={(e) => setMergeFeedback(e.target.value)}
+                style={styles.feedbackInput}
+                rows={3}
+              />
+              <div style={styles.feedbackActions}>
+                <button
+                  style={styles.rejectBtn}
+                  onClick={() => {
+                    onRejectMerge?.(mergeFeedback);
+                    setMergeFeedback('');
+                    setShowMergeReject(false);
+                  }}
+                  disabled={!mergeFeedback.trim()}
+                >
+                  Send Feedback
+                </button>
+                <button
+                  style={styles.cancelBtn}
+                  onClick={() => setShowMergeReject(false)}
                 >
                   Cancel
                 </button>

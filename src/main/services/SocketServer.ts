@@ -244,6 +244,14 @@ export class SocketServer {
         eventBus.emit('command:abort-task', data);
       });
 
+      socket.on('command:approve-merge', (data: { sessionId: string }) => {
+        eventBus.emit('command:approve-merge', data);
+      });
+
+      socket.on('command:reject-merge', (data: { sessionId: string; feedback: string }) => {
+        eventBus.emit('command:reject-merge', data);
+      });
+
       socket.on('disconnect', () => {
         console.log(`[SocketServer] Client disconnected: ${socket.id}`);
       });

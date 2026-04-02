@@ -5,7 +5,8 @@ export type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed';
 export type PipelineStage =
   | 'idle' | 'po' | 'awaiting_user_review' | 'architect'
-  | 'tech-lead' | 'developer' | 'qa' | 'done' | 'failed' | 'rejected';
+  | 'tech-lead' | 'developer' | 'qa' | 'awaiting_merge_approval'
+  | 'done' | 'failed' | 'rejected';
 
 export interface AgentMessage {
   id: string;
@@ -67,6 +68,7 @@ export const STAGE_DISPLAY: Record<PipelineStage, string> = {
   'tech-lead': 'Tech Lead Review',
   developer: 'Development',
   qa: 'QA Testing',
+  awaiting_merge_approval: 'Merge Approval',
   done: 'Done',
   failed: 'Failed',
   rejected: 'Rejected',

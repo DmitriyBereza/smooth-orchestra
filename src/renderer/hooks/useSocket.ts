@@ -124,5 +124,13 @@ export function useSocketCommands() {
     getSocket().emit('command:abort-task', { sessionId });
   }, []);
 
-  return { createTask, approveSpec, rejectSpec, abortTask };
+  const approveMerge = useCallback((sessionId: string) => {
+    getSocket().emit('command:approve-merge', { sessionId });
+  }, []);
+
+  const rejectMerge = useCallback((sessionId: string, feedback: string) => {
+    getSocket().emit('command:reject-merge', { sessionId, feedback });
+  }, []);
+
+  return { createTask, approveSpec, rejectSpec, abortTask, approveMerge, rejectMerge };
 }

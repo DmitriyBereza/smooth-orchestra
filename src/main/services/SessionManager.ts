@@ -112,6 +112,49 @@ export class SessionManager {
   }
 
   /**
+   * User approves the merge — finalize the task.
+   */
+  async approveMerge(): Promise<void> {
+    if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_merge_approval') {
+      throw new Error('No session awaiting merge approval');
+    }
+
+    if (this.currentSession.gitBranch) {
+      try {
+        const defaultBranch = await this.gitManager.getDefaultBranch();
+        await this.gitManager.switchBranch(defaultBranch);
+        // GitManager may not have mergeBranch yet (Unit 3).
+        // For now, just transition to done. The merge can be a manual step.
+      } catch (err) {
+        console.warn(`Merge failed: ${err}. Task marked as done anyway.`);
+      }
+    }
+
+    this.currentSession.completedAt = new Date().toISOString();
+    await this.transitionTo('done');
+
+    eventBus.emit('session:completed', {
+      sessionId: this.currentSession.id,
+      taskId: this.currentSession.task.id,
+    });
+  }
+
+  /**
+   * User rejects the merge — send back to developer with feedback.
+   */
+  async rejectMerge(feedback: string): Promise<void> {
+    if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_merge_approval') {
+      throw new Error('No session awaiting merge approval');
+    }
+
+    const taskId = this.currentSession.task.id;
+    this.artifactManager.writeArtifact(taskId, 'questions',
+      `# Merge Review Feedback\n\n${feedback}\n\nPlease address these issues.`);
+
+    await this.transitionTo('developer');
+  }
+
+  /**
    * Abort the current task.
    */
   async abortTask(): Promise<void> {
@@ -245,6 +288,22 @@ export class SessionManager {
         console.error('Failed to abort task:', err.message);
       }
     });
+
+    eventBus.on('command:approve-merge', async (_data) => {
+      try {
+        await this.approveMerge();
+      } catch (err: any) {
+        console.error('Failed to approve merge:', err.message);
+      }
+    });
+
+    eventBus.on('command:reject-merge', async ({ feedback }) => {
+      try {
+        await this.rejectMerge(feedback);
+      } catch (err: any) {
+        console.error('Failed to reject merge:', err.message);
+      }
+    });
   }
 
   /**
@@ -275,14 +334,8 @@ export class SessionManager {
         break;
 
       case 'qa':
-        // QA done → task complete!
-        this.currentSession.completedAt = new Date().toISOString();
-        await this.transitionTo('done');
-
-        eventBus.emit('session:completed', {
-          sessionId: this.currentSession.id,
-          taskId: this.currentSession.task.id,
-        });
+        // QA done → await merge approval (human gate)
+        await this.transitionTo('awaiting_merge_approval');
         break;
 
       default:

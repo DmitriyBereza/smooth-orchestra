@@ -32,6 +32,8 @@ export interface OrchestraEventMap {
   'command:approve-spec': (data: { sessionId: string }) => void;
   'command:reject-spec': (data: { sessionId: string; feedback: string }) => void;
   'command:abort-task': (data: { sessionId: string }) => void;
+  'command:approve-merge': (data: { sessionId: string }) => void;
+  'command:reject-merge': (data: { sessionId: string; feedback: string }) => void;
 }
 
 export type OrchestraEvent = keyof OrchestraEventMap;

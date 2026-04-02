@@ -8,6 +8,7 @@ export type PipelineStage =
   | 'tech-lead'
   | 'developer'
   | 'qa'
+  | 'awaiting_merge_approval'
   | 'done'
   | 'failed'
   | 'rejected';
@@ -39,6 +40,7 @@ export const PIPELINE_ORDER: PipelineStage[] = [
   'tech-lead',
   'developer',
   'qa',
+  'awaiting_merge_approval',
   'done',
 ];
 
