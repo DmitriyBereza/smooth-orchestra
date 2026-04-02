@@ -9,6 +9,7 @@ export type PipelineStage =
   | 'developer'
   | 'tl-code-review'
   | 'qa'
+  | 'awaiting_rejection_routing'
   | 'done'
   | 'failed'
   | 'rejected';
@@ -30,6 +31,8 @@ export interface SessionState {
   startedAt: string;
   completedAt: string | null;
   error: string | null;
+  qaDecision?: 'approved' | 'rejected' | null;
+  rejectionReason?: string | null;
 }
 
 export const PIPELINE_ORDER: PipelineStage[] = [

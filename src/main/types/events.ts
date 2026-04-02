@@ -35,6 +35,8 @@ export interface OrchestraEventMap {
   'command:approve-spec': (data: { sessionId: string }) => void;
   'command:reject-spec': (data: { sessionId: string; feedback: string }) => void;
   'command:abort-task': (data: { sessionId: string }) => void;
+  'command:route-rejection': (data: { sessionId: string; routing: 'send_to_dev' | 'escalate_to_po' }) => void;
+  'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;
 }
 
 export type OrchestraEvent = keyof OrchestraEventMap;

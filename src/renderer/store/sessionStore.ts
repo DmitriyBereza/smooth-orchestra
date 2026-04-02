@@ -5,7 +5,8 @@ export type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed';
 export type PipelineStage =
   | 'idle' | 'po' | 'awaiting_user_review' | 'architect'
-  | 'tech-lead' | 'developer' | 'tl-code-review' | 'qa' | 'done' | 'failed' | 'rejected';
+  | 'tech-lead' | 'developer' | 'tl-code-review' | 'qa'
+  | 'awaiting_rejection_routing' | 'done' | 'failed' | 'rejected';
 
 export interface AgentMessage {
   id: string;
@@ -41,6 +42,8 @@ export interface SessionState {
   startedAt: string;
   completedAt: string | null;
   error: string | null;
+  qaDecision?: 'approved' | 'rejected' | null;
+  rejectionReason?: string | null;
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
@@ -68,6 +71,7 @@ export const STAGE_DISPLAY: Record<PipelineStage, string> = {
   developer: 'Development',
   'tl-code-review': 'Code Review',
   qa: 'QA Testing',
+  awaiting_rejection_routing: 'QA Rejected',
   done: 'Done',
   failed: 'Failed',
   rejected: 'Rejected',

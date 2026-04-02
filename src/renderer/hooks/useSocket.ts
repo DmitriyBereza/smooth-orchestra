@@ -94,6 +94,10 @@ export function useSocket() {
       addEvent(`Branch created: ${data.branch}`, 'git');
     });
 
+    s.on('session:qa-rejection', (data: { sessionId: string; taskId: string; reason: string }) => {
+      addEvent(`QA rejected task: ${data.reason}`, 'error');
+    });
+
     return () => {
       s.removeAllListeners();
       s.disconnect();
@@ -124,5 +128,9 @@ export function useSocketCommands() {
     getSocket().emit('command:abort-task', { sessionId });
   }, []);
 
-  return { createTask, approveSpec, rejectSpec, abortTask };
+  const routeRejection = useCallback((sessionId: string, routing: 'send_to_dev' | 'escalate_to_po') => {
+    getSocket().emit('command:route-rejection', { sessionId, routing });
+  }, []);
+
+  return { createTask, approveSpec, rejectSpec, abortTask, routeRejection };
 }

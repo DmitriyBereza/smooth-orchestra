@@ -210,6 +210,10 @@ export class SocketServer {
     eventBus.on('git:branch-created', (data) => {
       this.io.emit('git:branch-created', data);
     });
+
+    eventBus.on('session:qa-rejection', (data) => {
+      this.io.emit('session:qa-rejection', data);
+    });
   }
 
   /**
@@ -242,6 +246,10 @@ export class SocketServer {
 
       socket.on('command:abort-task', (data: { sessionId: string }) => {
         eventBus.emit('command:abort-task', data);
+      });
+
+      socket.on('command:route-rejection', (data: { sessionId: string; routing: 'send_to_dev' | 'escalate_to_po' }) => {
+        eventBus.emit('command:route-rejection', data);
       });
 
       socket.on('disconnect', () => {
