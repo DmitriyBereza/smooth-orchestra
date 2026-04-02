@@ -1,10 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { AgentRole } from '../types';
 import { eventBus } from './EventBus';
 
 interface LockEntry {
-  holder: AgentRole;
+  holder: string;
   taskId: string;
   acquiredAt: string;
 }
@@ -22,7 +21,7 @@ export class FileLockManager {
     this.loadFromDisk();
   }
 
-  acquire(filepath: string, holder: AgentRole, taskId: string): boolean {
+  acquire(filepath: string, holder: string, taskId: string): boolean {
     const normalized = path.resolve(filepath);
     const existing = this.locks.get(normalized);
 
@@ -43,7 +42,7 @@ export class FileLockManager {
     return true;
   }
 
-  release(filepath: string, holder: AgentRole): boolean {
+  release(filepath: string, holder: string): boolean {
     const normalized = path.resolve(filepath);
     const existing = this.locks.get(normalized);
 
@@ -58,7 +57,7 @@ export class FileLockManager {
     return true;
   }
 
-  releaseAll(holder: AgentRole): void {
+  releaseAll(holder: string): void {
     const toRelease: string[] = [];
     for (const [filepath, entry] of this.locks) {
       if (entry.holder === holder) {
@@ -66,6 +65,23 @@ export class FileLockManager {
       }
     }
     for (const filepath of toRelease) {
+      this.release(filepath, holder);
+    }
+  }
+
+  /**
+   * Releases all locks whose holder starts with the given prefix.
+   * Useful for cleaning up all locks for a task (e.g., prefix `developer-TASK-001`
+   * releases all developer subtask locks for that task).
+   */
+  releaseByPrefix(prefix: string): void {
+    const toRelease: Array<{ filepath: string; holder: string }> = [];
+    for (const [filepath, entry] of this.locks) {
+      if (entry.holder.startsWith(prefix)) {
+        toRelease.push({ filepath, holder: entry.holder });
+      }
+    }
+    for (const { filepath, holder } of toRelease) {
       this.release(filepath, holder);
     }
   }

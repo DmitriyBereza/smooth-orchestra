@@ -20,8 +20,8 @@ export interface OrchestraEventMap {
   'git:branch-deleted': (data: { branch: string }) => void;
 
   // Lock events
-  'lock:acquired': (data: { filepath: string; holder: AgentRole; taskId: string }) => void;
-  'lock:released': (data: { filepath: string; holder: AgentRole }) => void;
+  'lock:acquired': (data: { filepath: string; holder: string; taskId: string }) => void;
+  'lock:released': (data: { filepath: string; holder: string }) => void;
 
   // Artifact events
   'artifact:written': (data: { taskId: string; name: string; path: string }) => void;
