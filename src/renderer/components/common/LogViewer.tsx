@@ -2,12 +2,13 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useStore } from '../../store/sessionStore';
 
 const EVENT_COLORS: Record<string, string> = {
-  system: 'var(--text-muted)',
-  session: 'var(--accent-blue)',
-  agent: 'var(--accent-purple)',
-  artifact: 'var(--accent-green)',
-  git: 'var(--accent-orange)',
-  error: 'var(--accent-red)',
+  system: '#5c5470',
+  session: '#ffd700',
+  agent: '#9b59b6',
+  artifact: '#ffd700',
+  git: '#ff4500',
+  lock: '#a0937d',
+  error: '#ff4500',
 };
 
 export const LogViewer: React.FC = () => {
@@ -28,7 +29,7 @@ export const LogViewer: React.FC = () => {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span style={styles.title}>
-          Event Log ({events.length})
+          EVENT LOG ({events.length})
         </span>
         <span style={styles.toggle}>{isExpanded ? '\u25BC' : '\u25B2'}</span>
       </div>
@@ -47,6 +48,7 @@ export const LogViewer: React.FC = () => {
                   style={{
                     ...styles.typeBadge,
                     color: EVENT_COLORS[event.type] || 'var(--text-secondary)',
+                    textShadow: `0 0 3px ${EVENT_COLORS[event.type] || 'var(--text-secondary)'}`,
                   }}
                 >
                   [{event.type}]
@@ -63,8 +65,9 @@ export const LogViewer: React.FC = () => {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    borderTop: '1px solid var(--border-color)',
-    backgroundColor: 'var(--bg-secondary)',
+    backgroundColor: '#0a0a14',
+    border: '1px solid rgba(155, 89, 182, 0.15)',
+    borderTop: '1px solid rgba(155, 89, 182, 0.25)',
     display: 'flex',
     flexDirection: 'column',
     transition: 'height 0.2s ease',
@@ -77,25 +80,27 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     cursor: 'pointer',
-    borderBottom: '1px solid var(--border-color)',
+    borderBottom: '1px solid rgba(155, 89, 182, 0.1)',
     flexShrink: 0,
   },
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: 'var(--text-muted)',
+    fontFamily: 'var(--font-sans)',
+    color: '#9b59b6',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
+    letterSpacing: '0.15em',
+    textShadow: '0 0 5px #9b59b6',
   },
   toggle: {
     fontSize: 10,
-    color: 'var(--text-muted)',
+    color: '#9b59b6',
   },
   list: {
     flex: 1,
     overflowY: 'auto',
     padding: '4px 16px',
-    fontFamily: 'var(--font-mono)',
+    fontFamily: 'var(--font-typewriter)',
     fontSize: 11,
     lineHeight: 1.8,
   },
@@ -110,7 +115,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'baseline',
   },
   timestamp: {
-    color: 'var(--text-muted)',
+    color: '#5c5470',
+    fontFamily: 'var(--font-mono)',
     flexShrink: 0,
   },
   typeBadge: {
@@ -118,7 +124,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   message: {
-    color: 'var(--text-secondary)',
+    color: '#a0937d',
     wordBreak: 'break-word' as const,
   },
 };
