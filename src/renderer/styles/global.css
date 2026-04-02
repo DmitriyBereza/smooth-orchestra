@@ -21,6 +21,7 @@
   --accent-yellow: #eab308;
   --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-typewriter: 'Special Elite', 'Courier New', monospace;
 }
 
 body {
@@ -83,4 +84,30 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* ── On Air marquee animations ─────────────────────────────── */
+
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 8px #ff4500, 0 0 16px #ff4500;
+  }
+  20%, 24%, 55% {
+    opacity: 0.6;
+    text-shadow: none;
+  }
+}
+
+.neon-flicker {
+  animation: neon-flicker 3s infinite;
+}
+
+@keyframes bulb-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+.bulb-glow {
+  animation: bulb-glow 2s ease-in-out infinite;
 }

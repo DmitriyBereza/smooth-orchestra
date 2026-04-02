@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSocket } from './hooks/useSocket';
 import { PipelineView } from './components/Pipeline/PipelineView';
+import { SetlistBar } from './components/BandStage/SetlistBar';
 import { TaskBoard } from './components/TaskBoard/TaskBoard';
 import { AgentPanel } from './components/AgentPanel/AgentPanel';
 import { StatusBar } from './components/common/StatusBar';
@@ -23,6 +24,9 @@ const App: React.FC = () => {
 
       {/* Bottom: Event log (collapsible) */}
       <LogViewer />
+
+      {/* Bottom: On Air marquee pipeline */}
+      <SetlistBar />
 
       {/* Bottom bar: Status */}
       <StatusBar />
