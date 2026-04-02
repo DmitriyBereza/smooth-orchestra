@@ -10,11 +10,13 @@ interface TaskCardProps {
 
 function getStageColor(stage: PipelineStage): string {
   switch (stage) {
-    case 'done': return 'var(--accent-green)';
-    case 'failed': return 'var(--accent-red)';
-    case 'rejected': return 'var(--accent-red)';
-    case 'awaiting_user_review': return 'var(--accent-yellow)';
-    default: return 'var(--accent-blue)';
+    case 'done': return '#ffd700';
+    case 'failed': return '#ff4500';
+    case 'rejected': return '#ff4500';
+    case 'awaiting_rejection_routing' as PipelineStage: return '#ff4500';
+    case 'awaiting_user_review': return '#ffd700';
+    case 'awaiting_merge_approval' as PipelineStage: return '#ffd700';
+    default: return '#9b59b6';
   }
 }
 
@@ -124,10 +126,11 @@ function getElapsed(startedAt: string): string {
 
 const styles: Record<string, React.CSSProperties> = {
   card: {
-    backgroundColor: 'var(--bg-card)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(15, 15, 35, 0.8)',
+    borderRadius: 10,
     padding: 16,
     borderLeft: '3px solid',
+    border: '1px solid rgba(255, 215, 0, 0.08)',
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
@@ -151,10 +154,13 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 14,
     fontWeight: 600,
+    fontFamily: 'var(--font-sans)',
+    letterSpacing: '0.03em',
     color: 'var(--text-primary)',
   },
   description: {
     fontSize: 12,
+    fontFamily: 'var(--font-typewriter)',
     color: 'var(--text-secondary)',
     lineHeight: 1.4,
     maxHeight: 60,
@@ -177,8 +183,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   approveBtn: {
     padding: '6px 16px',
-    backgroundColor: 'var(--accent-green)',
-    color: 'white',
+    backgroundColor: '#ffd700',
+    color: '#050505',
     border: 'none',
     borderRadius: 4,
     fontSize: 12,
@@ -187,8 +193,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   rejectBtn: {
     padding: '6px 16px',
-    backgroundColor: 'var(--accent-orange)',
-    color: 'white',
+    backgroundColor: '#ff4500',
+    color: '#e8dcc8',
     border: 'none',
     borderRadius: 4,
     fontSize: 12,
@@ -197,7 +203,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cancelBtn: {
     padding: '6px 16px',
-    backgroundColor: 'var(--bg-tertiary)',
+    backgroundColor: 'rgba(42, 42, 74, 0.6)',
     color: 'var(--text-secondary)',
     border: 'none',
     borderRadius: 4,
@@ -207,8 +213,8 @@ const styles: Record<string, React.CSSProperties> = {
   abortBtn: {
     padding: '6px 16px',
     backgroundColor: 'transparent',
-    color: 'var(--accent-red)',
-    border: '1px solid var(--accent-red)',
+    color: '#ff4500',
+    border: '1px solid #ff4500',
     borderRadius: 4,
     fontSize: 11,
     cursor: 'pointer',
@@ -223,12 +229,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   feedbackInput: {
     padding: '8px 10px',
-    backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border-color)',
+    backgroundColor: 'rgba(10, 10, 20, 0.6)',
+    border: '1px solid rgba(255, 215, 0, 0.15)',
     borderRadius: 4,
     color: 'var(--text-primary)',
     fontSize: 12,
-    fontFamily: 'var(--font-sans)',
+    fontFamily: 'var(--font-typewriter)',
     resize: 'vertical' as const,
     outline: 'none',
   },

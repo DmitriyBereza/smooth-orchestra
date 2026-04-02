@@ -52,21 +52,24 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    borderRight: '1px solid var(--border-color)',
-    width: 360,
+    background: 'rgba(10, 10, 20, 0.75)',
+    backdropFilter: 'blur(12px)',
+    width: 340,
     flexShrink: 0,
   },
   header: {
     padding: '12px 16px',
-    borderBottom: '1px solid var(--border-color)',
+    borderBottom: '1px solid rgba(255, 215, 0, 0.1)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   title: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 700,
-    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-sans)',
+    letterSpacing: '0.1em',
+    color: '#ffd700',
   },
   connectionStatus: {
     display: 'flex',
@@ -75,6 +78,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   connectionText: {
     fontSize: 11,
+    fontFamily: 'var(--font-typewriter)',
     color: 'var(--text-muted)',
   },
   content: {
@@ -93,8 +97,9 @@ const styles: Record<string, React.CSSProperties> = {
   sectionTitle: {
     fontSize: 12,
     fontWeight: 600,
-    color: 'var(--text-muted)',
+    fontFamily: 'var(--font-sans)',
+    color: '#ffd700',
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
+    letterSpacing: '0.15em',
   },
 };
