@@ -8,6 +8,7 @@ export type PipelineStage =
   | 'tech-lead'
   | 'developer'
   | 'tl-code-review'
+  | 'parallel-dev'
   | 'qa'
   | 'awaiting_rejection_routing'
   | 'awaiting_merge_approval'
@@ -22,6 +23,17 @@ export interface TaskDefinition {
   createdAt: string;
 }
 
+export interface SubtaskState {
+  id: string;              // e.g. "subtask-1"
+  index: number;           // 1-based
+  parentTaskId: string;
+  title: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  assignedAgentId: string | null;
+  gitBranch: string;
+  files: string[];
+}
+
 export interface SessionState {
   id: string;
   task: TaskDefinition;
@@ -34,6 +46,7 @@ export interface SessionState {
   error: string | null;
   qaDecision?: 'approved' | 'rejected' | null;
   rejectionReason?: string | null;
+  subtasks: SubtaskState[];
 }
 
 export const PIPELINE_ORDER: PipelineStage[] = [
@@ -44,6 +57,7 @@ export const PIPELINE_ORDER: PipelineStage[] = [
   'tech-lead',
   'developer',
   'tl-code-review',
+  'parallel-dev',
   'qa',
   'awaiting_merge_approval',
   'done',

@@ -10,6 +10,8 @@ import { AgentStatusBadge } from './AgentStatusBadge';
 
 interface AgentTabProps {
   role: AgentRole;
+  subtaskId?: string;
+  agentId?: string;
 }
 
 export const AgentTab: React.FC<AgentTabProps> = ({ role }) => {

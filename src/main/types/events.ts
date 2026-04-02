@@ -14,6 +14,12 @@ export interface OrchestraEventMap {
   'session:completed': (data: { sessionId: string; taskId: string }) => void;
   'session:failed': (data: { sessionId: string; taskId: string; error: string }) => void;
 
+  // Subtask events (parallel dev)
+  'session:subtask-started': (data: { taskId: string; subtaskId: string; agentId: string }) => void;
+  'session:subtask-completed': (data: { taskId: string; subtaskId: string; agentId: string }) => void;
+  'session:subtask-failed': (data: { taskId: string; subtaskId: string; agentId: string; error: string }) => void;
+  'session:all-subtasks-completed': (data: { taskId: string }) => void;
+
   // Git events
   'git:branch-created': (data: { branch: string; taskId: string }) => void;
   'git:branch-switched': (data: { branch: string }) => void;

@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
-import { AgentRole, ROLE_DISPLAY_NAMES, ROLE_COLORS, useStore } from '../../store/sessionStore';
+import { AgentRole, ROLE_DISPLAY_NAMES, ROLE_COLORS, useStore, SubtaskState } from '../../store/sessionStore';
 import { AgentTab } from './AgentTab';
 
 const ROLES: AgentRole[] = ['po', 'architect', 'tech-lead', 'developer', 'qa'];
 
+const SUBTASK_STATUS_ICON: Record<SubtaskState['status'], string> = {
+  pending: '-',
+  in_progress: '*',
+  completed: '+',
+  failed: 'x',
+};
+
 export const AgentPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AgentRole>('po');
+  const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
   const session = useStore((s) => s.session);
   const agents = useStore((s) => s.agents);
+  const subtasks = useStore((s) => s.subtasks);
 
-  // Auto-switch to the active agent's tab
-  const currentStageRole = session?.currentStage
-    ? ({ po: 'po', architect: 'architect', 'tech-lead': 'tech-lead', developer: 'developer', qa: 'qa' } as Record<string, AgentRole>)[session.currentStage]
-    : null;
+  const isParallelDev = session?.currentStage === 'parallel-dev' && subtasks.length > 0;
+  const showSubtaskTabs = isParallelDev && activeTab === 'developer';
 
   return (
     <div style={styles.container}>
@@ -21,7 +28,6 @@ export const AgentPanel: React.FC = () => {
           const agent = agents.find((a) => a.role === role);
           const isActive = activeTab === role;
           const isRunning = agent?.status === 'running';
-          const isCurrent = currentStageRole === role;
 
           return (
             <button
@@ -32,7 +38,10 @@ export const AgentPanel: React.FC = () => {
                 color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                 backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
               }}
-              onClick={() => setActiveTab(role)}
+              onClick={() => {
+                setActiveTab(role);
+                setActiveSubtaskId(null);
+              }}
             >
               <span
                 className={`status-dot ${isRunning ? 'running' : agent?.status || 'idle'}`}
@@ -43,8 +52,42 @@ export const AgentPanel: React.FC = () => {
         })}
       </div>
 
+      {showSubtaskTabs && (
+        <div style={styles.subtaskTabs}>
+          {subtasks.map((st) => {
+            const isActive = activeSubtaskId === st.id;
+            return (
+              <button
+                key={st.id}
+                style={{
+                  ...styles.subtaskTab,
+                  borderBottomColor: isActive ? ROLE_COLORS.developer : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                  backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
+                }}
+                onClick={() => setActiveSubtaskId(st.id)}
+                title={st.title}
+              >
+                <span style={styles.subtaskStatusIcon}>
+                  [{SUBTASK_STATUS_ICON[st.status]}]
+                </span>
+                <span>Dev {st.index}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div style={styles.content}>
-        <AgentTab role={activeTab} />
+        <AgentTab
+          role={activeTab}
+          subtaskId={showSubtaskTabs ? activeSubtaskId ?? undefined : undefined}
+          agentId={
+            showSubtaskTabs && activeSubtaskId
+              ? subtasks.find((s) => s.id === activeSubtaskId)?.assignedAgentId ?? undefined
+              : undefined
+          }
+        />
       </div>
     </div>
   );
@@ -77,6 +120,33 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
     whiteSpace: 'nowrap' as const,
     transition: 'all 0.15s ease',
+  },
+  subtaskTabs: {
+    display: 'flex',
+    borderBottom: '1px solid var(--border-color)',
+    flexShrink: 0,
+    paddingLeft: 8,
+    backgroundColor: 'var(--bg-secondary)',
+  },
+  subtaskTab: {
+    padding: '6px 12px',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    background: 'none',
+    cursor: 'pointer',
+    fontSize: 11,
+    fontWeight: 500,
+    fontFamily: 'var(--font-sans)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    whiteSpace: 'nowrap' as const,
+    transition: 'all 0.15s ease',
+  },
+  subtaskStatusIcon: {
+    fontSize: 10,
+    fontFamily: 'var(--font-mono)',
+    opacity: 0.7,
   },
   content: {
     flex: 1,

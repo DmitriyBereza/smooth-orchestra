@@ -5,7 +5,7 @@ export type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed';
 export type PipelineStage =
   | 'idle' | 'po' | 'awaiting_user_review' | 'architect'
-  | 'tech-lead' | 'developer' | 'tl-code-review' | 'qa'
+  | 'tech-lead' | 'developer' | 'tl-code-review' | 'parallel-dev' | 'qa'
   | 'awaiting_rejection_routing' | 'awaiting_merge_approval'
   | 'done' | 'failed' | 'rejected';
 
@@ -24,6 +24,17 @@ export interface AgentInfo {
   taskId: string | null;
   pid: number | null;
   tokensUsed: { input: number; output: number };
+}
+
+export interface SubtaskState {
+  id: string;
+  index: number;
+  parentTaskId: string;
+  title: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  assignedAgentId: string | null;
+  gitBranch: string;
+  files: string[];
 }
 
 export interface TaskDefinition {
@@ -45,6 +56,7 @@ export interface SessionState {
   error: string | null;
   qaDecision?: 'approved' | 'rejected' | null;
   rejectionReason?: string | null;
+  subtasks: SubtaskState[];
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
@@ -71,6 +83,7 @@ export const STAGE_DISPLAY: Record<PipelineStage, string> = {
   'tech-lead': 'Tech Lead Review',
   developer: 'Development',
   'tl-code-review': 'Code Review',
+  'parallel-dev': 'Parallel Dev',
   qa: 'QA Testing',
   awaiting_rejection_routing: 'QA Rejected',
   awaiting_merge_approval: 'Merge Approval',
@@ -98,6 +111,11 @@ interface OrchestraStore {
   agents: AgentInfo[];
   setAgents: (agents: AgentInfo[]) => void;
   updateAgentStatus: (role: AgentRole, status: AgentStatus) => void;
+
+  // Subtasks (parallel dev)
+  subtasks: SubtaskState[];
+  setSubtasks: (subtasks: SubtaskState[]) => void;
+  updateSubtask: (subtaskId: string, update: Partial<SubtaskState>) => void;
 
   // Event log
   events: Array<{ timestamp: string; message: string; type: string }>;
@@ -152,6 +170,16 @@ export const useStore = create<OrchestraStore>((set) => ({
     set((state) => ({
       agents: state.agents.map((a) =>
         a.role === role ? { ...a, status } : a
+      ),
+    })),
+
+  // Subtasks
+  subtasks: [],
+  setSubtasks: (subtasks) => set({ subtasks }),
+  updateSubtask: (subtaskId, update) =>
+    set((state) => ({
+      subtasks: state.subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, ...update } : s,
       ),
     })),
 
