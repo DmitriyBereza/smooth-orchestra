@@ -1,0 +1,34 @@
+/* Band Stage effects animations */
+
+/* Spotlight sway animation */
+@keyframes spotlight-sway {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+
+.spotlight {
+  animation: spotlight-sway 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Floating music notes */
+@keyframes float-note {
+  0% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+}
+
+.floating-note {
+  animation: float-note 2.5s ease-out infinite;
+}
+
+/* Status bubble fade-in */
+.status-bubble-visible {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
