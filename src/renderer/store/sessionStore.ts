@@ -6,7 +6,8 @@ export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed'
 export type PipelineStage =
   | 'idle' | 'po' | 'awaiting_user_review' | 'architect'
   | 'tech-lead' | 'developer' | 'tl-code-review' | 'qa'
-  | 'awaiting_rejection_routing' | 'done' | 'failed' | 'rejected';
+  | 'awaiting_rejection_routing' | 'awaiting_merge_approval'
+  | 'done' | 'failed' | 'rejected';
 
 export interface AgentMessage {
   id: string;
@@ -72,6 +73,7 @@ export const STAGE_DISPLAY: Record<PipelineStage, string> = {
   'tl-code-review': 'Code Review',
   qa: 'QA Testing',
   awaiting_rejection_routing: 'QA Rejected',
+  awaiting_merge_approval: 'Merge Approval',
   done: 'Done',
   failed: 'Failed',
   rejected: 'Rejected',

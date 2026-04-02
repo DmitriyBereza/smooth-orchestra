@@ -132,5 +132,13 @@ export function useSocketCommands() {
     getSocket().emit('command:route-rejection', { sessionId, routing });
   }, []);
 
-  return { createTask, approveSpec, rejectSpec, abortTask, routeRejection };
+  const approveMerge = useCallback((sessionId: string) => {
+    getSocket().emit('command:approve-merge', { sessionId });
+  }, []);
+
+  const rejectMerge = useCallback((sessionId: string, feedback: string) => {
+    getSocket().emit('command:reject-merge', { sessionId, feedback });
+  }, []);
+
+  return { createTask, approveSpec, rejectSpec, abortTask, routeRejection, approveMerge, rejectMerge };
 }

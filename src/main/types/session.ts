@@ -10,6 +10,7 @@ export type PipelineStage =
   | 'tl-code-review'
   | 'qa'
   | 'awaiting_rejection_routing'
+  | 'awaiting_merge_approval'
   | 'done'
   | 'failed'
   | 'rejected';
@@ -44,6 +45,7 @@ export const PIPELINE_ORDER: PipelineStage[] = [
   'developer',
   'tl-code-review',
   'qa',
+  'awaiting_merge_approval',
   'done',
 ];
 

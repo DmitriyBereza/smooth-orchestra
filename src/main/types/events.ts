@@ -37,6 +37,8 @@ export interface OrchestraEventMap {
   'command:abort-task': (data: { sessionId: string }) => void;
   'command:route-rejection': (data: { sessionId: string; routing: 'send_to_dev' | 'escalate_to_po' }) => void;
   'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;
+  'command:approve-merge': (data: { sessionId: string }) => void;
+  'command:reject-merge': (data: { sessionId: string; feedback: string }) => void;
 }
 
 export type OrchestraEvent = keyof OrchestraEventMap;

@@ -40,6 +40,8 @@ export const TaskBoard: React.FC = () => {
               onReject={(feedback) => commands.rejectSpec(session.id, feedback)}
               onAbort={() => commands.abortTask(session.id)}
               onRouteRejection={(routing) => commands.routeRejection(session.id, routing)}
+              onApproveMerge={() => commands.approveMerge(session.id)}
+              onRejectMerge={(feedback) => commands.rejectMerge(session.id, feedback)}
             />
           </div>
         )}
