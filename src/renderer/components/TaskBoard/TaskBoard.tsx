@@ -39,6 +39,7 @@ export const TaskBoard: React.FC = () => {
               onApprove={() => commands.approveSpec(session.id)}
               onReject={(feedback) => commands.rejectSpec(session.id, feedback)}
               onAbort={() => commands.abortTask(session.id)}
+              onRouteRejection={(routing) => commands.routeRejection(session.id, routing)}
             />
           </div>
         )}

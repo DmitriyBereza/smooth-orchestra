@@ -6,6 +6,7 @@ interface TaskCardProps {
   onApprove?: () => void;
   onReject?: (feedback: string) => void;
   onAbort?: () => void;
+  onRouteRejection?: (routing: 'send_to_dev' | 'escalate_to_po') => void;
 }
 
 function getStageColor(stage: PipelineStage): string {
@@ -13,12 +14,13 @@ function getStageColor(stage: PipelineStage): string {
     case 'done': return 'var(--accent-green)';
     case 'failed': return 'var(--accent-red)';
     case 'rejected': return 'var(--accent-red)';
+    case 'awaiting_rejection_routing': return 'var(--accent-red)';
     case 'awaiting_user_review': return 'var(--accent-yellow)';
     default: return 'var(--accent-blue)';
   }
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject, onAbort }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject, onAbort, onRouteRejection }) => {
   const [feedback, setFeedback] = React.useState('');
   const [showReject, setShowReject] = React.useState(false);
 
@@ -99,6 +101,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {session.currentStage === 'awaiting_rejection_routing' && (
+        <div style={styles.actions}>
+          <div style={{ ...styles.feedbackBox, borderLeft: '3px solid var(--accent-red)' }}>
+            <p style={{ color: 'var(--accent-red)', fontWeight: 600, fontSize: 12, margin: 0 }}>
+              QA Rejected
+            </p>
+            {session.rejectionReason && (
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0' }}>
+                {session.rejectionReason}
+              </p>
+            )}
+            <div style={styles.feedbackActions}>
+              <button style={styles.rejectBtn} onClick={() => onRouteRejection?.('send_to_dev')}>
+                Send Back to Dev
+              </button>
+              <button
+                style={{ ...styles.cancelBtn, color: 'var(--accent-red)' }}
+                onClick={() => onRouteRejection?.('escalate_to_po')}
+              >
+                Escalate to PO
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

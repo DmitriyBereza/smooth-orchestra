@@ -245,6 +245,30 @@ export class SessionManager {
         console.error('Failed to abort task:', err.message);
       }
     });
+
+    eventBus.on('command:route-rejection', async ({ sessionId, routing }) => {
+      if (!this.currentSession || this.currentSession.id !== sessionId) return;
+      if (this.currentSession.currentStage !== 'awaiting_rejection_routing') return;
+
+      try {
+        if (routing === 'send_to_dev') {
+          const taskId = this.currentSession.task.id;
+          const qaReport = this.artifactManager.readArtifact(taskId, 'qa-report');
+          this.artifactManager.writeArtifact(
+            taskId,
+            'questions',
+            `# QA Rejection Feedback\n\n${qaReport ?? ''}\n\nPlease fix the issues identified above.`,
+          );
+          await this.transitionTo('developer');
+        } else if (routing === 'escalate_to_po') {
+          this.currentSession.qaDecision = null;
+          this.currentSession.rejectionReason = null;
+          await this.transitionTo('po');
+        }
+      } catch (err: any) {
+        console.error('Failed to route rejection:', err.message);
+      }
+    });
   }
 
   /**
@@ -274,20 +298,58 @@ export class SessionManager {
         await this.transitionTo('qa');
         break;
 
-      case 'qa':
-        // QA done → task complete!
-        this.currentSession.completedAt = new Date().toISOString();
-        await this.transitionTo('done');
+      case 'qa': {
+        const taskId = this.currentSession.task.id;
+        const qaReport = this.artifactManager.readArtifact(taskId, 'qa-report');
+        const decision = qaReport ? this.parseArtifactDecision(qaReport) : null;
 
-        eventBus.emit('session:completed', {
-          sessionId: this.currentSession.id,
-          taskId: this.currentSession.task.id,
-        });
+        if (decision === 'REJECTED' || decision === 'FAIL') {
+          this.currentSession.qaDecision = 'rejected';
+          // qaReport is guaranteed non-null here (decision derived from it)
+          const reason = this.extractRejectionReason(qaReport!);
+          this.currentSession.rejectionReason = reason;
+
+          eventBus.emit('session:qa-rejection', {
+            sessionId: this.currentSession.id,
+            taskId,
+            reason,
+          });
+
+          await this.transitionTo('awaiting_rejection_routing');
+        } else {
+          this.currentSession.qaDecision = 'approved';
+          this.currentSession.completedAt = new Date().toISOString();
+          await this.transitionTo('done');
+
+          eventBus.emit('session:completed', {
+            sessionId: this.currentSession.id,
+            taskId,
+          });
+        }
         break;
+      }
 
       default:
         break;
     }
+  }
+
+  private parseArtifactDecision(content: string): string | null {
+    const match = content.match(/##\s*(?:Decision|Verdict):\s*(\w+)/i);
+    return match ? match[1].toUpperCase() : null;
+  }
+
+  private extractRejectionReason(content: string): string {
+    const reasonMatch = content.match(/##?\s*(?:Reason|Issues|Problems)[:\s]*\n([\s\S]*?)(?=\n##|\n$|$)/i);
+    if (reasonMatch) return reasonMatch[1].trim().slice(0, 500);
+
+    const decisionIdx = content.search(/##\s*(?:Decision|Verdict):/i);
+    if (decisionIdx !== -1) {
+      const afterDecision = content.slice(decisionIdx).split('\n').slice(1).join('\n').trim();
+      return afterDecision.slice(0, 500) || 'QA rejected (no details provided)';
+    }
+
+    return 'QA rejected (no details provided)';
   }
 
   private isTerminalStage(stage: PipelineStage): boolean {
