@@ -8,3 +8,5 @@ export { SessionManager } from './SessionManager';
 export { SocketServer } from './SocketServer';
 export { UserStore } from './UserStore';
 export { AuthService } from './AuthService';
+export { parseDevTasks } from './SubtaskParser';
+export type { ParsedSubtask } from './SubtaskParser';
