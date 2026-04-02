@@ -170,11 +170,11 @@ export class SessionManager {
     const { title, description } = this.currentSession.task;
 
     // Build context from previous stage artifacts
-    const artifactContext = this.artifactManager.buildContextForRole(taskId, role);
+    const artifactContext = this.artifactManager.buildContextForRole(taskId, role, stage);
 
     // Build prompts
-    const systemPrompt = buildSystemPrompt(role, this.projectContext);
-    const taskPrompt = buildTaskPrompt(role, taskId, title, description, artifactContext);
+    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage);
+    const taskPrompt = buildTaskPrompt(role, taskId, title, description, artifactContext, stage);
 
     // Create and start the agent
     const agent = this.agentPool.createAgent(role, taskId);
@@ -270,8 +270,13 @@ export class SessionManager {
         break;
 
       case 'developer':
-        // Developer done → QA testing
-        await this.transitionTo('qa');
+        // Developer done → Tech Lead code review
+        await this.transitionTo('tl-code-review');
+        break;
+
+      case 'tl-code-review':
+        // TL code review done → check decision
+        await this.handleCodeReviewDecision();
         break;
 
       case 'qa':
@@ -287,6 +292,31 @@ export class SessionManager {
 
       default:
         break;
+    }
+  }
+
+  /**
+   * Parse a machine-readable decision from an artifact's content.
+   */
+  private parseArtifactDecision(content: string): 'APPROVED' | 'CHANGES_REQUESTED' | null {
+    const match = content.match(/##\s*Decision:\s*(APPROVED|CHANGES_REQUESTED)/i);
+    return match ? (match[1].toUpperCase() as 'APPROVED' | 'CHANGES_REQUESTED') : null;
+  }
+
+  /**
+   * Handle the TL code review decision — approve to QA or loop back to developer.
+   */
+  private async handleCodeReviewDecision(): Promise<void> {
+    if (!this.currentSession) return;
+
+    const taskId = this.currentSession.task.id;
+    const content = this.artifactManager.readArtifact(taskId, 'tl-code-review');
+    const decision = content ? this.parseArtifactDecision(content) : null;
+
+    if (decision === 'CHANGES_REQUESTED') {
+      await this.transitionTo('developer');
+    } else {
+      await this.transitionTo('qa');
     }
   }
 

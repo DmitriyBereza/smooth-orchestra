@@ -1,8 +1,8 @@
-import { AgentRole } from '../types';
+import { AgentRole, PipelineStage } from '../types';
 import { buildBaseContext } from './base';
 import { PO_PROMPT } from './po';
 import { ARCHITECT_PROMPT } from './architect';
-import { TECH_LEAD_PROMPT } from './tech-lead';
+import { TECH_LEAD_PROMPT, TECH_LEAD_CODE_REVIEW_PROMPT } from './tech-lead';
 import { DEVELOPER_PROMPT } from './developer';
 import { QA_PROMPT } from './qa';
 
@@ -18,14 +18,21 @@ const ROLE_PROMPTS: Record<AgentRole, string> = {
  * Build the complete system prompt for an agent, combining:
  * 1. Base context (team structure, communication protocol)
  * 2. Project context (codebase info, constraints)
- * 3. Role-specific prompt
+ * 3. Role-specific prompt (may vary by stage, e.g. tech-lead design vs code review)
  */
 export function buildSystemPrompt(
   role: AgentRole,
   projectContext: string,
+  stage?: PipelineStage,
 ): string {
   const base = buildBaseContext(projectContext);
-  const rolePrompt = ROLE_PROMPTS[role];
+  let rolePrompt = ROLE_PROMPTS[role];
+
+  // Override prompt when the tech-lead is doing a code review
+  if (stage === 'tl-code-review' && role === 'tech-lead') {
+    rolePrompt = TECH_LEAD_CODE_REVIEW_PROMPT;
+  }
+
   return `${base}\n\n${rolePrompt}`;
 }
 
@@ -38,6 +45,7 @@ export function buildTaskPrompt(
   taskTitle: string,
   taskDescription: string,
   artifactContext: string,
+  _stage?: PipelineStage,
 ): string {
   const parts = [
     `# Task Assignment`,
