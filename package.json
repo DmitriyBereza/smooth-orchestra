@@ -1,0 +1,41 @@
+{
+  "name": "orchestra",
+  "version": "0.1.0",
+  "description": "AI Dev Team Orchestrator — orchestrate multiple Claude Code CLI agents as a virtual software development team",
+  "main": "dist/main/index.js",
+  "author": "Dmytro Bereza",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -n main,renderer -c blue,green \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev:main": "tsc -p tsconfig.json && electron dist/main/index.js",
+    "dev:renderer": "vite --config vite.config.ts",
+    "build:main": "tsc -p tsconfig.json",
+    "build:renderer": "vite build --config vite.config.ts",
+    "build": "npm run build:main && npm run build:renderer",
+    "start": "electron dist/main/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.renderer.json"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "uuid": "^13.0.0",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
+  }
+}

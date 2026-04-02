@@ -1,0 +1,21 @@
+appId: com.orchestra.app
+productName: Orchestra
+directories:
+  output: out
+  buildResources: build
+files:
+  - dist/**/*
+  - node_modules/**/*
+  - package.json
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - dmg
+    - zip
+win:
+  target:
+    - nsis
+linux:
+  target:
+    - AppImage
+    - deb
