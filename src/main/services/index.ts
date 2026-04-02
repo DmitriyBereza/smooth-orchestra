@@ -6,3 +6,5 @@ export { AgentProcess } from './AgentProcess';
 export { AgentPool } from './AgentPool';
 export { SessionManager } from './SessionManager';
 export { SocketServer } from './SocketServer';
+export { UserStore } from './UserStore';
+export { AuthService } from './AuthService';

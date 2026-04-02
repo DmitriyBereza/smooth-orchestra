@@ -214,10 +214,11 @@ export class SessionManager {
 
     // Handle user commands from the frontend
     eventBus.on('command:create-task', async ({ title, description }) => {
+      console.log(`[SessionManager] Received create-task: "${title}"`);
       try {
         await this.createTask(title, description);
       } catch (err: any) {
-        console.error('Failed to create task:', err.message);
+        console.error('[SessionManager] Failed to create task:', err.message, err.stack);
       }
     });
 

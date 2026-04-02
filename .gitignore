@@ -4,5 +4,6 @@ out/
 .orchestra/tasks/*/
 .orchestra/locks/*.json
 .orchestra/logs/*.log
+.orchestra/users.json
 *.log
 .DS_Store

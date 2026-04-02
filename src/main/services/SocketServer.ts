@@ -1,12 +1,72 @@
 import http from 'http';
+import express, { Router, Request, Response } from 'express';
+import cors from 'cors';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { eventBus } from './EventBus';
 import { SessionManager } from './SessionManager';
 import { AgentPool } from './AgentPool';
+import { AuthService, SignupError, LoginError } from './AuthService';
+
+// ─── Auth router ─────────────────────────────────────────────────────────────
+
+/**
+ * Builds an Express Router that handles:
+ *   POST /auth/signup  → AuthService.signup()
+ *   POST /auth/login   → AuthService.login()
+ */
+function buildAuthRouter(authService: AuthService): Router {
+  const router = Router();
+
+  // POST /auth/signup
+  router.post('/signup', async (req: Request, res: Response) => {
+    const { email, password } = req.body as { email?: string; password?: string };
+
+    try {
+      await authService.signup(email ?? '', password ?? '');
+      res.status(201).json({ message: 'User created' });
+    } catch (err) {
+      if (err instanceof SignupError) {
+        if (err.code === 'DUPLICATE') {
+          res.status(409).json({ error: 'Email already registered' });
+        } else {
+          // VALIDATION
+          res.status(400).json({ error: err.message });
+        }
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  // POST /auth/login
+  router.post('/login', async (req: Request, res: Response) => {
+    const { email, password } = req.body as { email?: string; password?: string };
+
+    try {
+      const token = await authService.login(email ?? '', password ?? '');
+      res.status(200).json({ token });
+    } catch (err) {
+      if (err instanceof LoginError) {
+        res.status(401).json({ error: 'Invalid credentials' });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  return router;
+}
+
+// ─── SocketServer ─────────────────────────────────────────────────────────────
 
 /**
  * Socket.io server that bridges backend events to the React frontend.
  * Forwards EventBus events to connected clients and routes client commands back.
+ *
+ * When an AuthService is provided:
+ *   - Mounts POST /auth/signup and POST /auth/login on Express.
+ *   - Requires a valid JWT in socket.handshake.auth.token for all Socket.io
+ *     connections (rejects with a '401' error otherwise).
  */
 export class SocketServer {
   private io: SocketIOServer;
@@ -15,9 +75,21 @@ export class SocketServer {
   constructor(
     private sessionManager: SessionManager,
     private agentPool: AgentPool,
-    private port: number = 3333,
+    private authService?: AuthService,
+    private port: number = Number(process.env.AUTH_PORT) || 3333,
   ) {
-    this.httpServer = http.createServer();
+    // Create Express app and attach it as the HTTP request handler so that
+    // REST endpoints and Socket.io share a single port.
+    const app = express();
+    app.use(express.json());
+    app.use(
+      cors({
+        origin: ['http://localhost:5173', 'http://localhost:3000'],
+        methods: ['GET', 'POST'],
+      }),
+    );
+
+    this.httpServer = http.createServer(app);
     this.io = new SocketIOServer(this.httpServer, {
       cors: {
         origin: ['http://localhost:5173', 'http://localhost:3000'],
@@ -25,9 +97,32 @@ export class SocketServer {
       },
     });
 
+    // Mount auth REST routes (only when AuthService is injected)
+    if (this.authService) {
+      app.use('/auth', buildAuthRouter(this.authService));
+    }
+
+    // Socket.io JWT middleware — runs BEFORE any event handler
+    if (this.authService) {
+      this.io.use((socket: Socket, next) => {
+        const token = socket.handshake.auth?.token as string | undefined;
+        if (!token) {
+          return next(new Error('401'));
+        }
+        try {
+          this.authService!.verifyToken(token);
+          next();
+        } catch {
+          next(new Error('401'));
+        }
+      });
+    }
+
     this.setupEventForwarding();
     this.setupClientHandlers();
   }
+
+  // ─── Public API ──────────────────────────────────────────────────────────
 
   /**
    * Start listening on the configured port.
@@ -53,6 +148,20 @@ export class SocketServer {
       });
     });
   }
+
+  /**
+   * Returns the actual port the HTTP server is listening on.
+   * Useful in tests when the server is started with port 0 (OS-assigned).
+   */
+  getPort(): number {
+    const addr = this.httpServer.address();
+    if (!addr || typeof addr === 'string') {
+      throw new Error('Server is not listening or address is a pipe/socket');
+    }
+    return addr.port;
+  }
+
+  // ─── Private helpers ─────────────────────────────────────────────────────
 
   /**
    * Subscribe to EventBus events and forward them to all connected clients.
@@ -119,6 +228,7 @@ export class SocketServer {
 
       // Route commands to EventBus
       socket.on('command:create-task', (data: { title: string; description: string }) => {
+        console.log(`[SocketServer] Received command:create-task`, data);
         eventBus.emit('command:create-task', data);
       });
 

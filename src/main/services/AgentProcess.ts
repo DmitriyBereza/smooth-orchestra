@@ -39,13 +39,16 @@ export class AgentProcess {
     this.status = 'running';
 
     // Spawn claude CLI in print mode with streaming JSON output
-    this.process = spawn('claude', [
+    const args = [
       '-p', taskPrompt,
       '--system-prompt', systemPrompt,
       '--output-format', 'stream-json',
       '--max-turns', '50',
       '--verbose',
-    ], {
+      '--dangerously-skip-permissions',
+    ];
+
+    this.process = spawn('claude', args, {
       cwd: workingDirectory,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
