@@ -105,8 +105,8 @@ export class ArtifactManager {
   /**
    * Build a context string containing all artifacts a role needs to read.
    */
-  buildContextForRole(taskId: string, role: AgentRole): string {
-    const stageConfig = STAGE_ARTIFACTS[role];
+  buildContextForRole(taskId: string, role: AgentRole, stage?: PipelineStage): string {
+    const stageConfig = STAGE_ARTIFACTS[stage ?? role];
     if (!stageConfig) return '';
 
     const sections: string[] = [];

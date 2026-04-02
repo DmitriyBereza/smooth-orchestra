@@ -8,6 +8,7 @@ export type ArtifactType =
   | 'dev-notes'
   | 'qa-spec'
   | 'review'
+  | 'tl-code-review'
   | 'qa-report';
 
 export interface ArtifactMeta {
@@ -36,6 +37,10 @@ export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: Ar
     writes: ['dev-notes', 'qa-spec'],
     reads: ['story', 'design', 'dev-tasks', 'review'],
   },
+  'tl-code-review': {
+    writes: ['tl-code-review'],
+    reads: ['story', 'design', 'dev-tasks', 'dev-notes', 'qa-spec'],
+  },
   qa: {
     writes: ['qa-report'],
     reads: ['story', 'qa-spec', 'dev-notes'],
@@ -50,5 +55,6 @@ export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
   'dev-notes': 'dev-notes.md',
   'qa-spec': 'qa-spec.md',
   review: 'review.md',
+  'tl-code-review': 'tl-code-review.md',
   'qa-report': 'qa-report.md',
 };

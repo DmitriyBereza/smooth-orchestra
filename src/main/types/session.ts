@@ -7,6 +7,7 @@ export type PipelineStage =
   | 'architect'
   | 'tech-lead'
   | 'developer'
+  | 'tl-code-review'
   | 'qa'
   | 'done'
   | 'failed'
@@ -38,6 +39,7 @@ export const PIPELINE_ORDER: PipelineStage[] = [
   'architect',
   'tech-lead',
   'developer',
+  'tl-code-review',
   'qa',
   'done',
 ];
@@ -47,6 +49,7 @@ export const STAGE_TO_ROLE: Partial<Record<PipelineStage, AgentRole>> = {
   architect: 'architect',
   'tech-lead': 'tech-lead',
   developer: 'developer',
+  'tl-code-review': 'tech-lead',
   qa: 'qa',
 };
 
