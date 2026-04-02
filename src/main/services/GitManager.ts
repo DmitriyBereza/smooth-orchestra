@@ -84,6 +84,101 @@ export class GitManager {
     return stdout.trim() === '';
   }
 
+  /**
+   * Create a subtask branch from a parent branch (not from current HEAD).
+   * Checks out a new branch starting from parentBranch.
+   */
+  async createSubtaskBranch(parentBranch: string, subtaskName: string, taskId: string): Promise<void> {
+    await this.git('checkout', '-b', subtaskName, parentBranch);
+    eventBus.emit('git:branch-created', { branch: subtaskName, taskId });
+  }
+
+  /**
+   * Merge source branch into target branch using --no-ff.
+   * Returns success status and any conflict file paths on failure.
+   */
+  async mergeBranch(source: string, target: string, taskId: string): Promise<{ success: boolean; conflicts?: string[] }> {
+    eventBus.emit('git:merge-started', { source, target, taskId });
+    await this.switchBranch(target);
+    try {
+      await this.git('merge', source, '--no-ff', '-m', `Merge ${source} into ${target}`);
+      eventBus.emit('git:merge-completed', { source, target, taskId });
+      return { success: true };
+    } catch {
+      const conflicts = await this.parseConflictFiles();
+      eventBus.emit('git:merge-conflict', { source, target, taskId, conflicts });
+      // Abort the failed merge to leave the working tree clean
+      await this.git('merge', '--abort').catch(() => {});
+      return { success: false, conflicts };
+    }
+  }
+
+  /**
+   * Sequentially merge each subtask branch into parentBranch.
+   * Stops on first conflict and reports which branches merged successfully.
+   */
+  async mergeSubtaskBranches(
+    parentBranch: string,
+    subtaskBranches: string[],
+    taskId: string,
+  ): Promise<{ success: boolean; mergedBranches: string[]; failedBranch?: string; conflicts?: string[] }> {
+    const mergedBranches: string[] = [];
+
+    for (const branch of subtaskBranches) {
+      const result = await this.mergeBranch(branch, parentBranch, taskId);
+      if (!result.success) {
+        return {
+          success: false,
+          mergedBranches,
+          failedBranch: branch,
+          conflicts: result.conflicts,
+        };
+      }
+      mergedBranches.push(branch);
+    }
+
+    return { success: true, mergedBranches };
+  }
+
+  /**
+   * Dry-run merge check: returns list of conflicting files without
+   * actually completing the merge.
+   */
+  async getMergeConflicts(source: string, target: string): Promise<string[]> {
+    await this.switchBranch(target);
+    try {
+      await this.git('merge', '--no-commit', '--no-ff', source);
+      // No conflicts — abort the uncommitted merge
+      await this.git('merge', '--abort').catch(() => {});
+      return [];
+    } catch {
+      const conflicts = await this.parseConflictFiles();
+      await this.git('merge', '--abort').catch(() => {});
+      return conflicts;
+    }
+  }
+
+  /**
+   * Show diff summary against a branch (defaults to HEAD).
+   */
+  async getDiffStat(branch?: string): Promise<string> {
+    const args = branch ? ['diff', '--stat', branch] : ['diff', '--stat'];
+    const { stdout } = await this.git(...args);
+    return stdout;
+  }
+
+  /**
+   * Parse conflicting file paths from `git diff --name-only --diff-filter=U`.
+   */
+  private async parseConflictFiles(): Promise<string[]> {
+    try {
+      const { stdout } = await this.git('diff', '--name-only', '--diff-filter=U');
+      return stdout.trim().split('\n').filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
   private async git(...args: string[]): Promise<{ stdout: string; stderr: string }> {
     return execFileAsync('git', args, {
       cwd: this.projectPath,
