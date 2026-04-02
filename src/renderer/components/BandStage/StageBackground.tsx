@@ -1,94 +1,101 @@
 import React from 'react';
 
-interface StageBackgroundProps {
-  width?: number;
-  height?: number;
-}
+export const StageBackground: React.FC = () => (
+  <g>
+    <defs>
+      {/* Wall gradient — deep noir blue-black */}
+      <linearGradient id="wall-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#050510" />
+        <stop offset="100%" stopColor="#020208" />
+      </linearGradient>
 
-export const StageBackground: React.FC<StageBackgroundProps> = ({ width, height }) => {
-  return (
-    <svg
-      viewBox="0 0 960 260"
-      width={width}
-      height={height}
-      style={{ width: width ?? '100%', height: height ?? 'auto', display: 'block' }}
-      xmlns="http://www.w3.org/2000/svg"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <defs>
-        {/* Dark jazz-club wall gradient */}
-        <linearGradient id="stage-wall-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--stage-wall, #0a0a14)" />
-          <stop offset="100%" stopColor="#050508" />
-        </linearGradient>
+      {/* Mahogany floor plank pattern */}
+      <pattern id="floor-planks" x="0" y="0" width="120" height="20" patternUnits="userSpaceOnUse">
+        <rect width="120" height="20" fill="#1a0f05" />
+        <rect x="0" y="0" width="58" height="20" fill="#150c04" />
+        {/* Grain lines */}
+        <line x1="10" y1="0" x2="10" y2="20" stroke="#0d0805" strokeWidth="0.5" opacity="0.3" />
+        <line x1="30" y1="0" x2="30" y2="20" stroke="#0d0805" strokeWidth="0.5" opacity="0.3" />
+        <line x1="70" y1="0" x2="70" y2="20" stroke="#0d0805" strokeWidth="0.5" opacity="0.3" />
+        <line x1="95" y1="0" x2="95" y2="20" stroke="#0d0805" strokeWidth="0.5" opacity="0.3" />
+      </pattern>
 
-        {/* Wooden plank floor pattern */}
-        <pattern id="wood-planks" x="0" y="0" width="960" height="20" patternUnits="userSpaceOnUse">
-          <rect width="960" height="20" fill="var(--stage-floor, #1a1205)" />
-          <line x1="0" y1="0" x2="960" y2="0" stroke="#241a0a" strokeWidth="1" />
-          <line x1="0" y1="10" x2="960" y2="10" stroke="#1f150a" strokeWidth="0.5" opacity="0.5" />
-          <line x1="0" y1="19" x2="960" y2="19" stroke="#0f0a03" strokeWidth="0.5" opacity="0.3" />
-        </pattern>
+      {/* Floor reflection gradient — warm stage light on polished wood */}
+      <linearGradient id="floor-reflection" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(255,215,0,0.03)" />
+        <stop offset="100%" stopColor="rgba(255,215,0,0)" />
+      </linearGradient>
 
-        {/* Left curtain gradient */}
-        <linearGradient id="curtain-left-grad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="var(--stage-curtain, #2d0a0a)" />
-          <stop offset="100%" stopColor="var(--stage-curtain, #2d0a0a)" stopOpacity="0" />
-        </linearGradient>
+      {/* Left curtain gradient */}
+      <linearGradient id="curtain-left-grad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stopColor="#1a0a1a" />
+        <stop offset="100%" stopColor="#1a0a1a" stopOpacity="0" />
+      </linearGradient>
 
-        {/* Right curtain gradient */}
-        <linearGradient id="curtain-right-grad" x1="1" y1="0" x2="0" y2="0">
-          <stop offset="0%" stopColor="var(--stage-curtain, #2d0a0a)" />
-          <stop offset="100%" stopColor="var(--stage-curtain, #2d0a0a)" stopOpacity="0" />
-        </linearGradient>
+      {/* Right curtain gradient */}
+      <linearGradient id="curtain-right-grad" x1="1" y1="0" x2="0" y2="0">
+        <stop offset="0%" stopColor="#1a0a1a" />
+        <stop offset="100%" stopColor="#1a0a1a" stopOpacity="0" />
+      </linearGradient>
 
-        {/* Spotlight radial gradient */}
-        <radialGradient id="spotlight-grad" cx="0.5" cy="0" r="0.7">
-          <stop offset="0%" stopColor="var(--stage-spotlight, rgba(255,248,220,0.15))" />
-          <stop offset="100%" stopColor="transparent" />
-        </radialGradient>
-      </defs>
+      {/* Top vignette */}
+      <linearGradient id="vignette-top" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="rgba(0,0,0,0.6)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+      </linearGradient>
 
-      {/* Wall background */}
-      <rect width="960" height="260" fill="url(#stage-wall-grad)" />
+      {/* Corner vignettes */}
+      <radialGradient id="vignette-corner-left" cx="0" cy="0" r="1">
+        <stop offset="0%" stopColor="rgba(0,0,0,0.5)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+      </radialGradient>
+      <radialGradient id="vignette-corner-right" cx="1" cy="0" r="1">
+        <stop offset="0%" stopColor="rgba(0,0,0,0.5)" />
+        <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+      </radialGradient>
 
-      {/* Subtle spotlight on stage */}
-      <ellipse cx="480" cy="0" rx="400" ry="200" fill="url(#spotlight-grad)" opacity="0.6" />
+      {/* Smoke haze filter */}
+      <filter id="smoke-filter">
+        <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="3" result="noise" />
+        <feColorMatrix type="saturate" values="0" in="noise" result="grey" />
+        <feComponentTransfer in="grey" result="faded">
+          <feFuncA type="linear" slope="0.04" />
+        </feComponentTransfer>
+        <feBlend in="SourceGraphic" in2="faded" mode="screen" />
+      </filter>
+    </defs>
 
-      {/* Stage floor */}
-      <rect x="0" y="180" width="960" height="80" fill="url(#wood-planks)" />
+    {/* 1. Wall */}
+    <rect x="0" y="0" width="960" height="175" fill="url(#wall-grad)" />
 
-      {/* Stage lip / front edge highlight */}
-      <rect x="0" y="178" width="960" height="3" fill="#3a2a10" opacity="0.8" />
-      <rect x="0" y="178" width="960" height="1" fill="#6b4f1f" opacity="0.5" />
+    {/* 2. Floor — mahogany planks */}
+    <rect x="0" y="175" width="960" height="85" fill="url(#floor-planks)" />
+    <rect x="0" y="175" width="960" height="85" fill="url(#floor-reflection)" />
 
-      {/* Left curtain with drape curves */}
-      <path
-        d="M0,0 L80,0 Q70,40 75,80 Q80,120 70,160 Q65,200 72,260 L0,260 Z"
-        fill="url(#curtain-left-grad)"
-      />
-      {/* Curtain fold highlights */}
-      <path
-        d="M40,0 Q35,50 42,100 Q48,150 38,200 Q34,230 40,260"
-        fill="none"
-        stroke="#3d1111"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
+    {/* 3. Stage lip — decorative brass strip */}
+    <rect x="0" y="175" width="960" height="2" fill="#ffd700" opacity="0.3" />
+    <rect x="0" y="177" width="960" height="1" fill="#ffd700" opacity="0.15" />
 
-      {/* Right curtain with drape curves */}
-      <path
-        d="M960,0 L880,0 Q890,40 885,80 Q880,120 890,160 Q895,200 888,260 L960,260 Z"
-        fill="url(#curtain-right-grad)"
-      />
-      {/* Curtain fold highlights */}
-      <path
-        d="M920,0 Q925,50 918,100 Q912,150 922,200 Q926,230 920,260"
-        fill="none"
-        stroke="#3d1111"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-    </svg>
-  );
-};
+    {/* 4. Left curtain */}
+    <rect x="0" y="0" width="120" height="260" fill="url(#curtain-left-grad)" />
+    <path d="M 20,0 Q 25,130 18,260" stroke="#2a1a2a" strokeWidth="1" fill="none" opacity="0.2" />
+    <path d="M 45,0 Q 50,120 42,260" stroke="#2a1a2a" strokeWidth="1" fill="none" opacity="0.2" />
+    <path d="M 70,0 Q 78,140 65,260" stroke="#2a1a2a" strokeWidth="1" fill="none" opacity="0.2" />
+    <path d="M 95,0 Q 100,125 90,258" stroke="#2a1a2a" strokeWidth="0.8" fill="none" opacity="0.15" />
+
+    {/* 5. Right curtain */}
+    <rect x="840" y="0" width="120" height="260" fill="url(#curtain-right-grad)" />
+    <path d="M 940,0 Q 935,130 942,260" stroke="#2a1a2a" strokeWidth="1" fill="none" opacity="0.2" />
+    <path d="M 915,0 Q 910,120 918,260" stroke="#2a1a2a" strokeWidth="1" fill="none" opacity="0.2" />
+    <path d="M 890,0 Q 882,140 895,260" stroke="#2a1a2a" strokeWidth="1" fill="none" opacity="0.2" />
+    <path d="M 865,0 Q 860,125 870,258" stroke="#2a1a2a" strokeWidth="0.8" fill="none" opacity="0.15" />
+
+    {/* 6. Vignette — top and corners */}
+    <rect x="0" y="0" width="960" height="60" fill="url(#vignette-top)" />
+    <rect x="0" y="0" width="200" height="200" fill="url(#vignette-corner-left)" />
+    <rect x="760" y="0" width="200" height="200" fill="url(#vignette-corner-right)" />
+
+    {/* 7. Smoke overlay */}
+    <rect x="0" y="0" width="960" height="260" filter="url(#smoke-filter)" fill="transparent" opacity="0.8" />
+  </g>
+);

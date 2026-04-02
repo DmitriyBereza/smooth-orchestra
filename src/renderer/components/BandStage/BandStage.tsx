@@ -6,13 +6,13 @@ import { SetlistBar } from './SetlistBar';
 import './bandStage.css';
 
 // Band member positions on stage (x, y) within the 960x260 viewBox
-// Arrangement: Bassist (QA), Drummer (Dev), Conductor (PO center), Pianist (Arch), Guitarist (TL)
+// Spread out for deep noir stage
 const MEMBER_POSITIONS: { role: AgentRole; x: number; y: number }[] = [
-  { role: 'qa',        x: 60,  y: 60 },   // Bassist — far left
-  { role: 'developer', x: 220, y: 50 },   // Drummer — left of center
-  { role: 'po',        x: 410, y: 40 },   // Conductor — center stage
-  { role: 'architect', x: 580, y: 55 },   // Pianist — right of center
-  { role: 'tech-lead', x: 760, y: 60 },   // Lead Guitarist — far right
+  { role: 'qa',        x: 40,  y: 70 },
+  { role: 'developer', x: 200, y: 60 },
+  { role: 'po',        x: 400, y: 45 },
+  { role: 'architect', x: 590, y: 65 },
+  { role: 'tech-lead', x: 770, y: 70 },
 ];
 
 export const BandStage: React.FC = () => {
@@ -52,13 +52,12 @@ export const BandStage: React.FC = () => {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     flexShrink: 0,
-    borderBottom: '1px solid var(--border-color)',
-    backgroundColor: 'var(--bg-primary)',
+    backgroundColor: '#050505',
     overflow: 'hidden',
   },
   svg: {
     display: 'block',
-    maxHeight: 240,
+    maxHeight: 280,
     width: '100%',
   },
 };
