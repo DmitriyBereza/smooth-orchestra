@@ -30,7 +30,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   label: {
     fontSize: 11,
-    color: 'var(--text-muted)',
+    fontFamily: 'var(--font-typewriter)',
+    color: 'var(--text-secondary)',
     fontWeight: 500,
   },
 };

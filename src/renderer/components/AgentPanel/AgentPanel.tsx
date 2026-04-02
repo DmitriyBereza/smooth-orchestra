@@ -30,7 +30,7 @@ export const AgentPanel: React.FC = () => {
                 ...styles.tab,
                 borderBottomColor: isActive ? ROLE_COLORS[role] : 'transparent',
                 color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
+                backgroundColor: isActive ? 'rgba(26, 26, 46, 0.8)' : 'transparent',
               }}
               onClick={() => setActiveTab(role)}
             >
@@ -59,7 +59,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid var(--border-color)',
+    borderBottom: '1px solid rgba(255, 215, 0, 0.1)',
+    backgroundColor: '#0a0a14',
     flexShrink: 0,
     overflowX: 'auto',
   },
