@@ -18,6 +18,9 @@ export interface OrchestraEventMap {
   'git:branch-created': (data: { branch: string; taskId: string }) => void;
   'git:branch-switched': (data: { branch: string }) => void;
   'git:branch-deleted': (data: { branch: string }) => void;
+  'git:merge-started': (data: { source: string; target: string; taskId: string }) => void;
+  'git:merge-completed': (data: { source: string; target: string; taskId: string }) => void;
+  'git:merge-conflict': (data: { source: string; target: string; taskId: string; conflicts: string[] }) => void;
 
   // Lock events
   'lock:acquired': (data: { filepath: string; holder: string; taskId: string }) => void;
