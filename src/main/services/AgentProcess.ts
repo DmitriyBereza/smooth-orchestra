@@ -94,6 +94,7 @@ export class AgentProcess {
         role: this.role,
         exitCode,
         taskId: this.taskId,
+        agentId: this.id,
       });
 
       eventBus.emit('agent:status-changed', {
@@ -111,6 +112,7 @@ export class AgentProcess {
         role: this.role,
         exitCode: 1,
         taskId: this.taskId,
+        agentId: this.id,
       });
 
       eventBus.emit('agent:status-changed', {

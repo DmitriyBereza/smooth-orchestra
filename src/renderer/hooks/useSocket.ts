@@ -27,6 +27,8 @@ export function useSocket() {
     setAgents,
     updateAgentStatus,
     addEvent,
+    setSubtasks,
+    updateSubtask,
   } = useStore();
 
   useEffect(() => {
@@ -46,10 +48,14 @@ export function useSocket() {
     s.on('session:snapshot', (data: { session: any; agents: any[] }) => {
       setSession(data.session);
       setAgents(data.agents);
+      if (data.session?.subtasks) {
+        setSubtasks(data.session.subtasks);
+      }
     });
 
     s.on('session:created', (session: any) => {
       setSession(session);
+      setSubtasks(session.subtasks || []);
       addEvent(`Task created: ${session.task.title}`, 'session');
     });
 
@@ -87,6 +93,26 @@ export function useSocket() {
     // Artifact events
     s.on('artifact:written', (data: { taskId: string; name: string }) => {
       addEvent(`Artifact written: ${data.name} (${data.taskId})`, 'artifact');
+    });
+
+    // Subtask events (parallel dev)
+    s.on('session:subtask-started', (data: { taskId: string; subtaskId: string; agentId: string }) => {
+      updateSubtask(data.subtaskId, { status: 'in_progress', assignedAgentId: data.agentId });
+      addEvent(`Subtask started: ${data.subtaskId}`, 'agent');
+    });
+
+    s.on('session:subtask-completed', (data: { taskId: string; subtaskId: string }) => {
+      updateSubtask(data.subtaskId, { status: 'completed' });
+      addEvent(`Subtask completed: ${data.subtaskId}`, 'agent');
+    });
+
+    s.on('session:subtask-failed', (data: { taskId: string; subtaskId: string; error: string }) => {
+      updateSubtask(data.subtaskId, { status: 'failed' });
+      addEvent(`Subtask failed: ${data.subtaskId} — ${data.error}`, 'error');
+    });
+
+    s.on('session:all-subtasks-completed', (data: { taskId: string }) => {
+      addEvent(`All subtasks completed for ${data.taskId}`, 'session');
     });
 
     // Git events

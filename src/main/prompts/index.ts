@@ -31,6 +31,7 @@ export function buildSystemPrompt(
 
 /**
  * Build the initial task prompt sent to an agent when it starts working.
+ * Optionally includes subtask assignment details for parallel dev.
  */
 export function buildTaskPrompt(
   role: AgentRole,
@@ -38,6 +39,7 @@ export function buildTaskPrompt(
   taskTitle: string,
   taskDescription: string,
   artifactContext: string,
+  subtask?: { index: number; files: string[]; title: string },
 ): string {
   const parts = [
     `# Task Assignment`,
@@ -48,6 +50,13 @@ export function buildTaskPrompt(
     ``,
     `**Your artifacts directory**: \`.orchestra/tasks/${taskId}/\``,
   ];
+
+  if (subtask) {
+    parts.push(``, `## Subtask Assignment`, ``);
+    parts.push(`**Subtask ${subtask.index}**: ${subtask.title}`);
+    parts.push(`**Assigned Files**: ${subtask.files.join(', ')}`);
+    parts.push(`Only modify your assigned files.`);
+  }
 
   if (artifactContext) {
     parts.push(``, `# Context from Previous Stages`, ``, artifactContext);

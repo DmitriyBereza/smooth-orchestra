@@ -5,7 +5,7 @@ export type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed';
 export type PipelineStage =
   | 'idle' | 'po' | 'awaiting_user_review' | 'architect'
-  | 'tech-lead' | 'developer' | 'qa' | 'done' | 'failed' | 'rejected';
+  | 'tech-lead' | 'developer' | 'parallel-dev' | 'qa' | 'done' | 'failed' | 'rejected';
 
 export interface AgentMessage {
   id: string;
@@ -22,6 +22,17 @@ export interface AgentInfo {
   taskId: string | null;
   pid: number | null;
   tokensUsed: { input: number; output: number };
+}
+
+export interface SubtaskState {
+  id: string;
+  index: number;
+  parentTaskId: string;
+  title: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  assignedAgentId: string | null;
+  gitBranch: string;
+  files: string[];
 }
 
 export interface TaskDefinition {
@@ -41,6 +52,7 @@ export interface SessionState {
   startedAt: string;
   completedAt: string | null;
   error: string | null;
+  subtasks: SubtaskState[];
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
@@ -66,6 +78,7 @@ export const STAGE_DISPLAY: Record<PipelineStage, string> = {
   architect: 'Architect',
   'tech-lead': 'Tech Lead Review',
   developer: 'Development',
+  'parallel-dev': 'Parallel Dev',
   qa: 'QA Testing',
   done: 'Done',
   failed: 'Failed',
@@ -91,6 +104,11 @@ interface OrchestraStore {
   agents: AgentInfo[];
   setAgents: (agents: AgentInfo[]) => void;
   updateAgentStatus: (role: AgentRole, status: AgentStatus) => void;
+
+  // Subtasks (parallel dev)
+  subtasks: SubtaskState[];
+  setSubtasks: (subtasks: SubtaskState[]) => void;
+  updateSubtask: (subtaskId: string, update: Partial<SubtaskState>) => void;
 
   // Event log
   events: Array<{ timestamp: string; message: string; type: string }>;
@@ -137,6 +155,16 @@ export const useStore = create<OrchestraStore>((set) => ({
     set((state) => ({
       agents: state.agents.map((a) =>
         a.role === role ? { ...a, status } : a
+      ),
+    })),
+
+  // Subtasks
+  subtasks: [],
+  setSubtasks: (subtasks) => set({ subtasks }),
+  updateSubtask: (subtaskId, update) =>
+    set((state) => ({
+      subtasks: state.subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, ...update } : s,
       ),
     })),
 

@@ -6,13 +6,19 @@ export interface OrchestraEventMap {
   'agent:output': (message: AgentMessage) => void;
   'agent:status-changed': (data: { role: AgentRole; status: AgentStatus; taskId: string }) => void;
   'agent:spawned': (data: { role: AgentRole; pid: number; taskId: string }) => void;
-  'agent:exited': (data: { role: AgentRole; exitCode: number | null; taskId: string }) => void;
+  'agent:exited': (data: { role: AgentRole; exitCode: number | null; taskId: string; agentId?: string }) => void;
 
   // Session/pipeline events
   'session:created': (session: SessionState) => void;
   'session:stage-changed': (data: { sessionId: string; from: PipelineStage; to: PipelineStage }) => void;
   'session:completed': (data: { sessionId: string; taskId: string }) => void;
   'session:failed': (data: { sessionId: string; taskId: string; error: string }) => void;
+
+  // Subtask events (parallel dev)
+  'session:subtask-started': (data: { taskId: string; subtaskId: string; agentId: string }) => void;
+  'session:subtask-completed': (data: { taskId: string; subtaskId: string; agentId: string }) => void;
+  'session:subtask-failed': (data: { taskId: string; subtaskId: string; agentId: string; error: string }) => void;
+  'session:all-subtasks-completed': (data: { taskId: string }) => void;
 
   // Git events
   'git:branch-created': (data: { branch: string; taskId: string }) => void;

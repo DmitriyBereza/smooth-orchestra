@@ -201,6 +201,23 @@ export class SocketServer {
       this.io.emit('session:failed', data);
     });
 
+    // Subtask events (parallel dev)
+    eventBus.on('session:subtask-started', (data) => {
+      this.io.emit('session:subtask-started', data);
+    });
+
+    eventBus.on('session:subtask-completed', (data) => {
+      this.io.emit('session:subtask-completed', data);
+    });
+
+    eventBus.on('session:subtask-failed', (data) => {
+      this.io.emit('session:subtask-failed', data);
+    });
+
+    eventBus.on('session:all-subtasks-completed', (data) => {
+      this.io.emit('session:all-subtasks-completed', data);
+    });
+
     // Artifact events
     eventBus.on('artifact:written', (data) => {
       this.io.emit('artifact:written', data);
