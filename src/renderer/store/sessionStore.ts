@@ -128,6 +128,10 @@ interface OrchestraStore {
     search: string;
   };
   setEventFilter: (filters: Partial<{ category: string | null; role: string | null; search: string }>) => void;
+
+  // Band stage: selected agent (from clicking a band member)
+  selectedAgent: AgentRole | null;
+  setSelectedAgent: (role: AgentRole | null) => void;
 }
 
 export const useStore = create<OrchestraStore>((set) => ({
@@ -199,4 +203,8 @@ export const useStore = create<OrchestraStore>((set) => ({
     set((state) => ({
       eventFilters: { ...state.eventFilters, ...filters },
     })),
+
+  // Band stage
+  selectedAgent: null,
+  setSelectedAgent: (role) => set({ selectedAgent: role }),
 }));

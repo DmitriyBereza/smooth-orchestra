@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSocket } from './hooks/useSocket';
-import { PipelineView } from './components/Pipeline/PipelineView';
+import { BandStage } from './components/BandStage/BandStage';
 import { TaskBoard } from './components/TaskBoard/TaskBoard';
 import { AgentPanel } from './components/AgentPanel/AgentPanel';
 import { StatusBar } from './components/common/StatusBar';
@@ -12,8 +12,8 @@ const App: React.FC = () => {
 
   return (
     <div style={styles.app}>
-      {/* Top: Pipeline visualization */}
-      <PipelineView />
+      {/* Top: Band stage visualization */}
+      <BandStage />
 
       {/* Middle: Task board (left) + Agent output (right) */}
       <div style={styles.main}>
