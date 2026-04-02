@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AgentRole, ROLE_DISPLAY_NAMES, ROLE_COLORS, useStore, SubtaskState } from '../../store/sessionStore';
 import { AgentTab } from './AgentTab';
 
@@ -17,17 +17,6 @@ export const AgentPanel: React.FC = () => {
   const session = useStore((s) => s.session);
   const agents = useStore((s) => s.agents);
   const subtasks = useStore((s) => s.subtasks);
-  const selectedAgent = useStore((s) => s.selectedAgent);
-  const setSelectedAgent = useStore((s) => s.setSelectedAgent);
-
-  // When a band member is clicked on the stage, switch to their tab
-  useEffect(() => {
-    if (selectedAgent) {
-      setActiveTab(selectedAgent);
-      setActiveSubtaskId(null);
-      setSelectedAgent(null);
-    }
-  }, [selectedAgent, setSelectedAgent]);
 
   const isParallelDev = session?.currentStage === 'parallel-dev' && subtasks.length > 0;
   const showSubtaskTabs = isParallelDev && activeTab === 'developer';
@@ -47,7 +36,7 @@ export const AgentPanel: React.FC = () => {
                 ...styles.tab,
                 borderBottomColor: isActive ? ROLE_COLORS[role] : 'transparent',
                 color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                backgroundColor: isActive ? 'rgba(26, 26, 46, 0.8)' : 'transparent',
+                backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
               }}
               onClick={() => {
                 setActiveTab(role);
@@ -113,8 +102,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid rgba(255, 215, 0, 0.1)',
-    backgroundColor: '#0a0a14',
+    borderBottom: '1px solid var(--border-color)',
     flexShrink: 0,
     overflowX: 'auto',
   },

@@ -19,13 +19,13 @@ export const StatusBar: React.FC = () => {
           <span
             className={`status-dot ${connected ? 'completed' : 'failed'}`}
           />
-          <span style={styles.orchestraLabel}>Orchestra</span>
+          Orchestra
         </span>
 
         {session && (
           <>
             <span style={styles.separator}>|</span>
-            <span style={{ ...styles.item, fontFamily: 'var(--font-typewriter)' }}>
+            <span style={styles.item}>
               {session.task.id}: {STAGE_DISPLAY[session.currentStage]}
             </span>
             {session.gitBranch && (
@@ -42,14 +42,14 @@ export const StatusBar: React.FC = () => {
 
       <div style={styles.right}>
         {runningCount > 0 && (
-          <span style={{ ...styles.item, color: '#ffd700' }}>
+          <span style={styles.item}>
             {runningCount} agent{runningCount > 1 ? 's' : ''} running
           </span>
         )}
         {totalTokens > 0 && (
           <>
             <span style={styles.separator}>|</span>
-            <span style={{ ...styles.item, color: '#ffd700' }}>
+            <span style={styles.item}>
               {totalTokens.toLocaleString()} tokens
             </span>
           </>
@@ -60,7 +60,7 @@ export const StatusBar: React.FC = () => {
 };
 
 const GitIcon: React.FC = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="#e8dcc8" style={{ verticalAlign: 'middle' }}>
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style={{ verticalAlign: 'middle' }}>
     <path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 2.122a2.25 2.25 0 1 0-1.5 0v.878A2.25 2.25 0 0 0 5.75 8.5h1.5v2.128a2.251 2.251 0 1 0 1.5 0V8.5h1.5a2.25 2.25 0 0 0 2.25-2.25v-.878a2.25 2.25 0 1 0-1.5 0v.878a.75.75 0 0 1-.75.75h-4.5A.75.75 0 0 1 5 6.25v-.878zm3.75 7.378a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm3-8.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5z" />
   </svg>
 );
@@ -68,13 +68,12 @@ const GitIcon: React.FC = () => (
 const styles: Record<string, React.CSSProperties> = {
   container: {
     padding: '4px 16px',
-    backgroundColor: '#0a0a14',
-    borderTop: '1px solid rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'var(--accent-blue)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     fontSize: 11,
-    color: '#e8dcc8',
+    color: 'white',
     flexShrink: 0,
   },
   left: {
@@ -92,11 +91,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 4,
   },
-  orchestraLabel: {
-    fontFamily: 'var(--font-sans)',
-    textShadow: '0 0 4px rgba(255, 215, 0, 0.3)',
-  },
   separator: {
-    color: 'rgba(255, 215, 0, 0.2)',
+    color: 'rgba(255,255,255,0.3)',
   },
 };

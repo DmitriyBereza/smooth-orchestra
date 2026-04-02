@@ -65,7 +65,7 @@ export const AgentTab: React.FC<AgentTabProps> = ({ role }) => {
               key={msg.id}
               style={{
                 ...styles.line,
-                color: msg.type === 'stderr' ? '#ff4500' : '#e8dcc8',
+                color: msg.type === 'stderr' ? 'var(--accent-red)' : 'var(--text-primary)',
               }}
             >
               {formatOutput(msg.content)}
@@ -113,8 +113,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottom: '1px solid rgba(255, 215, 0, 0.1)',
-    backgroundColor: 'rgba(10, 10, 20, 0.5)',
+    borderBottom: '1px solid var(--border-color)',
     flexShrink: 0,
   },
   roleInfo: {
@@ -125,31 +124,29 @@ const styles: Record<string, React.CSSProperties> = {
   roleIndicator: {
     width: 10,
     height: 10,
-    borderRadius: '50%',
+    borderRadius: 2,
   },
   roleName: {
     fontSize: 13,
     fontWeight: 600,
-    fontFamily: 'var(--font-sans)',
-    color: '#ffd700',
+    color: 'var(--text-primary)',
   },
   tokens: {
     fontSize: 11,
     fontFamily: 'var(--font-mono)',
-    color: '#ffd700',
+    color: 'var(--text-muted)',
   },
   output: {
     flex: 1,
     overflowY: 'auto',
     padding: 12,
-    fontFamily: 'var(--font-typewriter)',
+    fontFamily: 'var(--font-mono)',
     fontSize: 12,
     lineHeight: 1.6,
-    backgroundColor: '#050505',
-    color: '#e8dcc8',
+    backgroundColor: 'var(--bg-primary)',
   },
   empty: {
-    color: '#5c5470',
+    color: 'var(--text-muted)',
     fontStyle: 'italic',
     fontSize: 12,
   },

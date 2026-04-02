@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSocket } from './hooks/useSocket';
-import { BandStage } from './components/BandStage/BandStage';
+import { PipelineView } from './components/Pipeline/PipelineView';
 import { TaskBoard } from './components/TaskBoard/TaskBoard';
 import { AgentPanel } from './components/AgentPanel/AgentPanel';
 import { StatusBar } from './components/common/StatusBar';
@@ -12,8 +12,8 @@ const App: React.FC = () => {
 
   return (
     <div style={styles.app}>
-      {/* Top: Band stage visualization */}
-      <BandStage />
+      {/* Top: Pipeline visualization */}
+      <PipelineView />
 
       {/* Middle: Task board (left) + Agent output (right) */}
       <div style={styles.main}>
@@ -35,7 +35,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
-    backgroundColor: '#050505',
+    backgroundColor: 'var(--bg-primary)',
   },
   main: {
     display: 'flex',

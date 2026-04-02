@@ -68,11 +68,11 @@ export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
 };
 
 export const ROLE_COLORS: Record<AgentRole, string> = {
-  po: '#ffd700',
-  architect: '#9b59b6',
-  'tech-lead': '#ff4500',
-  developer: '#ffd700',
-  qa: '#e8dcc8',
+  po: '#3B82F6',
+  architect: '#8B5CF6',
+  'tech-lead': '#F97316',
+  developer: '#22C55E',
+  qa: '#EF4444',
 };
 
 export const STAGE_DISPLAY: Record<PipelineStage, string> = {
@@ -128,10 +128,6 @@ interface OrchestraStore {
     search: string;
   };
   setEventFilter: (filters: Partial<{ category: string | null; role: string | null; search: string }>) => void;
-
-  // Band stage: selected agent (from clicking a band member)
-  selectedAgent: AgentRole | null;
-  setSelectedAgent: (role: AgentRole | null) => void;
 }
 
 export const useStore = create<OrchestraStore>((set) => ({
@@ -203,8 +199,4 @@ export const useStore = create<OrchestraStore>((set) => ({
     set((state) => ({
       eventFilters: { ...state.eventFilters, ...filters },
     })),
-
-  // Band stage
-  selectedAgent: null,
-  setSelectedAgent: (role) => set({ selectedAgent: role }),
 }));
