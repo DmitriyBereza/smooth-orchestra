@@ -10,6 +10,7 @@ import {
   AgentPool,
   ArtifactManager,
   AuthService,
+  EventLogger,
   FileLockManager,
   GitManager,
   SessionManager,
@@ -66,8 +67,11 @@ async function main(): Promise<void> {
     sessionManager.setProjectContext(fs.readFileSync(projectMdPath, 'utf-8'));
   }
 
-  // Start socket server (with auth)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService);
+  // Initialize event logger
+  const eventLogger = new EventLogger(orchestraDir);
+
+  // Start socket server (with auth and event logger)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger);
   await socketServer.start();
 
   console.log('[Orchestra] Server ready. Open http://localhost:5173 in your browser.');
