@@ -1,91 +1,151 @@
 import React from 'react';
 
-interface MemberProps {
+interface BassistProps {
   playing: boolean;
 }
 
-export const Bassist: React.FC<MemberProps> = ({ playing }) => {
-  return (
-    <svg viewBox="0 0 120 180" width="120" height="180" xmlns="http://www.w3.org/2000/svg">
-      <g className={playing ? 'member-playing' : 'member-idle'}>
+export const Bassist: React.FC<BassistProps> = ({ playing }) => (
+  <svg viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+    {/* === Upright Double Bass === */}
 
-        {/* Legs */}
-        <rect x="44" y="124" width="11" height="38" rx="4" fill="#2a2a3e" />
-        <rect x="60" y="124" width="11" height="38" rx="4" fill="#2a2a3e" />
-        {/* Shoes */}
-        <rect x="42" y="158" width="15" height="7" rx="3" fill="#1a1a2e" />
-        <rect x="58" y="158" width="15" height="7" rx="3" fill="#1a1a2e" />
+    {/* Double bass body — tall figure-8 / teardrop shape */}
+    <path
+      d="M 38 90 Q 28 95 26 110 Q 24 125 30 135 Q 34 142 42 145
+         Q 50 148 56 145 Q 62 142 66 135 Q 72 125 70 110
+         Q 68 95 58 90 Q 52 87 48 87 Q 42 87 38 90 Z"
+      fill="#1a0f05"
+    />
+    {/* Upper bout (narrower waist and upper body) */}
+    <path
+      d="M 40 72 Q 34 76 33 84 Q 32 88 38 90
+         Q 42 87 48 87 Q 52 87 58 90
+         Q 64 88 63 84 Q 62 76 56 72 Q 50 68 48 68 Q 42 68 40 72 Z"
+      fill="#1a0f05"
+    />
+    {/* F-holes — two S-curves */}
+    <path
+      d="M 40 105 Q 42 110 40 115"
+      fill="none"
+      stroke="#0a0a14"
+      strokeWidth="1"
+      strokeLinecap="round"
+    />
+    <path
+      d="M 56 105 Q 54 110 56 115"
+      fill="none"
+      stroke="#0a0a14"
+      strokeWidth="1"
+      strokeLinecap="round"
+    />
+    {/* Bridge */}
+    <rect x="40" y="120" width="16" height="2" rx="0.5" fill="#2a2a3e" />
+    {/* Strings — 4 thin vertical lines */}
+    <line x1="43" y1="72" x2="43" y2="120" stroke="#2a2a3e" strokeWidth="0.4" />
+    <line x1="46" y1="72" x2="46" y2="120" stroke="#2a2a3e" strokeWidth="0.4" />
+    <line x1="50" y1="72" x2="50" y2="120" stroke="#2a2a3e" strokeWidth="0.4" />
+    <line x1="53" y1="72" x2="53" y2="120" stroke="#2a2a3e" strokeWidth="0.4" />
+    {/* Tailpiece */}
+    <path d="M 44 122 L 48 140 L 52 122" fill="none" stroke="#2a2a3e" strokeWidth="0.6" />
 
-        {/* === Bass Guitar — larger/thicker than lead guitar === */}
-        <g>
-          {/* Bass neck — long, thick, extending up-left */}
-          <rect x="22" y="42" width="8" height="62" rx="3" fill="#5a3a1a" transform="rotate(-20, 26, 73)" />
-          {/* Headstock — larger */}
-          <rect x="12" y="30" width="12" height="18" rx="4" fill="#3a2a1a" transform="rotate(-20, 18, 39)" />
-          {/* Tuning pegs */}
-          <circle cx="11" cy="32" r="2.5" fill="#888" />
-          <circle cx="11" cy="39" r="2.5" fill="#888" />
-          <circle cx="25" cy="28" r="2.5" fill="#888" />
-          <circle cx="25" cy="35" r="2.5" fill="#888" />
-          {/* Bass body — noticeably larger and rounder than lead guitar */}
-          <ellipse cx="58" cy="114" rx="22" ry="18" fill="#3a2a1a" />
-          <ellipse cx="56" cy="110" rx="17" ry="13" fill="#4a3520" />
-          {/* Pickup — single, wider */}
-          <rect x="48" y="108" width="16" height="4" rx="1.5" fill="#666" />
-          {/* Bridge */}
-          <rect x="50" y="120" width="12" height="3" rx="1" fill="#888" />
-          {/* Strings — 4 thick bass strings */}
-          <line x1="26" y1="50" x2="53" y2="108" stroke="#ccc" strokeWidth="0.8" />
-          <line x1="28" y1="50" x2="55" y2="108" stroke="#ccc" strokeWidth="0.8" />
-          <line x1="30" y1="50" x2="57" y2="108" stroke="#ccc" strokeWidth="0.8" />
-          <line x1="32" y1="50" x2="59" y2="108" stroke="#ccc" strokeWidth="0.8" />
-          {/* Strap button */}
-          <circle cx="78" cy="100" r="2" fill="#888" />
-        </g>
+    {/* Double bass neck — extending up */}
+    <rect x="46" y="28" width="4" height="42" rx="1" fill="#1a0f05" />
+    {/* Scroll / pegbox at top */}
+    <path
+      d="M 45 28 Q 44 22 48 20 Q 52 18 51 24 L 51 28"
+      fill="#1a0f05"
+    />
+    {/* Tuning pegs */}
+    <line x1="44" y1="26" x2="42" y2="25" stroke="#2a2a3e" strokeWidth="1" />
+    <line x1="44" y1="30" x2="42" y2="31" stroke="#2a2a3e" strokeWidth="1" />
+    <line x1="52" y1="26" x2="54" y2="25" stroke="#2a2a3e" strokeWidth="1" />
+    <line x1="52" y1="30" x2="54" y2="31" stroke="#2a2a3e" strokeWidth="1" />
 
-        {/* Torso / body — slightly wider, grounded stance */}
-        <rect x="40" y="74" width="38" height="52" rx="8" fill="#2a2a3e" />
-        {/* Red accent vest */}
-        <rect x="46" y="77" width="26" height="46" rx="5" fill="#EF4444" />
-        {/* Vest details — darker center line */}
-        <line x1="59" y1="80" x2="59" y2="120" stroke="#c03030" strokeWidth="1.5" />
+    {/* Gold edge highlight on bass body */}
+    <path
+      d="M 58 90 Q 68 95 70 110 Q 72 125 66 135"
+      fill="none"
+      stroke="#ffd700"
+      strokeWidth="0.5"
+      opacity="0.15"
+    />
 
-        {/* Neck */}
-        <rect x="54" y="62" width="10" height="14" rx="4" fill="#d4a574" />
+    {/* Endpin */}
+    <line x1="48" y1="145" x2="48" y2="170" stroke="#2a2a3e" strokeWidth="1" />
 
-        {/* Head */}
-        <circle cx="59" cy="54" r="16" fill="#d4a574" />
-        {/* Eyes — calm, steady gaze */}
-        <circle cx="53" cy="52" r="2" fill="#1a1a2e" />
-        <circle cx="65" cy="52" r="2" fill="#1a1a2e" />
-        {/* Slight smile — confident */}
-        <path d="M54,59 Q59,63 64,59" fill="none" stroke="#a07050" strokeWidth="1.5" strokeLinecap="round" />
-        {/* Beanie/cap */}
-        <path d="M43,48 Q43,32 59,32 Q75,32 75,48" fill="#EF4444" />
-        <rect x="43" y="46" width="32" height="5" rx="2" fill="#c03030" />
+    {/* === Standing Figure — leaning into the bass === */}
 
-        {/* Left arm — on bass neck (static) */}
-        <g>
-          {/* Upper arm */}
-          <rect x="32" y="78" width="10" height="26" rx="4" fill="#2a2a3e" transform="rotate(12, 37, 78)" />
-          {/* Hand gripping neck */}
-          <circle cx="28" cy="74" r="5.5" fill="#d4a574" />
-        </g>
+    {/* Head — dark silhouette, no cap */}
+    <circle cx="72" cy="42" r="10" fill="#0a0a14" />
+    <path
+      d="M 66 34 A 10 10 0 0 1 78 34"
+      fill="none"
+      stroke="#ffd700"
+      strokeWidth="0.5"
+      opacity="0.2"
+    />
 
-        {/* Right arm — plucking hand (animated) */}
-        <g className="bassist-pluck-hand" style={{ transformOrigin: '65px 105px' }}>
-          {/* Upper arm */}
-          <rect x="76" y="82" width="10" height="22" rx="4" fill="#2a2a3e" transform="rotate(-15, 81, 82)" />
-          {/* Forearm */}
-          <rect x="72" y="100" width="8" height="14" rx="3" fill="#d4a574" transform="rotate(8, 76, 100)" />
-          {/* Hand / fingers near strings */}
-          <circle cx="70" cy="114" r="5.5" fill="#d4a574" />
-          {/* Fingers extended for plucking */}
-          <line x1="67" y1="112" x2="64" y2="116" stroke="#c49564" strokeWidth="2" strokeLinecap="round" />
-          <line x1="70" y1="113" x2="68" y2="118" stroke="#c49564" strokeWidth="2" strokeLinecap="round" />
-        </g>
+    {/* Torso — angled toward bass */}
+    <path
+      d="M 64 52 L 60 56 L 56 98 L 64 102 L 76 102 L 84 98 L 82 56 L 78 52 Z"
+      fill="#0a0a14"
+    />
+    {/* Edge light on far side */}
+    <path
+      d="M 78 52 L 82 56 L 84 98"
+      fill="none"
+      stroke="#ffd700"
+      strokeWidth="0.5"
+      opacity="0.2"
+    />
 
-      </g>
-    </svg>
-  );
-};
+    {/* Left arm — grips double bass neck near top */}
+    <path
+      d="M 64 56 L 58 50 L 52 42 L 50 38"
+      fill="none"
+      stroke="#111122"
+      strokeWidth="5"
+      strokeLinecap="round"
+    />
+    {/* Left hand gripping neck */}
+    <circle cx="50" cy="38" r="3" fill="#0a0a14" />
+
+    {/* Right arm — plucking hand, animated */}
+    <g
+      className={playing ? 'member-playing bassist-pluck-hand' : 'member-idle bassist-pluck-hand'}
+      style={{ transformOrigin: '65px 105px' }}
+    >
+      {/* Forearm reaching to strings near bridge */}
+      <path
+        d="M 78 60 L 74 80 L 66 100 L 58 115"
+        fill="none"
+        stroke="#111122"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+      {/* Hand near bridge / strings */}
+      <circle cx="57" cy="116" r="3.5" fill="#0a0a14" />
+    </g>
+
+    {/* Legs — one foot forward (jazz bassist posture) */}
+    <path
+      d="M 64 100 L 58 130 L 54 155 L 50 165"
+      fill="none"
+      stroke="#0a0a14"
+      strokeWidth="5.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M 76 100 L 80 130 L 82 155 L 84 165"
+      fill="none"
+      stroke="#0a0a14"
+      strokeWidth="5.5"
+      strokeLinecap="round"
+    />
+
+    {/* Shoes */}
+    <rect x="46" y="163" width="10" height="4" rx="2" fill="#0a0a14" />
+    <rect x="80" y="163" width="10" height="4" rx="2" fill="#0a0a14" />
+  </svg>
+);
+
+export default Bassist;

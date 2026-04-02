@@ -1,101 +1,130 @@
 import React from 'react';
 
-interface MemberProps {
+interface DrummerProps {
   playing: boolean;
 }
 
-export const Drummer: React.FC<MemberProps> = ({ playing }) => {
-  return (
-    <svg viewBox="0 0 120 180" width="120" height="180" xmlns="http://www.w3.org/2000/svg">
-      <g className={playing ? 'member-playing' : 'member-idle'}>
+export const Drummer: React.FC<DrummerProps> = ({ playing }) => (
+  <svg viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+    {/* === Drum Kit === */}
 
-        {/* === Drum Kit === */}
+    {/* Bass drum — dark circle */}
+    <circle cx="60" cy="148" r="18" fill="#1a1a2e" />
+    <circle cx="60" cy="148" r="18" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    <circle cx="60" cy="148" r="14" fill="#111122" />
 
-        {/* Bass drum — large, front-facing */}
-        <ellipse cx="60" cy="148" rx="28" ry="22" fill="#3a3a4e" />
-        <ellipse cx="60" cy="148" rx="24" ry="18" fill="#2a2a3e" />
-        {/* Green accent trim on bass drum */}
-        <ellipse cx="60" cy="148" rx="24" ry="18" fill="none" stroke="#22C55E" strokeWidth="2.5" />
-        {/* Bass drum logo circle */}
-        <circle cx="60" cy="148" r="8" fill="none" stroke="#22C55E" strokeWidth="1" />
+    {/* Floor tom — left */}
+    <ellipse cx="30" cy="125" rx="12" ry="5" fill="#1a1a2e" />
+    <ellipse cx="30" cy="125" rx="12" ry="5" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    <rect x="18" y="125" width="24" height="12" fill="#1a1a2e" />
 
-        {/* Snare drum — small ellipse in front */}
-        <ellipse cx="54" cy="122" rx="12" ry="5" fill="#4a4a5e" />
-        <rect x="42" y="122" width="24" height="8" rx="2" fill="#3a3a4e" />
-        <ellipse cx="54" cy="130" rx="12" ry="4" fill="#4a4a5e" />
-        {/* Snare stand */}
-        <line x1="54" y1="130" x2="54" y2="142" stroke="#666" strokeWidth="2" />
+    {/* Rack tom — center */}
+    <ellipse cx="60" cy="100" rx="10" ry="4" fill="#1a1a2e" />
+    <ellipse cx="60" cy="100" rx="10" ry="4" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    <rect x="50" y="100" width="20" height="8" fill="#1a1a2e" />
 
-        {/* Hi-hat — left side */}
-        <line x1="24" y1="90" x2="24" y2="135" stroke="#666" strokeWidth="2" />
-        <ellipse cx="24" cy="90" rx="10" ry="3" fill="#aaa" />
-        <ellipse cx="24" cy="93" rx="10" ry="3" fill="#999" />
+    {/* Snare — right */}
+    <ellipse cx="88" cy="115" rx="11" ry="4.5" fill="#1a1a2e" />
+    <ellipse cx="88" cy="115" rx="11" ry="4.5" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    <rect x="77" y="115" width="22" height="7" fill="#1a1a2e" />
 
-        {/* Cymbal — right side */}
-        <line x1="96" y1="85" x2="96" y2="130" stroke="#666" strokeWidth="2" />
-        <ellipse cx="96" cy="85" rx="12" ry="3" fill="#c0a030" />
-        <circle cx="96" cy="85" r="2" fill="#a08020" />
+    {/* Hi-hat — left, two discs */}
+    <ellipse cx="15" cy="95" rx="9" ry="2" fill="#2a2a3e" />
+    <ellipse cx="15" cy="93" rx="9" ry="2" fill="#2a2a3e" />
+    <ellipse cx="15" cy="93" rx="9" ry="2" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    {/* Hi-hat stand */}
+    <line x1="15" y1="97" x2="15" y2="160" stroke="#2a2a3e" strokeWidth="1.5" />
 
-        {/* Tom drum — right of snare */}
-        <ellipse cx="74" cy="118" rx="10" ry="4" fill="#4a4a5e" />
-        <rect x="64" y="118" width="20" height="10" rx="2" fill="#3a3a4e" />
-        <ellipse cx="74" cy="128" rx="10" ry="4" fill="#4a4a5e" />
+    {/* Ride cymbal — right */}
+    <ellipse cx="105" cy="88" rx="12" ry="2.5" fill="#2a2a3e" />
+    <ellipse cx="105" cy="88" rx="12" ry="2.5" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    {/* Cymbal stand */}
+    <line x1="105" y1="90" x2="105" y2="155" stroke="#2a2a3e" strokeWidth="1.5" />
 
-        {/* === Drummer (seated) === */}
+    {/* Crash cymbal — center left */}
+    <ellipse cx="38" cy="82" rx="10" ry="2" fill="#2a2a3e" />
+    <ellipse cx="38" cy="82" rx="10" ry="2" fill="none" stroke="#ffd700" strokeWidth="0.5" opacity="0.2" />
+    <line x1="38" y1="84" x2="38" y2="140" stroke="#2a2a3e" strokeWidth="1.5" />
 
-        {/* Stool */}
-        <rect x="52" y="108" width="16" height="4" rx="2" fill="#555" />
-        <line x1="60" y1="112" x2="60" y2="130" stroke="#555" strokeWidth="3" />
+    {/* === Seated Figure === */}
 
-        {/* Legs (seated, angled outward) */}
-        <rect x="46" y="108" width="8" height="24" rx="3" fill="#2a2a3e" transform="rotate(10, 50, 108)" />
-        <rect x="66" y="108" width="8" height="24" rx="3" fill="#2a2a3e" transform="rotate(-10, 70, 108)" />
+    {/* Head */}
+    <circle cx="60" cy="52" r="10" fill="#0a0a14" />
+    <path
+      d="M 54 44 A 10 10 0 0 1 66 44"
+      fill="none"
+      stroke="#ffd700"
+      strokeWidth="0.5"
+      opacity="0.2"
+    />
 
-        {/* Torso */}
-        <rect x="44" y="68" width="32" height="42" rx="7" fill="#2a2a3e" />
-        {/* Green accent shirt */}
-        <rect x="48" y="71" width="24" height="36" rx="5" fill="#22C55E" />
+    {/* Torso */}
+    <path
+      d="M 50 62 L 48 64 L 46 95 L 55 98 L 65 98 L 74 95 L 72 64 L 70 62 Z"
+      fill="#0a0a14"
+    />
 
-        {/* Neck */}
-        <rect x="55" y="56" width="10" height="14" rx="4" fill="#d4a574" />
+    {/* Stool */}
+    <rect x="48" y="98" width="24" height="4" rx="2" fill="#111122" />
+    <line x1="50" y1="102" x2="48" y2="130" stroke="#2a2a3e" strokeWidth="2" />
+    <line x1="70" y1="102" x2="72" y2="130" stroke="#2a2a3e" strokeWidth="2" />
 
-        {/* Head */}
-        <circle cx="60" cy="48" r="15" fill="#d4a574" />
-        {/* Eyes */}
-        <circle cx="54" cy="46" r="2" fill="#1a1a2e" />
-        <circle cx="66" cy="46" r="2" fill="#1a1a2e" />
-        {/* Focused expression — slight frown of concentration */}
-        <line x1="56" y1="54" x2="64" y2="54" stroke="#a07050" strokeWidth="1.5" strokeLinecap="round" />
-        {/* Headband */}
-        <rect x="45" y="38" width="30" height="4" rx="2" fill="#22C55E" />
+    {/* Legs — seated, spread to pedals */}
+    <path d="M 52 98 L 45 120 L 40 140 L 38 148" fill="none" stroke="#0a0a14" strokeWidth="5" strokeLinecap="round" />
+    <path d="M 68 98 L 75 120 L 78 140 L 80 148" fill="none" stroke="#0a0a14" strokeWidth="5" strokeLinecap="round" />
 
-        {/* === Animated Arms with Drumsticks === */}
+    {/* Feet */}
+    <rect x="34" y="146" width="10" height="4" rx="2" fill="#0a0a14" />
+    <rect x="76" y="146" width="10" height="4" rx="2" fill="#0a0a14" />
 
-        {/* Right arm — hits snare/cymbal */}
-        <g className="drummer-right-arm" style={{ transformOrigin: '70px 75px' }}>
-          {/* Upper arm */}
-          <rect x="74" y="72" width="8" height="20" rx="3" fill="#2a2a3e" transform="rotate(-30, 78, 72)" />
-          {/* Forearm */}
-          <rect x="82" y="86" width="7" height="16" rx="3" fill="#d4a574" transform="rotate(-45, 85, 86)" />
-          {/* Hand */}
-          <circle cx="90" cy="96" r="4" fill="#d4a574" />
-          {/* Drumstick */}
-          <line x1="88" y1="94" x2="74" y2="118" stroke="#c4a060" strokeWidth="2.5" strokeLinecap="round" />
-        </g>
+    {/* === Arms with Brushes === */}
 
-        {/* Left arm — hits hi-hat/snare */}
-        <g className="drummer-left-arm" style={{ transformOrigin: '50px 75px' }}>
-          {/* Upper arm */}
-          <rect x="38" y="72" width="8" height="20" rx="3" fill="#2a2a3e" transform="rotate(30, 42, 72)" />
-          {/* Forearm */}
-          <rect x="30" y="86" width="7" height="16" rx="3" fill="#d4a574" transform="rotate(45, 34, 86)" />
-          {/* Hand */}
-          <circle cx="30" cy="96" r="4" fill="#d4a574" />
-          {/* Drumstick */}
-          <line x1="32" y1="94" x2="40" y2="118" stroke="#c4a060" strokeWidth="2.5" strokeLinecap="round" />
-        </g>
+    {/* Right arm — animated */}
+    <g
+      className={playing ? 'member-playing drummer-right-arm' : 'member-idle drummer-right-arm'}
+      style={{ transformOrigin: '70px 75px' }}
+    >
+      <path
+        d="M 70 64 L 78 72 L 85 80 L 90 88"
+        fill="none"
+        stroke="#111122"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+      {/* Hand */}
+      <circle cx="90" cy="88" r="3" fill="#0a0a14" />
+      {/* Brush handle */}
+      <line x1="92" y1="86" x2="98" y2="95" stroke="#2a2a3e" strokeWidth="1.2" strokeLinecap="round" />
+      {/* Brush wire fan — 4 thin splayed lines */}
+      <line x1="98" y1="95" x2="102" y2="100" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+      <line x1="98" y1="95" x2="100" y2="101" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+      <line x1="98" y1="95" x2="97" y2="101" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+      <line x1="98" y1="95" x2="95" y2="100" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+    </g>
 
-      </g>
-    </svg>
-  );
-};
+    {/* Left arm — animated */}
+    <g
+      className={playing ? 'member-playing drummer-left-arm' : 'member-idle drummer-left-arm'}
+      style={{ transformOrigin: '50px 75px' }}
+    >
+      <path
+        d="M 50 64 L 42 72 L 35 80 L 28 88"
+        fill="none"
+        stroke="#111122"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+      {/* Hand */}
+      <circle cx="28" cy="88" r="3" fill="#0a0a14" />
+      {/* Brush handle */}
+      <line x1="26" y1="86" x2="20" y2="92" stroke="#2a2a3e" strokeWidth="1.2" strokeLinecap="round" />
+      {/* Brush wire fan — 4 thin splayed lines */}
+      <line x1="20" y1="92" x2="16" y2="97" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+      <line x1="20" y1="92" x2="18" y2="98" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+      <line x1="20" y1="92" x2="21" y2="98" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+      <line x1="20" y1="92" x2="23" y2="97" stroke="#2a2a3e" strokeWidth="0.4" opacity="0.6" />
+    </g>
+  </svg>
+);
+
+export default Drummer;

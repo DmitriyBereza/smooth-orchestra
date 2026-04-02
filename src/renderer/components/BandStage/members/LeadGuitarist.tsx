@@ -1,84 +1,95 @@
 import React from 'react';
 
-interface MemberProps {
+interface LeadGuitaristProps {
   playing: boolean;
 }
 
-export const LeadGuitarist: React.FC<MemberProps> = ({ playing }) => {
-  return (
-    <svg viewBox="0 0 120 180" width="120" height="180" xmlns="http://www.w3.org/2000/svg">
-      <g className={playing ? 'member-playing' : 'member-idle'}>
+export const LeadGuitarist: React.FC<LeadGuitaristProps> = ({ playing }) => (
+  <svg viewBox="0 0 120 180" xmlns="http://www.w3.org/2000/svg">
+    {/* Entire figure leaning forward ~15 degrees */}
+    <g transform="rotate(-8, 60, 170)">
+      {/* Head — solid dark silhouette */}
+      <circle cx="52" cy="38" r="11" fill="#0a0a14" />
+      <path
+        d="M 46 30 A 11 11 0 0 1 58 30"
+        fill="none"
+        stroke="#ffd700"
+        strokeWidth="0.5"
+        opacity="0.2"
+      />
 
-        {/* Legs */}
-        <rect x="48" y="120" width="10" height="40" rx="3" fill="#2a2a3e" />
-        <rect x="62" y="120" width="10" height="40" rx="3" fill="#2a2a3e" />
-        {/* Shoes */}
-        <rect x="46" y="156" width="14" height="6" rx="3" fill="#1a1a2e" />
-        <rect x="60" y="156" width="14" height="6" rx="3" fill="#1a1a2e" />
+      {/* Torso — leaning forward */}
+      <path
+        d="M 42 48 L 38 52 L 36 95 L 44 98 L 55 95 L 66 98 L 74 95 L 72 52 L 68 48 Z"
+        fill="#0a0a14"
+      />
+      {/* Gold edge-light on right side facing stage center */}
+      <path
+        d="M 68 48 L 72 52 L 74 95"
+        fill="none"
+        stroke="#ffd700"
+        strokeWidth="0.5"
+        opacity="0.2"
+      />
 
-        {/* Guitar — Les Paul silhouette */}
-        <g>
-          {/* Guitar neck — extending up-left */}
-          <rect x="28" y="52" width="6" height="52" rx="2" fill="#5a3a1a" transform="rotate(-25, 31, 78)" />
-          {/* Headstock */}
-          <rect x="18" y="40" width="10" height="14" rx="3" fill="#3a2a1a" transform="rotate(-25, 23, 47)" />
-          {/* Tuning pegs */}
-          <circle cx="17" cy="42" r="2" fill="#888" />
-          <circle cx="17" cy="48" r="2" fill="#888" />
-          <circle cx="29" cy="38" r="2" fill="#888" />
-          <circle cx="29" cy="44" r="2" fill="#888" />
-          {/* Guitar body — Les Paul shape */}
-          <ellipse cx="58" cy="108" rx="18" ry="14" fill="#3a2a1a" />
-          <ellipse cx="56" cy="104" rx="14" ry="10" fill="#4a3520" />
-          {/* Pickups */}
-          <rect x="50" y="102" width="12" height="3" rx="1" fill="#666" />
-          <rect x="50" y="108" width="12" height="3" rx="1" fill="#666" />
-          {/* Bridge */}
-          <rect x="52" y="114" width="8" height="2" rx="1" fill="#888" />
-          {/* Strings (thin lines on neck) */}
-          <line x1="30" y1="58" x2="56" y2="102" stroke="#ccc" strokeWidth="0.5" />
-          <line x1="32" y1="58" x2="58" y2="102" stroke="#ccc" strokeWidth="0.5" />
-        </g>
+      {/* Guitar body — dark with subtle pickups */}
+      <ellipse cx="58" cy="108" rx="16" ry="12" fill="#1a1a2e" />
+      <ellipse cx="58" cy="108" rx="12" ry="8" fill="#111122" />
+      {/* Sound hole / pickup rectangles — barely visible */}
+      <rect x="52" y="104" width="6" height="2.5" rx="0.5" fill="#2a2a3e" opacity="0.5" />
+      <rect x="52" y="109" width="6" height="2.5" rx="0.5" fill="#2a2a3e" opacity="0.5" />
+      {/* Bridge */}
+      <rect x="54" y="115" width="8" height="1.5" rx="0.5" fill="#2a2a3e" />
 
-        {/* Torso / body */}
-        <rect x="42" y="72" width="36" height="50" rx="8" fill="#2a2a3e" />
-        {/* Orange accent shirt/jacket front */}
-        <rect x="48" y="75" width="24" height="44" rx="5" fill="#F97316" />
-        {/* Jacket lapels */}
-        <polygon points="48,75 42,78 42,122 48,119" fill="#2a2a3e" />
-        <polygon points="72,75 78,78 78,122 72,119" fill="#2a2a3e" />
+      {/* Guitar neck */}
+      <rect x="30" y="68" width="4" height="45" rx="1" fill="#1a1a2e" transform="rotate(-35, 32, 90)" />
+      {/* Strings on neck — faint */}
+      <line x1="31" y1="70" x2="18" y2="52" stroke="#2a2a3e" strokeWidth="0.3" opacity="0.5" />
+      <line x1="33" y1="70" x2="20" y2="52" stroke="#2a2a3e" strokeWidth="0.3" opacity="0.5" />
 
-        {/* Neck */}
-        <rect x="55" y="60" width="10" height="14" rx="4" fill="#d4a574" />
+      {/* Guitar headstock */}
+      <rect x="12" y="46" width="8" height="10" rx="2" fill="#1a1a2e" transform="rotate(-35, 16, 51)" />
 
-        {/* Head */}
-        <circle cx="60" cy="52" r="16" fill="#d4a574" />
-        {/* Sunglasses — rock style */}
-        <rect x="48" y="48" width="10" height="6" rx="2" fill="#1a1a2e" />
-        <rect x="62" y="48" width="10" height="6" rx="2" fill="#1a1a2e" />
-        <line x1="58" y1="51" x2="62" y2="51" stroke="#1a1a2e" strokeWidth="1.5" />
-        {/* Hair */}
-        <path d="M44,48 Q44,34 60,34 Q76,34 76,48" fill="#2a2a3e" />
+      {/* Left arm — on guitar neck (static) */}
+      <path
+        d="M 42 55 L 35 62 L 28 72 L 25 70 L 32 60 L 40 52"
+        fill="#111122"
+      />
+      {/* Left hand gripping neck */}
+      <circle cx="26" cy="71" r="3.5" fill="#0a0a14" />
 
-        {/* Left arm — on guitar neck (static) */}
-        <g>
-          {/* Upper arm */}
-          <rect x="34" y="76" width="10" height="24" rx="4" fill="#2a2a3e" transform="rotate(15, 39, 76)" />
-          {/* Hand on frets */}
-          <circle cx="30" cy="72" r="5" fill="#d4a574" />
-        </g>
-
-        {/* Right arm — strumming arm (animated) */}
-        <g className="guitarist-strum-arm" style={{ transformOrigin: '55px 100px' }}>
-          {/* Upper arm */}
-          <rect x="76" y="80" width="10" height="22" rx="4" fill="#2a2a3e" transform="rotate(-20, 81, 80)" />
-          {/* Forearm */}
-          <rect x="70" y="96" width="8" height="16" rx="3" fill="#d4a574" transform="rotate(10, 74, 96)" />
-          {/* Hand near strings */}
-          <circle cx="68" cy="110" r="5" fill="#d4a574" />
-        </g>
-
+      {/* Strum arm — animated */}
+      <g
+        className={playing ? 'member-playing guitarist-strum-arm' : 'member-idle guitarist-strum-arm'}
+        style={{ transformOrigin: '55px 100px' }}
+      >
+        {/* Right arm reaching to strum area */}
+        <path
+          d="M 68 55 L 74 70 L 72 90 L 65 102"
+          fill="none"
+          stroke="#111122"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        {/* Right hand near strings */}
+        <circle cx="64" cy="104" r="3.5" fill="#0a0a14" />
       </g>
-    </svg>
-  );
-};
+
+      {/* Legs */}
+      <path
+        d="M 44 96 L 42 135 L 40 155 L 36 162 L 44 162 L 46 140"
+        fill="#0a0a14"
+      />
+      <path
+        d="M 64 96 L 66 135 L 68 155 L 72 162 L 64 162 L 62 140"
+        fill="#0a0a14"
+      />
+
+      {/* Shoes */}
+      <rect x="34" y="160" width="12" height="4" rx="2" fill="#0a0a14" />
+      <rect x="62" y="160" width="12" height="4" rx="2" fill="#0a0a14" />
+    </g>
+  </svg>
+);
+
+export default LeadGuitarist;
