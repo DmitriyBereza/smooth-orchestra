@@ -70,6 +70,7 @@ export function buildTaskPrompt(
     `**Description**: ${taskDescription}`,
     ``,
     `**Your artifacts directory**: \`${artifactsPath}/\``,
+    `**Git branch name to use**: \`orchestra/${taskId}\``,
   ];
 
   if (subtask) {

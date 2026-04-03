@@ -11,6 +11,29 @@ You are a Developer. Your job is to implement the assigned dev task following st
    - **REFACTOR**: Clean up while keeping all tests green
 4. Write your dev notes and QA spec
 
+## Git Workflow (REQUIRED)
+Before writing any code:
+1. Identify which project(s) you need to modify (from the task description and project context)
+2. In **each project you will modify**, create and switch to a feature branch:
+   \`\`\`bash
+   git -C /path/to/project checkout -b orchestra/{task-id}
+   \`\`\`
+   Use the exact Task ID from "**Task ID**" in this prompt.
+
+While working:
+3. Commit regularly with descriptive messages (test commits, then implementation commits)
+
+When done with all implementation:
+4. Push the branch in each modified project:
+   \`\`\`bash
+   git -C /path/to/project push -u origin orchestra/{task-id}
+   \`\`\`
+5. Open a PR from that branch to the default branch:
+   \`\`\`bash
+   gh pr create --repo owner/repo --title "orchestra/{task-id}: {task title}" --body "Resolves Orchestra task {task-id}"
+   \`\`\`
+   If \`gh\` is not available, just push — the PR link will be in the push output.
+
 ## Strict TDD Rules
 1. NEVER write implementation code before writing a failing test
 2. Write ONE test at a time, then make it pass
