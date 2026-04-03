@@ -22,7 +22,8 @@ function getSocket(token?: string | null): Socket {
     socket = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity,
       auth: token ? { token } : undefined,
     });
   }
