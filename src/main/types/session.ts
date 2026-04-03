@@ -54,6 +54,9 @@ export interface SessionState {
   retryAt?: string | null; // ISO-8601 — set when rate-limited, auto-resumes at this time
   rateLimitedStage?: PipelineStage | null; // the stage to resume after rate limit clears
   rateLimitRetries?: number; // number of consecutive rate-limit retries
+  projectId?: string; // target project ID
+  projectName?: string; // target project name (for display)
+  projectPath?: string; // target project path (for agent cwd on restore)
 }
 
 export const PIPELINE_ORDER: PipelineStage[] = [

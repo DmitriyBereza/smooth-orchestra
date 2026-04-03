@@ -109,6 +109,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
       </p>
 
       <div style={styles.meta}>
+        {session.projectName && (
+          <span style={styles.metaItem}>Project: {session.projectName}</span>
+        )}
         {!isScheduled && <span style={styles.metaItem}>Elapsed: {elapsed}</span>}
         {session.gitBranch && (
           <span style={styles.metaItem}>Branch: {session.gitBranch}</span>

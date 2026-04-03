@@ -59,6 +59,9 @@ export interface SessionState {
   subtasks: SubtaskState[];
   scheduledAt?: string | null;
   models?: Partial<Record<AgentRole, string>>;
+  projectId?: string;
+  projectName?: string;
+  projectPath?: string;
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {

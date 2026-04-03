@@ -47,9 +47,15 @@ export const TaskBoard: React.FC = () => {
 
         <div style={styles.divider} />
 
+        {!selectedProjectId && (
+          <div style={styles.projectHint}>
+            Select a project above before creating a task
+          </div>
+        )}
+
         <NewTaskForm
           onSubmit={(title, description, scheduledAt, models) => commands.createTask(title, description, selectedProjectId ?? undefined, scheduledAt, models)}
-          disabled={!connected || !!isTaskInProgress}
+          disabled={!connected || !!isTaskInProgress || !selectedProjectId}
         />
 
         {session && (
@@ -128,5 +134,11 @@ const styles: Record<string, React.CSSProperties> = {
     height: 1,
     backgroundColor: 'var(--border-color)',
     margin: '4px 0',
+  },
+  projectHint: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    fontStyle: 'italic',
+    padding: '8px 0',
   },
 };

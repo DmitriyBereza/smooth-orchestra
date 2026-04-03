@@ -81,7 +81,15 @@ export class SessionManager {
       }
 
       this.currentSession = session;
-      console.log(`[SessionManager] Restored session ${session.task.id} at stage: ${session.currentStage}`);
+
+      // Restore project path so agents work in the correct directory
+      if (session.projectPath) {
+        this.projectPath = session.projectPath;
+        this.gitManager = new GitManager(session.projectPath);
+        console.log(`[SessionManager] Restored session ${session.task.id} at stage: ${session.currentStage} (project: ${session.projectName ?? session.projectPath})`);
+      } else {
+        console.log(`[SessionManager] Restored session ${session.task.id} at stage: ${session.currentStage}`);
+      }
 
       // Resume scheduled tasks
       if (session.currentStage === 'scheduled' && session.scheduledAt) {
@@ -138,7 +146,7 @@ export class SessionManager {
 
   /**
    * Create a new task and start the pipeline.
-   * If projectId is provided, the task runs against that project's path.
+   * A projectId is required — agents work in the target project's repo, not Orchestra's.
    * If scheduledAt is provided (ISO-8601), the pipeline starts at that time.
    */
   async createTask(title: string, description: string, projectId?: string, scheduledAt?: string, models?: Partial<Record<AgentRole, string>>): Promise<SessionState> {
@@ -146,33 +154,36 @@ export class SessionManager {
       throw new Error('A task is already in progress. Complete or abort it first.');
     }
 
-    // Resolve effective project path and update context for agents
-    if (projectId && this.projectStore) {
-      const project = this.projectStore.findById(projectId);
-      if (!project) {
-        throw new Error(`Project not found: ${projectId}`);
-      }
-      this.projectPath = project.path;
-      this.gitManager = new GitManager(project.path);
-
-      // Build project context from metadata + optional project.md in the target repo
-      const contextParts = [
-        `**Project**: ${project.name}`,
-        `**Code Location**: ${project.path}`,
-      ];
-      if (project.labels.length > 0) {
-        contextParts.push(`**Labels**: ${project.labels.join(', ')}`);
-      }
-
-      // Load project.md from the target project if it exists
-      const targetProjectMd = path.join(project.path, '.orchestra', 'project.md');
-      if (fs.existsSync(targetProjectMd)) {
-        const mdContent = fs.readFileSync(targetProjectMd, 'utf-8');
-        contextParts.push('', mdContent);
-      }
-
-      this.projectContext = contextParts.join('\n');
+    // Resolve target project — required for knowing where to work
+    if (!projectId || !this.projectStore) {
+      throw new Error('A project must be selected before creating a task.');
     }
+
+    const project = this.projectStore.findById(projectId);
+    if (!project) {
+      throw new Error(`Project not found: ${projectId}`);
+    }
+
+    this.projectPath = project.path;
+    this.gitManager = new GitManager(project.path);
+
+    // Build project context from metadata + optional project.md in the target repo
+    const contextParts = [
+      `**Project**: ${project.name}`,
+      `**Code Location**: ${project.path}`,
+    ];
+    if (project.labels.length > 0) {
+      contextParts.push(`**Labels**: ${project.labels.join(', ')}`);
+    }
+
+    // Load project.md from the target project if it exists
+    const targetProjectMd = path.join(project.path, '.orchestra', 'project.md');
+    if (fs.existsSync(targetProjectMd)) {
+      const mdContent = fs.readFileSync(targetProjectMd, 'utf-8');
+      contextParts.push('', mdContent);
+    }
+
+    this.projectContext = contextParts.join('\n');
 
     const taskId = `TASK-${uuid().slice(0, 8).toUpperCase()}`;
     const branchName = `orchestra/${taskId}`;
@@ -184,15 +195,15 @@ export class SessionManager {
       createdAt: new Date().toISOString(),
     };
 
-    // Create task directory
+    // Create task directory (artifacts stay in Orchestra's .orchestra/)
     this.artifactManager.getTaskDir(taskId);
 
-    // Create git branch
+    // Create git branch in the TARGET project's repo
     try {
       await this.gitManager.createBranch(branchName, taskId);
+      console.log(`[SessionManager] Created branch ${branchName} in ${project.path}`);
     } catch (err) {
-      // If branch creation fails (e.g., no initial commit), continue without branching
-      console.warn(`Git branch creation failed: ${err}. Continuing without branch.`);
+      console.warn(`Git branch creation failed in ${project.path}: ${err}. Continuing without branch.`);
     }
 
     const isScheduled = scheduledAt && new Date(scheduledAt).getTime() > Date.now();
@@ -210,6 +221,9 @@ export class SessionManager {
       subtasks: [],
       scheduledAt: isScheduled ? scheduledAt : null,
       models: models ?? {},
+      projectId: project.id,
+      projectName: project.name,
+      projectPath: project.path,
     };
 
     this.persistSession();
