@@ -62,6 +62,8 @@ export interface SessionState {
   projectId?: string;
   projectName?: string;
   projectPath?: string;
+  proposedPipeline?: PipelineStage[];
+  activePipeline?: PipelineStage[];
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {

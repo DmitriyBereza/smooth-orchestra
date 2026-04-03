@@ -166,8 +166,8 @@ export function useSocketCommands() {
     socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models });
   }, []);
 
-  const approveSpec = useCallback((sessionId: string) => {
-    socket?.emit('command:approve-spec', { sessionId });
+  const approveSpec = useCallback((sessionId: string, pipeline?: string[]) => {
+    socket?.emit('command:approve-spec', { sessionId, pipeline });
   }, []);
 
   const rejectSpec = useCallback((sessionId: string, feedback: string) => {

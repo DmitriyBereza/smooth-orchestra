@@ -57,7 +57,26 @@ export interface SessionState {
   projectId?: string; // target project ID
   projectName?: string; // target project name (for display)
   projectPath?: string; // target project path (for agent cwd on restore)
+  proposedPipeline?: PipelineStage[]; // suggested by PO based on complexity
+  activePipeline?: PipelineStage[]; // confirmed by user at review gate
 }
+
+// Stages that can appear in activePipeline (after PO / user review)
+export const PIPELINE_STAGES: PipelineStage[] = [
+  'architect',
+  'tech-lead',
+  'developer',
+  'tl-code-review',
+  'qa',
+];
+
+export const DEFAULT_PIPELINE: PipelineStage[] = [
+  'architect',
+  'tech-lead',
+  'developer',
+  'tl-code-review',
+  'qa',
+];
 
 export const PIPELINE_ORDER: PipelineStage[] = [
   'idle',

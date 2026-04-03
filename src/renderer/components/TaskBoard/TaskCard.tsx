@@ -4,7 +4,7 @@ import { ArtifactViewer } from './ArtifactViewer';
 
 interface TaskCardProps {
   session: SessionState;
-  onApprove?: () => void;
+  onApprove?: (pipeline: string[]) => void;
   onReject?: (feedback: string) => void;
   onAnswerQuestions?: (answers: string) => void;
   onAbort?: () => void;
@@ -12,6 +12,16 @@ interface TaskCardProps {
   onApproveMerge?: () => void;
   onRejectMerge?: (feedback: string) => void;
 }
+
+const PIPELINE_STAGE_OPTIONS: { stage: string; label: string; description: string }[] = [
+  { stage: 'architect', label: 'Architect', description: 'Design doc & task breakdown' },
+  { stage: 'tech-lead', label: 'Tech Lead', description: 'Design review & approval' },
+  { stage: 'developer', label: 'Developer', description: 'Implementation (always required)' },
+  { stage: 'tl-code-review', label: 'TL Code Review', description: 'Post-dev code review' },
+  { stage: 'qa', label: 'QA', description: 'Automated testing & verification' },
+];
+
+const DEFAULT_FULL_PIPELINE = ['architect', 'tech-lead', 'developer', 'tl-code-review', 'qa'];
 
 function getStageColor(stage: PipelineStage): string {
   switch (stage) {
@@ -56,6 +66,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
   const [mergeFeedback, setMergeFeedback] = React.useState('');
   const [descExpanded, setDescExpanded] = React.useState(false);
   const [hasQuestions, setHasQuestions] = React.useState(false);
+  const [selectedPipeline, setSelectedPipeline] = React.useState<string[]>(
+    session.proposedPipeline ?? DEFAULT_FULL_PIPELINE,
+  );
+
+  // Sync selectedPipeline when PO's proposal arrives
+  useEffect(() => {
+    if (session.proposedPipeline) {
+      setSelectedPipeline(session.proposedPipeline);
+    }
+  }, [session.proposedPipeline?.join(',')]);
+
+  const toggleStage = (stage: string) => {
+    if (stage === 'developer') return; // always required
+    setSelectedPipeline((prev) =>
+      prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage],
+    );
+  };
 
   // Check if the PO wrote questions
   useEffect(() => {
@@ -172,7 +199,41 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         <div style={styles.actions}>
           {!showReject && !showAnswerQuestions ? (
             <>
-              <button style={styles.approveBtn} onClick={onApprove}>
+              {/* Pipeline selector */}
+              <div style={styles.pipelineSelector}>
+                <div style={styles.pipelineSelectorHeader}>
+                  <span style={styles.pipelineSelectorTitle}>Pipeline</span>
+                  {session.proposedPipeline && (
+                    <span style={styles.pipelineBadge}>PO suggested</span>
+                  )}
+                </div>
+                <div style={styles.pipelineStages}>
+                  {PIPELINE_STAGE_OPTIONS.map(({ stage, label, description }) => {
+                    const isSelected = selectedPipeline.includes(stage);
+                    const isRequired = stage === 'developer';
+                    return (
+                      <button
+                        key={stage}
+                        title={description}
+                        onClick={() => toggleStage(stage)}
+                        style={{
+                          ...styles.stageToggle,
+                          ...(isSelected ? styles.stageToggleOn : styles.stageToggleOff),
+                          ...(isRequired ? styles.stageToggleRequired : {}),
+                        }}
+                        disabled={isRequired}
+                      >
+                        {isSelected ? '✓' : '○'} {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button style={styles.approveBtn} onClick={() => onApprove?.(
+                // Preserve order from PIPELINE_STAGE_OPTIONS
+                PIPELINE_STAGE_OPTIONS.map((o) => o.stage).filter((s) => selectedPipeline.includes(s)),
+              )}>
                 Approve Spec
               </button>
               {hasQuestions && (
@@ -465,6 +526,62 @@ const styles: Record<string, React.CSSProperties> = {
   feedbackActions: {
     display: 'flex',
     gap: 8,
+  },
+  pipelineSelector: {
+    width: '100%',
+    padding: '10px 12px',
+    backgroundColor: 'var(--bg-tertiary)',
+    borderRadius: 6,
+    border: '1px solid var(--border-color)',
+  },
+  pipelineSelectorHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  pipelineSelectorTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+  },
+  pipelineBadge: {
+    fontSize: 10,
+    padding: '1px 6px',
+    backgroundColor: 'rgba(59,130,246,0.15)',
+    color: 'var(--accent-blue)',
+    borderRadius: 4,
+    fontWeight: 600,
+  },
+  pipelineStages: {
+    display: 'flex',
+    gap: 6,
+    flexWrap: 'wrap' as const,
+  },
+  stageToggle: {
+    padding: '4px 10px',
+    fontSize: 11,
+    fontWeight: 600,
+    borderRadius: 4,
+    border: '1px solid',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  stageToggleOn: {
+    backgroundColor: 'rgba(34,197,94,0.15)',
+    borderColor: 'var(--accent-green)',
+    color: 'var(--accent-green)',
+  },
+  stageToggleOff: {
+    backgroundColor: 'transparent',
+    borderColor: 'var(--border-color)',
+    color: 'var(--text-muted)',
+  },
+  stageToggleRequired: {
+    opacity: 0.7,
+    cursor: 'not-allowed',
   },
   countdown: {
     display: 'flex',

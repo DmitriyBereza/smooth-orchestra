@@ -39,7 +39,7 @@ export interface OrchestraEventMap {
 
   // User-initiated commands (from frontend)
   'command:create-task': (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<string, string>> }) => void;
-  'command:approve-spec': (data: { sessionId: string }) => void;
+  'command:approve-spec': (data: { sessionId: string; pipeline?: PipelineStage[] }) => void;
   'command:reject-spec': (data: { sessionId: string; feedback: string }) => void;
   'command:answer-questions': (data: { sessionId: string; answers: string }) => void;
   'command:abort-task': (data: { sessionId: string }) => void;

@@ -4,6 +4,7 @@ export type ArtifactType =
   | 'story'
   | 'questions'
   | 'answers'
+  | 'pipeline'
   | 'design'
   | 'dev-tasks'
   | 'dev-notes'
@@ -23,7 +24,7 @@ export interface ArtifactMeta {
 
 export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: ArtifactType[] }> = {
   po: {
-    writes: ['story', 'questions'],
+    writes: ['story', 'questions', 'pipeline'],
     reads: ['answers'],
   },
   architect: {
@@ -52,6 +53,7 @@ export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
   story: 'story.md',
   questions: 'questions.md',
   answers: 'answers.md',
+  pipeline: 'pipeline.md',
   design: 'design.md',
   'dev-tasks': 'dev-tasks.md',
   'dev-notes': 'dev-notes.md',

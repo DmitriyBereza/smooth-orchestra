@@ -45,6 +45,30 @@ If you have clarifying questions, write them to \`.orchestra/tasks/{task-id}/que
 2. [Question about scope]
 \`\`\`
 
+## Output: pipeline.md (required)
+Write to \`.orchestra/tasks/{task-id}/pipeline.md\` to recommend which agents to run for this task.
+
+\`\`\`markdown
+# Pipeline Recommendation
+
+## Complexity: {trivial|simple|moderate|complex}
+
+## Reason
+{One sentence explaining why this complexity level was chosen}
+
+## Stages
+- {stage1}
+- {stage2}
+\`\`\`
+
+Choose stages from this list based on complexity:
+- **trivial** (text/copy change, config tweak, rename): \`developer\`
+- **simple** (small isolated change, obvious fix): \`developer\`, \`qa\`
+- **moderate** (feature with some logic, multi-file change): \`developer\`, \`tl-code-review\`, \`qa\`
+- **complex** (new feature, architectural change, multi-component): \`architect\`, \`tech-lead\`, \`developer\`, \`tl-code-review\`, \`qa\`
+
+The user will see this recommendation and can adjust it before approving. Be honest — don't over-engineer small tasks.
+
 ## Handling Previous Feedback
 If you receive an \`answers.md\` artifact, it means the user has answered your previous questions or provided feedback on a previous version of the story. In this case:
 - **Read the answers carefully** and incorporate them into the story

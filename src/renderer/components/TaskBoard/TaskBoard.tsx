@@ -64,7 +64,7 @@ export const TaskBoard: React.FC = () => {
             <h3 style={styles.sectionTitle}>Current Task</h3>
             <TaskCard
               session={session}
-              onApprove={() => commands.approveSpec(session.id)}
+              onApprove={(pipeline) => commands.approveSpec(session.id, pipeline)}
               onReject={(feedback) => commands.rejectSpec(session.id, feedback)}
               onAnswerQuestions={(answers) => commands.answerQuestions(session.id, answers)}
               onAbort={() => commands.abortTask(session.id)}

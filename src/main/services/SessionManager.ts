@@ -9,6 +9,8 @@ import {
   STAGE_TO_ROLE,
   getNextStage,
   AgentRole,
+  DEFAULT_PIPELINE,
+  PIPELINE_STAGES,
 } from '../types';
 import { eventBus } from './EventBus';
 import { AgentPool } from './AgentPool';
@@ -267,13 +269,28 @@ export class SessionManager {
   }
 
   /**
-   * User approves the spec — advance from awaiting_user_review to architect.
+   * User approves the spec — set the active pipeline and advance to its first stage.
+   * If no pipeline is provided, uses the PO's proposed pipeline or the full default.
    */
-  async approveSpec(): Promise<void> {
+  async approveSpec(pipeline?: PipelineStage[]): Promise<void> {
     if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_user_review') {
       throw new Error('No session awaiting user review');
     }
-    await this.transitionTo('architect');
+
+    const activePipeline = pipeline
+      ?? this.currentSession.proposedPipeline
+      ?? DEFAULT_PIPELINE;
+
+    // Always ensure developer is present
+    if (!activePipeline.includes('developer')) {
+      activePipeline.push('developer');
+    }
+
+    this.currentSession.activePipeline = activePipeline;
+    this.persistSession();
+
+    const firstStage = activePipeline[0] as PipelineStage;
+    await this.transitionTo(firstStage);
   }
 
   /**
@@ -521,9 +538,9 @@ export class SessionManager {
       }
     });
 
-    eventBus.on('command:approve-spec', async () => {
+    eventBus.on('command:approve-spec', async ({ pipeline }: { pipeline?: PipelineStage[] }) => {
       try {
-        await this.approveSpec();
+        await this.approveSpec(pipeline);
       } catch (err: any) {
         console.error('Failed to approve spec:', err.message);
       }
@@ -596,73 +613,97 @@ export class SessionManager {
 
   /**
    * Advance the pipeline to the next stage after an agent completes.
+   * Uses activePipeline for dynamic routing; handles special loopback cases.
    */
   private async advancePipeline(completedStage: PipelineStage): Promise<void> {
     if (!this.currentSession) return;
+    const taskId = this.currentSession.task.id;
 
-    switch (completedStage) {
-      case 'po':
-        // PO done → wait for user review
-        await this.transitionTo('awaiting_user_review');
-        break;
-
-      case 'architect':
-        // Architect done → Tech Lead review
-        await this.transitionTo('tech-lead');
-        break;
-
-      case 'tech-lead': {
-        // Tech Lead done → check if multiple dev tasks → parallel or single dev
-        const devTasksContent = this.artifactManager.readArtifact(
-          this.currentSession!.task.id, 'dev-tasks');
-        const parsed = devTasksContent ? this.parseDevTasks(devTasksContent) : [];
-
-        if (parsed.length > 1) {
-          await this.transitionTo('parallel-dev');
-        } else {
-          await this.transitionTo('developer');
-        }
-        break;
+    // PO always transitions to awaiting_user_review (pipeline not set yet)
+    if (completedStage === 'po') {
+      const pipelineContent = this.artifactManager.readArtifact(taskId, 'pipeline');
+      if (pipelineContent) {
+        this.currentSession.proposedPipeline = this.parsePipelineArtifact(pipelineContent);
+        this.persistSession();
       }
-
-      case 'developer':
-        // Developer done → Tech Lead code review
-        await this.transitionTo('tl-code-review');
-        break;
-
-      case 'tl-code-review':
-        // TL code review done → check decision
-        await this.handleCodeReviewDecision();
-        break;
-
-      case 'qa': {
-        const taskId = this.currentSession.task.id;
-        const qaReport = this.artifactManager.readArtifact(taskId, 'qa-report');
-        const decision = qaReport ? this.parseArtifactDecision(qaReport) : null;
-
-        if (decision === 'REJECTED' || decision === 'FAIL') {
-          this.currentSession.qaDecision = 'rejected';
-          const reason = this.extractRejectionReason(qaReport!);
-          this.currentSession.rejectionReason = reason;
-
-          eventBus.emit('session:qa-rejection', {
-            sessionId: this.currentSession.id,
-            taskId,
-            reason,
-          });
-
-          await this.transitionTo('awaiting_rejection_routing');
-        } else {
-          this.currentSession.qaDecision = 'approved';
-          // QA passed → await merge approval (human gate)
-          await this.transitionTo('awaiting_merge_approval');
-        }
-        break;
-      }
-
-      default:
-        break;
+      await this.transitionTo('awaiting_user_review');
+      return;
     }
+
+    // TL code review: might loop back to developer
+    if (completedStage === 'tl-code-review') {
+      await this.handleCodeReviewDecision();
+      return;
+    }
+
+    // QA: might reject
+    if (completedStage === 'qa') {
+      const qaReport = this.artifactManager.readArtifact(taskId, 'qa-report');
+      const decision = qaReport ? this.parseArtifactDecision(qaReport) : null;
+
+      if (decision === 'REJECTED' || decision === 'FAIL') {
+        this.currentSession.qaDecision = 'rejected';
+        const reason = this.extractRejectionReason(qaReport!);
+        this.currentSession.rejectionReason = reason;
+        eventBus.emit('session:qa-rejection', {
+          sessionId: this.currentSession.id,
+          taskId,
+          reason,
+        });
+        await this.transitionTo('awaiting_rejection_routing');
+      } else {
+        this.currentSession.qaDecision = 'approved';
+        await this.transitionTo('awaiting_merge_approval');
+      }
+      return;
+    }
+
+    // Normal: find next stage in activePipeline
+    const pipeline = this.currentSession.activePipeline ?? DEFAULT_PIPELINE;
+    const idx = pipeline.indexOf(completedStage);
+    const nextStage = (idx !== -1 && idx < pipeline.length - 1)
+      ? pipeline[idx + 1] as PipelineStage
+      : 'awaiting_merge_approval';
+
+    // developer might become parallel-dev if multiple subtasks were planned
+    if (nextStage === 'developer') {
+      const devTasksContent = this.artifactManager.readArtifact(taskId, 'dev-tasks');
+      const parsed = devTasksContent ? this.parseDevTasks(devTasksContent) : [];
+      if (parsed.length > 1) {
+        await this.transitionTo('parallel-dev');
+        return;
+      }
+    }
+
+    await this.transitionTo(nextStage);
+  }
+
+  /**
+   * Parse the PO's pipeline.md artifact into an ordered list of pipeline stages.
+   */
+  private parsePipelineArtifact(content: string): PipelineStage[] {
+    const stagesMatch = content.match(/## Stages\n([\s\S]*?)(?=\n##|$)/);
+    if (!stagesMatch) return DEFAULT_PIPELINE;
+
+    const lines = stagesMatch[1].trim().split('\n');
+    const stages: PipelineStage[] = [];
+
+    for (const line of lines) {
+      const match = line.match(/^[-*]\s+(\S+)/);
+      if (match) {
+        const stage = match[1].trim() as PipelineStage;
+        if (PIPELINE_STAGES.includes(stage)) {
+          stages.push(stage);
+        }
+      }
+    }
+
+    // Always ensure developer is present
+    if (!stages.includes('developer')) {
+      stages.push('developer');
+    }
+
+    return stages.length > 0 ? stages : DEFAULT_PIPELINE;
   }
 
   private parseArtifactDecision(content: string): string | null {
@@ -671,7 +712,7 @@ export class SessionManager {
   }
 
   /**
-   * Handle the TL code review decision — approve to QA or loop back to developer.
+   * Handle the TL code review decision — approve to next stage or loop back to developer.
    */
   private async handleCodeReviewDecision(): Promise<void> {
     if (!this.currentSession) return;
@@ -683,7 +724,13 @@ export class SessionManager {
     if (decision === 'CHANGES_REQUESTED') {
       await this.transitionTo('developer');
     } else {
-      await this.transitionTo('qa');
+      // Find next stage after tl-code-review in activePipeline
+      const pipeline = this.currentSession.activePipeline ?? DEFAULT_PIPELINE;
+      const idx = pipeline.indexOf('tl-code-review');
+      const nextStage = (idx !== -1 && idx < pipeline.length - 1)
+        ? pipeline[idx + 1] as PipelineStage
+        : 'awaiting_merge_approval';
+      await this.transitionTo(nextStage);
     }
   }
 

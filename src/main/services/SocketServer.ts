@@ -12,6 +12,7 @@ import { EventLogger } from './EventLogger';
 import { ProjectStore } from './ProjectStore';
 import { ProjectRecord } from '../types/project';
 import { ArtifactType, ARTIFACT_FILENAMES } from '../types/artifacts';
+import { PipelineStage } from '../types/session';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -399,7 +400,7 @@ export class SocketServer {
         }
       });
 
-      socket.on('command:approve-spec', (data: { sessionId: string }) => {
+      socket.on('command:approve-spec', (data: { sessionId: string; pipeline?: PipelineStage[] }) => {
         eventBus.emit('command:approve-spec', data);
       });
 
