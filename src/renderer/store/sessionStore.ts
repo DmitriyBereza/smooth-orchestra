@@ -4,7 +4,7 @@ import { create } from 'zustand';
 export type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed';
 export type PipelineStage =
-  | 'idle' | 'po' | 'awaiting_user_review' | 'architect'
+  | 'idle' | 'scheduled' | 'po' | 'awaiting_user_review' | 'architect'
   | 'tech-lead' | 'developer' | 'tl-code-review' | 'parallel-dev' | 'qa'
   | 'awaiting_rejection_routing' | 'awaiting_merge_approval'
   | 'done' | 'failed' | 'rejected';
@@ -57,6 +57,8 @@ export interface SessionState {
   qaDecision?: 'approved' | 'rejected' | null;
   rejectionReason?: string | null;
   subtasks: SubtaskState[];
+  scheduledAt?: string | null;
+  models?: Partial<Record<AgentRole, string>>;
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
@@ -77,6 +79,7 @@ export const ROLE_COLORS: Record<AgentRole, string> = {
 
 export const STAGE_DISPLAY: Record<PipelineStage, string> = {
   idle: 'Idle',
+  scheduled: 'Scheduled',
   po: 'Product Owner',
   awaiting_user_review: 'Awaiting Review',
   architect: 'Architect',

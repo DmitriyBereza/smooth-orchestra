@@ -3,3 +3,4 @@ export * from './session';
 export * from './events';
 export * from './artifacts';
 export * from './auth';
+export * from './project';

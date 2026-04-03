@@ -2,6 +2,8 @@ import { AgentRole } from './agent';
 
 export type PipelineStage =
   | 'idle'
+  | 'scheduled'
+  | 'rate-limited'
   | 'po'
   | 'awaiting_user_review'
   | 'architect'
@@ -47,6 +49,11 @@ export interface SessionState {
   qaDecision?: 'approved' | 'rejected' | null;
   rejectionReason?: string | null;
   subtasks: SubtaskState[];
+  scheduledAt?: string | null; // ISO-8601 — if set, pipeline starts at this time
+  models?: Partial<Record<AgentRole, string>>; // per-role model overrides
+  retryAt?: string | null; // ISO-8601 — set when rate-limited, auto-resumes at this time
+  rateLimitedStage?: PipelineStage | null; // the stage to resume after rate limit clears
+  rateLimitRetries?: number; // number of consecutive rate-limit retries
 }
 
 export const PIPELINE_ORDER: PipelineStage[] = [

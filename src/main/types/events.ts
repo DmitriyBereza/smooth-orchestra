@@ -7,6 +7,7 @@ export interface OrchestraEventMap {
   'agent:status-changed': (data: { role: AgentRole; status: AgentStatus; taskId: string }) => void;
   'agent:spawned': (data: { role: AgentRole; pid: number; taskId: string; agentId: string }) => void;
   'agent:exited': (data: { role: AgentRole; exitCode: number | null; taskId: string; agentId: string }) => void;
+  'agent:rate-limited': (data: { role: AgentRole; taskId: string; agentId: string; retryAfterMs: number; message: string }) => void;
 
   // Session/pipeline events
   'session:created': (session: SessionState) => void;
@@ -40,6 +41,7 @@ export interface OrchestraEventMap {
   'command:create-task': (data: { title: string; description: string }) => void;
   'command:approve-spec': (data: { sessionId: string }) => void;
   'command:reject-spec': (data: { sessionId: string; feedback: string }) => void;
+  'command:answer-questions': (data: { sessionId: string; answers: string }) => void;
   'command:abort-task': (data: { sessionId: string }) => void;
   'command:route-rejection': (data: { sessionId: string; routing: 'send_to_dev' | 'escalate_to_po' }) => void;
   'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;

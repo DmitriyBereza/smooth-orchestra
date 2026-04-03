@@ -28,7 +28,7 @@ export const PipelineView: React.FC = () => {
   const effectiveIdx = STAGE_ORDER.indexOf(effectiveStage);
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="pipeline-container">
       <div style={styles.label}>Pipeline</div>
       <div style={styles.steps}>
         {PIPELINE_STEPS.map((step, i) => {
@@ -131,6 +131,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 16,
+    overflowX: 'auto',
+    flexShrink: 0,
   },
   label: {
     fontSize: 12,
@@ -139,6 +141,7 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     minWidth: 60,
+    flexShrink: 0,
   },
   steps: {
     display: 'flex',

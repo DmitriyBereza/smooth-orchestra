@@ -3,6 +3,7 @@ import { PipelineStage } from './session';
 export type ArtifactType =
   | 'story'
   | 'questions'
+  | 'answers'
   | 'design'
   | 'dev-tasks'
   | 'dev-notes'
@@ -23,7 +24,7 @@ export interface ArtifactMeta {
 export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: ArtifactType[] }> = {
   po: {
     writes: ['story', 'questions'],
-    reads: [],
+    reads: ['answers'],
   },
   architect: {
     writes: ['design', 'dev-tasks'],
@@ -50,6 +51,7 @@ export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: Ar
 export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
   story: 'story.md',
   questions: 'questions.md',
+  answers: 'answers.md',
   design: 'design.md',
   'dev-tasks': 'dev-tasks.md',
   'dev-notes': 'dev-notes.md',
