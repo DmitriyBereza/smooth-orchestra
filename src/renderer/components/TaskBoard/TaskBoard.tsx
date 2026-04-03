@@ -20,6 +20,7 @@ export const TaskBoard: React.FC = () => {
   const session = useStore((s) => s.session);
   const connected = useStore((s) => s.connected);
   const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
+  const selectedProjectIds = useProjectStore((s) => s.selectedProjectIds);
   const commands = useSocketCommands();
   const isMobile = useIsMobile();
 
@@ -47,15 +48,15 @@ export const TaskBoard: React.FC = () => {
 
         <div style={styles.divider} />
 
-        {!selectedProjectId && (
+        {selectedProjectIds.length === 0 && (
           <div style={styles.projectHint}>
-            Select a project above before creating a task
+            Select one or more projects above before creating a task
           </div>
         )}
 
         <NewTaskForm
-          onSubmit={(title, description, scheduledAt, models) => commands.createTask(title, description, selectedProjectId ?? undefined, scheduledAt, models)}
-          disabled={!connected || !!isTaskInProgress || !selectedProjectId}
+          onSubmit={(title, description, scheduledAt, models) => commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models)}
+          disabled={!connected || !!isTaskInProgress || selectedProjectIds.length === 0}
         />
 
         {session && (

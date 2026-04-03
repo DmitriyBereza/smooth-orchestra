@@ -7,12 +7,13 @@ interface ProjectListProps {
 }
 
 export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) => {
-  const { selectedProjectId, selectProject, deleteProject } = useProjectStore();
+  const { selectedProjectIds, selectedProjectId, toggleProject, deleteProject } = useProjectStore();
 
   return (
     <div style={styles.list}>
       {projects.map((project) => {
-        const isSelected = selectedProjectId === project.id;
+        const isSelected = selectedProjectIds.includes(project.id);
+        const isPrimary = selectedProjectId === project.id;
         return (
           <div
             key={project.id}
@@ -20,7 +21,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) =>
               ...styles.card,
               borderColor: isSelected ? 'var(--accent-blue)' : 'var(--border-color)',
             }}
-            onClick={() => selectProject(isSelected ? null : project.id)}
+            onClick={() => toggleProject(project.id)}
           >
             <div style={styles.cardHeader}>
               <span style={styles.projectName}>{project.name}</span>
@@ -60,7 +61,12 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) =>
             )}
 
             {isSelected && (
-              <div style={styles.selectedBadge}>Selected for next task</div>
+              <div style={{
+                ...styles.selectedBadge,
+                color: isPrimary ? 'var(--accent-blue)' : 'var(--accent-green)',
+              }}>
+                {isPrimary ? 'Primary (CWD)' : 'Included'}
+              </div>
             )}
           </div>
         );

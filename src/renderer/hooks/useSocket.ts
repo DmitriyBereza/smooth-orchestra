@@ -160,10 +160,10 @@ export function useSocket() {
  * Returns stable command functions that emit on the shared socket.
  */
 export function useSocketCommands() {
-  const createTask = useCallback((title: string, description: string, projectId?: string, scheduledAt?: string, models?: Record<string, string>) => {
+  const createTask = useCallback((title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Record<string, string>) => {
     if (!socket) return;
-    console.log('[Orchestra] Emitting command:create-task', { title, description, projectId, scheduledAt, models });
-    socket.emit('command:create-task', { title, description, projectId, scheduledAt, models });
+    console.log('[Orchestra] Emitting command:create-task', { title, description, projectIds, scheduledAt, models });
+    socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models });
   }, []);
 
   const approveSpec = useCallback((sessionId: string) => {

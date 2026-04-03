@@ -387,7 +387,7 @@ export class SocketServer {
       }
 
       // Route commands to EventBus
-      socket.on('command:create-task', (data: { title: string; description: string; projectId?: string; scheduledAt?: string; models?: Record<string, string> }) => {
+      socket.on('command:create-task', (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Record<string, string> }) => {
         console.log(`[SocketServer] Received command:create-task`, data);
         eventBus.emit('command:create-task', data);
       });

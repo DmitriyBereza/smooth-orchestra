@@ -146,47 +146,71 @@ export class SessionManager {
 
   /**
    * Create a new task and start the pipeline.
-   * A projectId is required — agents work in the target project's repo, not Orchestra's.
-   * If scheduledAt is provided (ISO-8601), the pipeline starts at that time.
+   * One or more projects must be selected — agents work in those repos.
+   * The first project is the "primary" (used as CWD for agents).
+   * Agents handle git branching themselves — no upfront branch creation.
    */
-  async createTask(title: string, description: string, projectId?: string, scheduledAt?: string, models?: Partial<Record<AgentRole, string>>): Promise<SessionState> {
+  async createTask(title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Partial<Record<AgentRole, string>>): Promise<SessionState> {
     if (this.currentSession && !this.isTerminalStage(this.currentSession.currentStage)) {
       throw new Error('A task is already in progress. Complete or abort it first.');
     }
 
-    // Resolve target project — required for knowing where to work
-    if (!projectId || !this.projectStore) {
-      throw new Error('A project must be selected before creating a task.');
+    if (!projectIds?.length || !this.projectStore) {
+      throw new Error('At least one project must be selected before creating a task.');
     }
 
-    const project = this.projectStore.findById(projectId);
-    if (!project) {
-      throw new Error(`Project not found: ${projectId}`);
+    // Resolve all projects
+    const projects = projectIds.map((id) => {
+      const p = this.projectStore!.findById(id);
+      if (!p) throw new Error(`Project not found: ${id}`);
+      return p;
+    });
+
+    // Primary project = first selected — used as CWD for agents
+    const primary = projects[0];
+    this.projectPath = primary.path;
+    this.gitManager = new GitManager(primary.path);
+
+    // Build multi-project context for agents
+    const contextParts: string[] = [];
+
+    for (let i = 0; i < projects.length; i++) {
+      const p = projects[i];
+      const isPrimary = i === 0;
+      const header = isPrimary
+        ? `### Primary Project: ${p.name} (CWD)`
+        : `### Additional Project: ${p.name}`;
+
+      contextParts.push(header);
+      contextParts.push(`**Path**: ${p.path}`);
+      if (p.labels.length > 0) {
+        contextParts.push(`**Labels**: ${p.labels.join(', ')}`);
+      }
+
+      // Load project.md from the project if it exists
+      const projectMd = path.join(p.path, '.orchestra', 'project.md');
+      if (fs.existsSync(projectMd)) {
+        const mdContent = fs.readFileSync(projectMd, 'utf-8');
+        contextParts.push('', mdContent);
+      }
+
+      contextParts.push('');
     }
 
-    this.projectPath = project.path;
-    this.gitManager = new GitManager(project.path);
-
-    // Build project context from metadata + optional project.md in the target repo
-    const contextParts = [
-      `**Project**: ${project.name}`,
-      `**Code Location**: ${project.path}`,
-    ];
-    if (project.labels.length > 0) {
-      contextParts.push(`**Labels**: ${project.labels.join(', ')}`);
-    }
-
-    // Load project.md from the target project if it exists
-    const targetProjectMd = path.join(project.path, '.orchestra', 'project.md');
-    if (fs.existsSync(targetProjectMd)) {
-      const mdContent = fs.readFileSync(targetProjectMd, 'utf-8');
-      contextParts.push('', mdContent);
+    if (projects.length > 1) {
+      contextParts.push(
+        '### Multi-Project Instructions',
+        'This task involves multiple projects. You have access to all listed project paths.',
+        'Use absolute paths when working with files outside the primary project (CWD).',
+        'Create git branches as needed in any project you modify — use branch name `orchestra/{task-id}`.',
+        'You decide which projects need changes based on the task requirements.',
+        '',
+      );
     }
 
     this.projectContext = contextParts.join('\n');
 
     const taskId = `TASK-${uuid().slice(0, 8).toUpperCase()}`;
-    const branchName = `orchestra/${taskId}`;
 
     const task: TaskDefinition = {
       id: taskId,
@@ -198,13 +222,7 @@ export class SessionManager {
     // Create task directory (artifacts stay in Orchestra's .orchestra/)
     this.artifactManager.getTaskDir(taskId);
 
-    // Create git branch in the TARGET project's repo
-    try {
-      await this.gitManager.createBranch(branchName, taskId);
-      console.log(`[SessionManager] Created branch ${branchName} in ${project.path}`);
-    } catch (err) {
-      console.warn(`Git branch creation failed in ${project.path}: ${err}. Continuing without branch.`);
-    }
+    // No upfront branch creation — agents handle git themselves based on which projects they modify
 
     const isScheduled = scheduledAt && new Date(scheduledAt).getTime() > Date.now();
 
@@ -214,16 +232,16 @@ export class SessionManager {
       currentStage: isScheduled ? 'scheduled' : 'idle',
       assignedAgents: {},
       artifacts: {},
-      gitBranch: branchName,
+      gitBranch: null, // agents create branches as needed
       startedAt: new Date().toISOString(),
       completedAt: null,
       error: null,
       subtasks: [],
       scheduledAt: isScheduled ? scheduledAt : null,
       models: models ?? {},
-      projectId: project.id,
-      projectName: project.name,
-      projectPath: project.path,
+      projectId: primary.id,
+      projectName: projects.map((p) => p.name).join(', '),
+      projectPath: primary.path,
     };
 
     this.persistSession();
@@ -308,17 +326,7 @@ export class SessionManager {
       throw new Error('No session awaiting merge approval');
     }
 
-    if (this.currentSession.gitBranch) {
-      try {
-        const defaultBranch = await this.gitManager.getDefaultBranch();
-        await this.gitManager.switchBranch(defaultBranch);
-        // GitManager may not have mergeBranch yet (Unit 3).
-        // For now, just transition to done. The merge can be a manual step.
-      } catch (err) {
-        console.warn(`Merge failed: ${err}. Task marked as done anyway.`);
-      }
-    }
-
+    // Agents handle branches themselves — merge is manual or handled by the developer agent
     this.currentSession.completedAt = new Date().toISOString();
     this.persistSession();
     await this.transitionTo('done');
@@ -504,10 +512,10 @@ export class SessionManager {
     });
 
     // Handle user commands from the frontend
-    eventBus.on('command:create-task', async ({ title, description, projectId, scheduledAt, models }: { title: string; description: string; projectId?: string; scheduledAt?: string; models?: Partial<Record<AgentRole, string>> }) => {
-      console.log(`[SessionManager] Received create-task: "${title}" (project: ${projectId ?? 'default'}, scheduled: ${scheduledAt ?? 'now'}, models: ${JSON.stringify(models ?? {})})`);
+    eventBus.on('command:create-task', async ({ title, description, projectIds, scheduledAt, models }: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<AgentRole, string>> }) => {
+      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, scheduled: ${scheduledAt ?? 'now'}, models: ${JSON.stringify(models ?? {})})`);
       try {
-        await this.createTask(title, description, projectId, scheduledAt, models);
+        await this.createTask(title, description, projectIds, scheduledAt, models);
       } catch (err: any) {
         console.error('[SessionManager] Failed to create task:', err.message, err.stack);
       }
@@ -735,13 +743,7 @@ export class SessionManager {
     // Spawn a developer agent for each subtask
     for (const subtask of this.currentSession.subtasks) {
       try {
-        // Create subtask git branch from the task branch
-        try {
-          await this.gitManager.createBranch(subtask.gitBranch, taskId);
-        } catch (err) {
-          console.warn(`Failed to create subtask branch: ${err}`);
-        }
-
+        // Agents handle their own branching
         const taskPrompt = this.buildSubtaskPrompt(taskId, subtask, artifactContext);
 
         // Create agent — AgentPool manages one per role, so we call createAgent

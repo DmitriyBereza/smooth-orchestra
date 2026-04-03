@@ -14,10 +14,13 @@ const API_BASE = '';
 interface ProjectStore {
   projects: ProjectRecord[];
   selectedProjectId: string | null;
+  /** IDs of all projects selected for the next task */
+  selectedProjectIds: string[];
   loading: boolean;
 
   setProjects: (projects: ProjectRecord[]) => void;
   selectProject: (id: string | null) => void;
+  toggleProject: (id: string) => void;
 
   fetchProjects: () => Promise<void>;
   createProject: (name: string, path: string, labels: string[]) => Promise<ProjectRecord>;
@@ -28,11 +31,23 @@ interface ProjectStore {
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   projects: [],
   selectedProjectId: null,
+  selectedProjectIds: [],
   loading: false,
 
   setProjects: (projects) => set({ projects }),
 
   selectProject: (id) => set({ selectedProjectId: id }),
+
+  toggleProject: (id) => set((state) => {
+    const ids = state.selectedProjectIds.includes(id)
+      ? state.selectedProjectIds.filter((i) => i !== id)
+      : [...state.selectedProjectIds, id];
+    // First selected project becomes the primary (selectedProjectId)
+    return {
+      selectedProjectIds: ids,
+      selectedProjectId: ids[0] ?? null,
+    };
+  }),
 
   fetchProjects: async () => {
     set({ loading: true });
@@ -70,9 +85,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   deleteProject: async (id) => {
     await fetch(`${API_BASE}/api/projects/${id}`, { method: 'DELETE' });
-    set((state) => ({
-      projects: state.projects.filter((p) => p.id !== id),
-      selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId,
-    }));
+    set((state) => {
+      const ids = state.selectedProjectIds.filter((i) => i !== id);
+      return {
+        projects: state.projects.filter((p) => p.id !== id),
+        selectedProjectIds: ids,
+        selectedProjectId: ids[0] ?? null,
+      };
+    });
   },
 }));
