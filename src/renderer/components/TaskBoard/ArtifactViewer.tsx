@@ -19,6 +19,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
 
     fetch(`/api/artifacts/${encodeURIComponent(taskId)}/${encodeURIComponent(artifactType)}`)
       .then(async (res) => {
+        if (res.status === 404) return null; // artifact simply doesn't exist — hide quietly
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `HTTP ${res.status}`);
@@ -26,7 +27,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
         return res.json();
       })
       .then((data) => {
-        if (!cancelled) setContent(data.content);
+        if (!cancelled) setContent(data?.content ?? null);
       })
       .catch((err) => {
         if (!cancelled) setError(err.message);
