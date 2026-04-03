@@ -22,8 +22,8 @@ export const AgentPanel: React.FC = () => {
   const showSubtaskTabs = isParallelDev && activeTab === 'developer';
 
   return (
-    <div style={styles.container}>
-      <div style={styles.tabs}>
+    <div style={styles.container} className="agent-panel-container">
+      <div style={styles.tabs} className="agent-panel-tabs">
         {ROLES.map((role) => {
           const agent = agents.find((a) => a.role === role);
           const isActive = activeTab === role;

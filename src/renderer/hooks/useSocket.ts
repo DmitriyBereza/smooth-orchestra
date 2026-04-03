@@ -1,18 +1,29 @@
 import { useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useStore } from '../store/sessionStore';
+import { useAuthStore } from '../store/authStore';
 
-const SOCKET_URL = 'http://localhost:3333';
+// In dev, Vite proxy forwards /socket.io to the backend.
+// Use the current page origin so it works through tunnels too.
+const SOCKET_URL = window.location.origin;
 
 // Single shared socket instance
 let socket: Socket | null = null;
+let currentToken: string | null = null;
 
-function getSocket(): Socket {
+function getSocket(token?: string | null): Socket {
+  // Reconnect if token changed (login/logout)
+  if (socket && token !== currentToken) {
+    socket.disconnect();
+    socket = null;
+  }
   if (!socket) {
+    currentToken = token ?? null;
     socket = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
+      auth: token ? { token } : undefined,
     });
   }
   return socket;
@@ -30,9 +41,13 @@ export function useSocket() {
     setSubtasks,
     updateSubtask,
   } = useStore();
+  const token = useAuthStore((s) => s.token);
+  const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
-    const s = getSocket();
+    if (!token) return; // Don't connect without auth
+
+    const s = getSocket(token);
 
     s.on('connect', () => {
       setConnected(true);
@@ -42,6 +57,13 @@ export function useSocket() {
     s.on('disconnect', () => {
       setConnected(false);
       addEvent('Disconnected from Orchestra server', 'system');
+    });
+
+    s.on('connect_error', (err: Error) => {
+      if (err.message === '401') {
+        // Token expired or invalid — force re-login
+        logout();
+      }
     });
 
     // Session events
@@ -128,43 +150,48 @@ export function useSocket() {
       s.removeAllListeners();
       s.disconnect();
       socket = null;
+      currentToken = null;
     };
-  }, []);
+  }, [token]);
 }
 
 /**
  * Returns stable command functions that emit on the shared socket.
  */
 export function useSocketCommands() {
-  const createTask = useCallback((title: string, description: string) => {
-    const s = getSocket();
-    console.log('[Orchestra] Emitting command:create-task', { title, description });
-    s.emit('command:create-task', { title, description });
+  const createTask = useCallback((title: string, description: string, projectId?: string, scheduledAt?: string, models?: Record<string, string>) => {
+    if (!socket) return;
+    console.log('[Orchestra] Emitting command:create-task', { title, description, projectId, scheduledAt, models });
+    socket.emit('command:create-task', { title, description, projectId, scheduledAt, models });
   }, []);
 
   const approveSpec = useCallback((sessionId: string) => {
-    getSocket().emit('command:approve-spec', { sessionId });
+    socket?.emit('command:approve-spec', { sessionId });
   }, []);
 
   const rejectSpec = useCallback((sessionId: string, feedback: string) => {
-    getSocket().emit('command:reject-spec', { sessionId, feedback });
+    socket?.emit('command:reject-spec', { sessionId, feedback });
+  }, []);
+
+  const answerQuestions = useCallback((sessionId: string, answers: string) => {
+    socket?.emit('command:answer-questions', { sessionId, answers });
   }, []);
 
   const abortTask = useCallback((sessionId: string) => {
-    getSocket().emit('command:abort-task', { sessionId });
+    socket?.emit('command:abort-task', { sessionId });
   }, []);
 
   const routeRejection = useCallback((sessionId: string, routing: 'send_to_dev' | 'escalate_to_po') => {
-    getSocket().emit('command:route-rejection', { sessionId, routing });
+    socket?.emit('command:route-rejection', { sessionId, routing });
   }, []);
 
   const approveMerge = useCallback((sessionId: string) => {
-    getSocket().emit('command:approve-merge', { sessionId });
+    socket?.emit('command:approve-merge', { sessionId });
   }, []);
 
   const rejectMerge = useCallback((sessionId: string, feedback: string) => {
-    getSocket().emit('command:reject-merge', { sessionId, feedback });
+    socket?.emit('command:reject-merge', { sessionId, feedback });
   }, []);
 
-  return { createTask, approveSpec, rejectSpec, abortTask, routeRejection, approveMerge, rejectMerge };
+  return { createTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge };
 }

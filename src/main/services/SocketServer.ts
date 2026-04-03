@@ -2,11 +2,16 @@ import http from 'http';
 import express, { Router, Request, Response } from 'express';
 import cors from 'cors';
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { v4 as uuid } from 'uuid';
 import { eventBus } from './EventBus';
 import { SessionManager } from './SessionManager';
 import { AgentPool } from './AgentPool';
+import { ArtifactManager } from './ArtifactManager';
 import { AuthService, SignupError, LoginError } from './AuthService';
 import { EventLogger } from './EventLogger';
+import { ProjectStore } from './ProjectStore';
+import { ProjectRecord } from '../types/project';
+import { ArtifactType, ARTIFACT_FILENAMES } from '../types/artifacts';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -58,6 +63,94 @@ function buildAuthRouter(authService: AuthService): Router {
   return router;
 }
 
+// ─── Projects router ─────────────────────────────────────────────────────────
+
+function buildProjectRouter(projectStore: ProjectStore): Router {
+  const router = Router();
+
+  // GET /projects — list all projects
+  router.get('/', (_req: Request, res: Response) => {
+    res.json(projectStore.all());
+  });
+
+  // GET /projects/:id
+  router.get('/:id', (req: Request, res: Response) => {
+    const project = projectStore.findById(req.params.id);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.json(project);
+  });
+
+  // POST /projects — create a new project
+  router.post('/', (req: Request, res: Response) => {
+    const { name, path: projectPath, labels } = req.body as {
+      name?: string;
+      path?: string;
+      labels?: string[];
+    };
+
+    if (!name?.trim() || !projectPath?.trim()) {
+      res.status(400).json({ error: 'name and path are required' });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const project: ProjectRecord = {
+      id: uuid(),
+      name: name.trim(),
+      path: projectPath.trim(),
+      labels: (labels ?? []).map((l) => l.trim()).filter(Boolean),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    projectStore.save(project);
+    res.status(201).json(project);
+  });
+
+  // PUT /projects/:id — update a project
+  router.put('/:id', (req: Request, res: Response) => {
+    const existing = projectStore.findById(req.params.id);
+    if (!existing) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const { name, path: projectPath, labels } = req.body as {
+      name?: string;
+      path?: string;
+      labels?: string[];
+    };
+
+    const updated: ProjectRecord = {
+      ...existing,
+      name: name?.trim() ?? existing.name,
+      path: projectPath?.trim() ?? existing.path,
+      labels: labels !== undefined
+        ? labels.map((l) => l.trim()).filter(Boolean)
+        : existing.labels,
+      updatedAt: new Date().toISOString(),
+    };
+
+    projectStore.save(updated);
+    res.json(updated);
+  });
+
+  // DELETE /projects/:id
+  router.delete('/:id', (req: Request, res: Response) => {
+    const deleted = projectStore.delete(req.params.id);
+    if (!deleted) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  return router;
+}
+
 // ─── SocketServer ─────────────────────────────────────────────────────────────
 
 /**
@@ -79,29 +172,28 @@ export class SocketServer {
     private authService?: AuthService,
     private port: number = Number(process.env.AUTH_PORT) || 3333,
     private eventLogger?: EventLogger,
+    private projectStore?: ProjectStore,
+    private artifactManager?: ArtifactManager,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
     const app = express();
     app.use(express.json());
-    app.use(
-      cors({
-        origin: ['http://localhost:5173', 'http://localhost:3000'],
-        methods: ['GET', 'POST'],
-      }),
-    );
+    app.use(cors({ origin: true, methods: ['GET', 'POST', 'PUT', 'DELETE'] }));
 
     this.httpServer = http.createServer(app);
     this.io = new SocketIOServer(this.httpServer, {
-      cors: {
-        origin: ['http://localhost:5173', 'http://localhost:3000'],
-        methods: ['GET', 'POST'],
-      },
+      cors: { origin: true, methods: ['GET', 'POST'] },
     });
 
     // Mount auth REST routes (only when AuthService is injected)
     if (this.authService) {
       app.use('/auth', buildAuthRouter(this.authService));
+    }
+
+    // Mount project REST routes
+    if (this.projectStore) {
+      app.use('/api/projects', buildProjectRouter(this.projectStore));
     }
 
     if (this.eventLogger) {
@@ -114,6 +206,33 @@ export class SocketServer {
           limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 100,
         };
         res.json(eventLogger.getEvents(filters));
+      });
+    }
+
+    // Artifact content endpoint
+    if (this.artifactManager) {
+      const am = this.artifactManager;
+
+      // GET /api/artifacts/:taskId/:type — fetch artifact content
+      app.get('/api/artifacts/:taskId/:type', (req: Request, res: Response) => {
+        const { taskId, type } = req.params;
+        if (!(type in ARTIFACT_FILENAMES)) {
+          res.status(400).json({ error: `Unknown artifact type: ${type}` });
+          return;
+        }
+        const content = am.readArtifact(taskId, type as ArtifactType);
+        if (content === null) {
+          res.status(404).json({ error: 'Artifact not found' });
+          return;
+        }
+        res.json({ taskId, type, content });
+      });
+
+      // GET /api/artifacts/:taskId — list all artifacts for a task
+      app.get('/api/artifacts/:taskId', (req: Request, res: Response) => {
+        const { taskId } = req.params;
+        const artifacts = am.listArtifacts(taskId);
+        res.json(artifacts);
       });
     }
 
@@ -262,10 +381,22 @@ export class SocketServer {
         agents: this.agentPool.getAllAgentInfo(),
       });
 
+      // Send project list on connect
+      if (this.projectStore) {
+        socket.emit('projects:list', this.projectStore.all());
+      }
+
       // Route commands to EventBus
-      socket.on('command:create-task', (data: { title: string; description: string }) => {
+      socket.on('command:create-task', (data: { title: string; description: string; projectId?: string; scheduledAt?: string; models?: Record<string, string> }) => {
         console.log(`[SocketServer] Received command:create-task`, data);
         eventBus.emit('command:create-task', data);
+      });
+
+      // Project management via socket (for real-time sync)
+      socket.on('projects:request-list', () => {
+        if (this.projectStore) {
+          socket.emit('projects:list', this.projectStore.all());
+        }
       });
 
       socket.on('command:approve-spec', (data: { sessionId: string }) => {
@@ -274,6 +405,10 @@ export class SocketServer {
 
       socket.on('command:reject-spec', (data: { sessionId: string; feedback: string }) => {
         eventBus.emit('command:reject-spec', data);
+      });
+
+      socket.on('command:answer-questions', (data: { sessionId: string; answers: string }) => {
+        eventBus.emit('command:answer-questions', data);
       });
 
       socket.on('command:abort-task', (data: { sessionId: string }) => {

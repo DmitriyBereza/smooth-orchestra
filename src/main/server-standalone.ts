@@ -16,6 +16,7 @@ import {
   SessionManager,
   SocketServer,
   UserStore,
+  ProjectStore,
 } from './services';
 
 const projectPath = process.cwd();
@@ -48,17 +49,32 @@ async function main(): Promise<void> {
   const userStore = new UserStore(userStorePath);
   const authService = new AuthService(userStore);
 
+  // Seed default admin user if no users exist
+  if (userStore.all().length === 0) {
+    const seedEmail = process.env.SEED_EMAIL || 'admin@orchestra.local';
+    const seedPassword = process.env.SEED_PASSWORD || 'orchestra';
+    await authService.signup(seedEmail, seedPassword);
+    console.log(`[Orchestra] Seeded admin user: ${seedEmail} (password: ${seedPassword})`);
+    console.log(`[Orchestra] Set SEED_EMAIL and SEED_PASSWORD env vars to customize.`);
+  }
+
   // Initialize services
   const fileLockManager = new FileLockManager(orchestraDir);
   const gitManager = new GitManager(projectPath);
   const artifactManager = new ArtifactManager(orchestraDir);
   const agentPool = new AgentPool();
 
+  // Initialize project store
+  const projectStorePath = path.join(orchestraDir, 'projects.json');
+  const projectStore = new ProjectStore(projectStorePath);
+
   const sessionManager = new SessionManager(
     agentPool,
     artifactManager,
     gitManager,
     projectPath,
+    projectStore,
+    orchestraDir,
   );
 
   // Load project context if it exists
@@ -70,8 +86,8 @@ async function main(): Promise<void> {
   // Initialize event logger
   const eventLogger = new EventLogger(orchestraDir);
 
-  // Start socket server (with auth and event logger)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger);
+  // Start socket server (with auth, event logger, and project store)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager);
   await socketServer.start();
 
   console.log('[Orchestra] Server ready. Open http://localhost:5173 in your browser.');

@@ -13,6 +13,9 @@ export class AgentProcess {
   public status: AgentStatus = 'idle';
   public pid: number | null = null;
   public tokensUsed = { input: 0, output: 0 };
+  public rateLimited = false;
+  public rateLimitRetryMs: number | null = null;
+  public rateLimitMessage: string = '';
 
   private process: ChildProcess | null = null;
   private outputBuffer: string[] = [];
@@ -35,6 +38,7 @@ export class AgentProcess {
     systemPrompt: string,
     taskPrompt: string,
     workingDirectory: string,
+    model?: string,
   ): Promise<void> {
     if (this.status === 'running') {
       throw new Error(`Agent ${this.id} is already running`);
@@ -51,6 +55,10 @@ export class AgentProcess {
       '--verbose',
       '--dangerously-skip-permissions',
     ];
+
+    if (model) {
+      args.push('--model', model);
+    }
 
     this.process = spawn('claude', args, {
       cwd: workingDirectory,

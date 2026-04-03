@@ -45,6 +45,13 @@ If you have clarifying questions, write them to \`.orchestra/tasks/{task-id}/que
 2. [Question about scope]
 \`\`\`
 
+## Handling Previous Feedback
+If you receive an \`answers.md\` artifact, it means the user has answered your previous questions or provided feedback on a previous version of the story. In this case:
+- **Read the answers carefully** and incorporate them into the story
+- **Do NOT re-ask questions that were already answered** in answers.md
+- Only write new questions.md if you have NEW questions that weren't covered
+- Focus on updating and finalizing story.md based on the answers received
+
 ## Guidelines
 - Make acceptance criteria SPECIFIC and TESTABLE — avoid vague language
 - Each criterion should be independently verifiable

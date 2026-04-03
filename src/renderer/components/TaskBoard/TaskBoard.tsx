@@ -1,18 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../store/sessionStore';
+import { useProjectStore } from '../../store/projectStore';
 import { NewTaskForm } from './NewTaskForm';
 import { TaskCard } from './TaskCard';
+import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { useSocketCommands } from '../../hooks/useSocket';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isMobile;
+}
 
 export const TaskBoard: React.FC = () => {
   const session = useStore((s) => s.session);
   const connected = useStore((s) => s.connected);
+  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const commands = useSocketCommands();
+  const isMobile = useIsMobile();
 
   const isTaskInProgress = session && !['done', 'failed', 'idle'].includes(session.currentStage);
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="task-board-container">
       <div style={styles.header}>
         <h2 style={styles.title}>Task Board</h2>
         <div style={styles.connectionStatus}>
@@ -25,9 +39,16 @@ export const TaskBoard: React.FC = () => {
         </div>
       </div>
 
-      <div style={styles.content}>
+      <div style={{
+        ...styles.content,
+        ...(isMobile ? { paddingBottom: 24 } : {}),
+      }}>
+        <ProjectManager />
+
+        <div style={styles.divider} />
+
         <NewTaskForm
-          onSubmit={(title, description) => commands.createTask(title, description)}
+          onSubmit={(title, description, scheduledAt, models) => commands.createTask(title, description, selectedProjectId ?? undefined, scheduledAt, models)}
           disabled={!connected || !!isTaskInProgress}
         />
 
@@ -38,6 +59,7 @@ export const TaskBoard: React.FC = () => {
               session={session}
               onApprove={() => commands.approveSpec(session.id)}
               onReject={(feedback) => commands.rejectSpec(session.id, feedback)}
+              onAnswerQuestions={(answers) => commands.answerQuestions(session.id, answers)}
               onAbort={() => commands.abortTask(session.id)}
               onRouteRejection={(routing) => commands.routeRejection(session.id, routing)}
               onApproveMerge={() => commands.approveMerge(session.id)}
@@ -54,10 +76,12 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     flexDirection: 'column',
+    minHeight: 0,
     height: '100%',
     borderRight: '1px solid var(--border-color)',
     width: 360,
     flexShrink: 0,
+    maxWidth: '100%',
   },
   header: {
     padding: '12px 16px',
@@ -99,5 +123,10 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-muted)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'var(--border-color)',
+    margin: '4px 0',
   },
 };

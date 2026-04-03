@@ -84,3 +84,40 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* ─── Mobile responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body {
+    overflow: hidden;
+  }
+
+  .task-board-container {
+    width: 100% !important;
+    border-right: none !important;
+    min-height: 0 !important;
+  }
+
+  /* Compact pipeline on mobile */
+  .pipeline-container {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+  }
+
+  /* Agent panel fills mobile container */
+  .agent-panel-container {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  /* Agent panel tabs should scroll horizontally */
+  .agent-panel-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Smooth scrolling on touch devices */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}

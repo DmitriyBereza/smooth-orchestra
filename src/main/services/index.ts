@@ -11,3 +11,4 @@ export { AuthService } from './AuthService';
 export { parseDevTasks } from './SubtaskParser';
 export type { ParsedSubtask } from './SubtaskParser';
 export { EventLogger } from './EventLogger';
+export { ProjectStore } from './ProjectStore';

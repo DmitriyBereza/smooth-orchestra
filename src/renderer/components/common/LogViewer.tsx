@@ -31,7 +31,7 @@ function relativeTime(isoTimestamp: string): string {
   return `${days}d ago`;
 }
 
-export const LogViewer: React.FC = () => {
+export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded }) => {
   const events = useStore((s) => s.events);
   const filters = useStore((s) => s.eventFilters);
   const setEventFilter = useStore((s) => s.setEventFilter);
@@ -52,18 +52,20 @@ export const LogViewer: React.FC = () => {
   });
 
   return (
-    <div style={{ ...styles.container, height: isExpanded ? 250 : 32 }}>
-      <div
-        style={styles.header}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <span style={styles.title}>
-          Event Log ({filteredEvents.length}/{events.length})
-        </span>
-        <span style={styles.toggle}>{isExpanded ? '\u25BC' : '\u25B2'}</span>
-      </div>
+    <div style={{ ...styles.container, height: forceExpanded ? '100%' : isExpanded ? 250 : 32 }}>
+      {!forceExpanded && (
+        <div
+          style={styles.header}
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <span style={styles.title}>
+            Event Log ({filteredEvents.length}/{events.length})
+          </span>
+          <span style={styles.toggle}>{isExpanded ? '\u25BC' : '\u25B2'}</span>
+        </div>
+      )}
 
-      {isExpanded && (
+      {(forceExpanded || isExpanded) && (
         <>
           <div style={styles.filterBar}>
             <select

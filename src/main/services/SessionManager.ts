@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { v4 as uuid } from 'uuid';
 import {
   PipelineStage,
@@ -12,6 +14,7 @@ import { eventBus } from './EventBus';
 import { AgentPool } from './AgentPool';
 import { ArtifactManager } from './ArtifactManager';
 import { GitManager } from './GitManager';
+import { ProjectStore } from './ProjectStore';
 import { buildSystemPrompt, buildTaskPrompt } from '../prompts';
 
 /**
@@ -21,13 +24,19 @@ import { buildSystemPrompt, buildTaskPrompt } from '../prompts';
 export class SessionManager {
   private currentSession: SessionState | null = null;
   private projectContext: string = '';
+  private scheduleTimer: ReturnType<typeof setTimeout> | null = null;
+  private sessionFilePath: string;
 
   constructor(
     private agentPool: AgentPool,
     private artifactManager: ArtifactManager,
     private gitManager: GitManager,
     private projectPath: string,
+    private projectStore?: ProjectStore,
+    orchestraDir?: string,
   ) {
+    this.sessionFilePath = path.join(orchestraDir ?? path.join(projectPath, '.orchestra'), 'session.json');
+    this.loadSession();
     this.setupEventListeners();
   }
 
@@ -39,11 +48,130 @@ export class SessionManager {
   }
 
   /**
-   * Create a new task and start the pipeline.
+   * Persist session state to disk (atomic write).
    */
-  async createTask(title: string, description: string): Promise<SessionState> {
+  private persistSession(): void {
+    try {
+      const data = JSON.stringify(this.currentSession, null, 2);
+      const tmpPath = `${this.sessionFilePath}.tmp`;
+      fs.writeFileSync(tmpPath, data, 'utf-8');
+      fs.renameSync(tmpPath, this.sessionFilePath);
+    } catch (err) {
+      console.error('[SessionManager] Failed to persist session:', err);
+    }
+  }
+
+  /**
+   * Load session state from disk on startup.
+   * Resumes non-terminal sessions at the last known stage.
+   */
+  private loadSession(): void {
+    try {
+      if (!fs.existsSync(this.sessionFilePath)) return;
+      const raw = fs.readFileSync(this.sessionFilePath, 'utf-8');
+      const session = JSON.parse(raw) as SessionState;
+
+      if (!session || !session.task) return;
+
+      // Only restore non-terminal sessions
+      if (this.isTerminalStage(session.currentStage)) {
+        this.currentSession = session; // keep for display but don't resume
+        console.log(`[SessionManager] Loaded completed session ${session.task.id} (${session.currentStage})`);
+        return;
+      }
+
+      this.currentSession = session;
+      console.log(`[SessionManager] Restored session ${session.task.id} at stage: ${session.currentStage}`);
+
+      // Resume scheduled tasks
+      if (session.currentStage === 'scheduled' && session.scheduledAt) {
+        const delayMs = new Date(session.scheduledAt).getTime() - Date.now();
+        if (delayMs > 0) {
+          console.log(`[SessionManager] Re-scheduling task to start in ${Math.round(delayMs / 1000)}s`);
+          this.scheduleTimer = setTimeout(async () => {
+            this.scheduleTimer = null;
+            if (this.currentSession?.currentStage === 'scheduled') {
+              console.log(`[SessionManager] Scheduled time reached — starting pipeline`);
+              this.currentSession.scheduledAt = null;
+              await this.transitionTo('po');
+            }
+          }, delayMs);
+        } else {
+          // Scheduled time already passed — start immediately
+          console.log(`[SessionManager] Scheduled time already passed — starting pipeline now`);
+          setTimeout(async () => {
+            if (this.currentSession?.currentStage === 'scheduled') {
+              this.currentSession.scheduledAt = null;
+              await this.transitionTo('po');
+            }
+          }, 1000); // small delay to let server finish initializing
+        }
+        return;
+      }
+
+      // For stages waiting on user action, just keep the state — user will see it in UI
+      const userActionStages: PipelineStage[] = [
+        'awaiting_user_review', 'awaiting_rejection_routing', 'awaiting_merge_approval',
+      ];
+      if (userActionStages.includes(session.currentStage)) {
+        console.log(`[SessionManager] Session waiting for user action at: ${session.currentStage}`);
+        return;
+      }
+
+      // For active agent stages, the agent process died on restart.
+      // Re-spawn the agent for the current stage.
+      const role = STAGE_TO_ROLE[session.currentStage];
+      if (role) {
+        console.log(`[SessionManager] Resuming agent for stage: ${session.currentStage} (role: ${role})`);
+        setTimeout(async () => {
+          try {
+            await this.spawnAgentForStage(role, this.currentSession!.currentStage);
+          } catch (err) {
+            console.error(`[SessionManager] Failed to resume agent:`, err);
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      console.error('[SessionManager] Failed to load session:', err);
+    }
+  }
+
+  /**
+   * Create a new task and start the pipeline.
+   * If projectId is provided, the task runs against that project's path.
+   * If scheduledAt is provided (ISO-8601), the pipeline starts at that time.
+   */
+  async createTask(title: string, description: string, projectId?: string, scheduledAt?: string, models?: Partial<Record<AgentRole, string>>): Promise<SessionState> {
     if (this.currentSession && !this.isTerminalStage(this.currentSession.currentStage)) {
       throw new Error('A task is already in progress. Complete or abort it first.');
+    }
+
+    // Resolve effective project path and update context for agents
+    if (projectId && this.projectStore) {
+      const project = this.projectStore.findById(projectId);
+      if (!project) {
+        throw new Error(`Project not found: ${projectId}`);
+      }
+      this.projectPath = project.path;
+      this.gitManager = new GitManager(project.path);
+
+      // Build project context from metadata + optional project.md in the target repo
+      const contextParts = [
+        `**Project**: ${project.name}`,
+        `**Code Location**: ${project.path}`,
+      ];
+      if (project.labels.length > 0) {
+        contextParts.push(`**Labels**: ${project.labels.join(', ')}`);
+      }
+
+      // Load project.md from the target project if it exists
+      const targetProjectMd = path.join(project.path, '.orchestra', 'project.md');
+      if (fs.existsSync(targetProjectMd)) {
+        const mdContent = fs.readFileSync(targetProjectMd, 'utf-8');
+        contextParts.push('', mdContent);
+      }
+
+      this.projectContext = contextParts.join('\n');
     }
 
     const taskId = `TASK-${uuid().slice(0, 8).toUpperCase()}`;
@@ -67,10 +195,12 @@ export class SessionManager {
       console.warn(`Git branch creation failed: ${err}. Continuing without branch.`);
     }
 
+    const isScheduled = scheduledAt && new Date(scheduledAt).getTime() > Date.now();
+
     this.currentSession = {
       id: uuid(),
       task,
-      currentStage: 'idle',
+      currentStage: isScheduled ? 'scheduled' : 'idle',
       assignedAgents: {},
       artifacts: {},
       gitBranch: branchName,
@@ -78,12 +208,28 @@ export class SessionManager {
       completedAt: null,
       error: null,
       subtasks: [],
+      scheduledAt: isScheduled ? scheduledAt : null,
+      models: models ?? {},
     };
 
+    this.persistSession();
     eventBus.emit('session:created', this.currentSession);
 
-    // Start the pipeline with the PO stage
-    await this.transitionTo('po');
+    if (isScheduled) {
+      const delayMs = new Date(scheduledAt!).getTime() - Date.now();
+      console.log(`[SessionManager] Task scheduled to start in ${Math.round(delayMs / 1000)}s at ${scheduledAt}`);
+      this.scheduleTimer = setTimeout(async () => {
+        this.scheduleTimer = null;
+        if (this.currentSession?.currentStage === 'scheduled') {
+          console.log(`[SessionManager] Scheduled time reached — starting pipeline`);
+          this.currentSession.scheduledAt = null;
+          await this.transitionTo('po');
+        }
+      }, delayMs);
+    } else {
+      // Start the pipeline immediately
+      await this.transitionTo('po');
+    }
 
     return this.currentSession;
   }
@@ -99,16 +245,43 @@ export class SessionManager {
   }
 
   /**
-   * User rejects the spec — send back to PO with feedback.
+   * User rejects the spec — send back to PO with feedback to revise.
    */
   async rejectSpec(feedback: string): Promise<void> {
     if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_user_review') {
       throw new Error('No session awaiting user review');
     }
 
-    // Write feedback as additional context for PO
     const taskId = this.currentSession.task.id;
-    this.artifactManager.writeArtifact(taskId, 'questions', `# User Feedback\n\n${feedback}\n\nPlease revise the story based on this feedback.`);
+    this.artifactManager.writeArtifact(taskId, 'answers',
+      `# User Feedback — Spec Revision Requested\n\n${feedback}\n\nThe user has reviewed your story and wants changes. Please revise the story based on the feedback above.`);
+
+    await this.transitionTo('po');
+  }
+
+  /**
+   * User answers the PO's clarifying questions — send back to PO with answers.
+   */
+  async answerQuestions(answers: string): Promise<void> {
+    if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_user_review') {
+      throw new Error('No session awaiting user review');
+    }
+
+    const taskId = this.currentSession.task.id;
+
+    // Preserve the PO's original questions for reference
+    const originalQuestions = this.artifactManager.readArtifact(taskId, 'questions');
+
+    const answerContent = [
+      `# User Answers to Clarifying Questions`,
+      ``,
+      ...(originalQuestions ? [`## Original Questions\n\n${originalQuestions}\n`, `---\n`] : []),
+      `## Answers\n\n${answers}`,
+      ``,
+      `Please incorporate these answers into the user story. Do NOT ask these questions again — they have been answered above. Update story.md with the refined spec.`,
+    ].join('\n');
+
+    this.artifactManager.writeArtifact(taskId, 'answers', answerContent);
 
     await this.transitionTo('po');
   }
@@ -133,6 +306,7 @@ export class SessionManager {
     }
 
     this.currentSession.completedAt = new Date().toISOString();
+    this.persistSession();
     await this.transitionTo('done');
 
     eventBus.emit('session:completed', {
@@ -157,10 +331,16 @@ export class SessionManager {
   }
 
   /**
-   * Abort the current task.
+   * Abort the current task (also cancels scheduled tasks).
    */
   async abortTask(): Promise<void> {
     if (!this.currentSession) return;
+
+    // Cancel pending schedule timer
+    if (this.scheduleTimer) {
+      clearTimeout(this.scheduleTimer);
+      this.scheduleTimer = null;
+    }
 
     this.agentPool.killAll();
 
@@ -168,6 +348,7 @@ export class SessionManager {
     session.currentStage = 'failed';
     session.error = 'Aborted by user';
     session.completedAt = new Date().toISOString();
+    this.persistSession();
 
     eventBus.emit('session:failed', {
       sessionId: session.id,
@@ -191,6 +372,7 @@ export class SessionManager {
 
     const from = this.currentSession.currentStage;
     this.currentSession.currentStage = stage;
+    this.persistSession();
 
     eventBus.emit('session:stage-changed', {
       sessionId: this.currentSession.id,
@@ -231,7 +413,8 @@ export class SessionManager {
     const agent = this.agentPool.createAgent(role, taskId);
     this.currentSession.assignedAgents[role] = agent.id;
 
-    await agent.start(systemPrompt, taskPrompt, this.projectPath);
+    const modelForRole = this.currentSession.models?.[role] || undefined;
+    await agent.start(systemPrompt, taskPrompt, this.projectPath, modelForRole);
   }
 
   /**
@@ -250,6 +433,7 @@ export class SessionManager {
 
         if (exitCode === 0) {
           subtask.status = 'completed';
+          this.persistSession();
           eventBus.emit('session:subtask-completed', {
             taskId,
             subtaskId: subtask.id,
@@ -257,6 +441,7 @@ export class SessionManager {
           });
         } else {
           subtask.status = 'failed';
+          this.persistSession();
           eventBus.emit('session:subtask-failed', {
             taskId,
             subtaskId: subtask.id,
@@ -305,10 +490,10 @@ export class SessionManager {
     });
 
     // Handle user commands from the frontend
-    eventBus.on('command:create-task', async ({ title, description }) => {
-      console.log(`[SessionManager] Received create-task: "${title}"`);
+    eventBus.on('command:create-task', async ({ title, description, projectId, scheduledAt, models }: { title: string; description: string; projectId?: string; scheduledAt?: string; models?: Partial<Record<AgentRole, string>> }) => {
+      console.log(`[SessionManager] Received create-task: "${title}" (project: ${projectId ?? 'default'}, scheduled: ${scheduledAt ?? 'now'}, models: ${JSON.stringify(models ?? {})})`);
       try {
-        await this.createTask(title, description);
+        await this.createTask(title, description, projectId, scheduledAt, models);
       } catch (err: any) {
         console.error('[SessionManager] Failed to create task:', err.message, err.stack);
       }
@@ -327,6 +512,14 @@ export class SessionManager {
         await this.rejectSpec(feedback);
       } catch (err: any) {
         console.error('Failed to reject spec:', err.message);
+      }
+    });
+
+    eventBus.on('command:answer-questions', async ({ answers }: { answers: string }) => {
+      try {
+        await this.answerQuestions(answers);
+      } catch (err: any) {
+        console.error('Failed to answer questions:', err.message);
       }
     });
 
@@ -549,7 +742,8 @@ export class SessionManager {
           agentId: agent.id,
         });
 
-        await agent.start(systemPrompt, taskPrompt, this.projectPath);
+        const devModel = this.currentSession.models?.['developer'] || undefined;
+        await agent.start(systemPrompt, taskPrompt, this.projectPath, devModel);
       } catch (err: any) {
         subtask.status = 'failed';
         console.error(`Failed to spawn dev for subtask ${subtask.id}:`, err);
