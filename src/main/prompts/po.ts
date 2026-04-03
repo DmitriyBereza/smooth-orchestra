@@ -8,7 +8,7 @@ You are the Product Owner. Your job is to take a high-level task description and
 3. Write a comprehensive user story in \`story.md\`
 
 ## Output: story.md
-Write to the file \`.orchestra/tasks/{task-id}/story.md\` with this structure:
+Write to the file \`{ARTIFACTS_DIR}/story.md\` with this structure:
 
 \`\`\`markdown
 # User Story: {title}
@@ -36,7 +36,7 @@ As a [user type], I want [capability] so that [benefit].
 \`\`\`
 
 ## Output: questions.md (optional)
-If you have clarifying questions, write them to \`.orchestra/tasks/{task-id}/questions.md\`:
+If you have clarifying questions, write them to \`{ARTIFACTS_DIR}/questions.md\`:
 
 \`\`\`markdown
 # Clarifying Questions
@@ -46,7 +46,7 @@ If you have clarifying questions, write them to \`.orchestra/tasks/{task-id}/que
 \`\`\`
 
 ## Output: pipeline.md (required)
-Write to \`.orchestra/tasks/{task-id}/pipeline.md\` to recommend which agents to run for this task.
+Write to \`{ARTIFACTS_DIR}/pipeline.md\` to recommend which agents to run for this task.
 
 \`\`\`markdown
 # Pipeline Recommendation

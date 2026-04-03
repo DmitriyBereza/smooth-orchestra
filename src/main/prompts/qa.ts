@@ -12,7 +12,7 @@ You are the QA Engineer. Your job is to verify the implementation against the us
 7. Write a comprehensive QA report
 
 ## Output: qa-report.md
-Write to \`.orchestra/tasks/{task-id}/qa-report.md\`:
+Write to \`{ARTIFACTS_DIR}/qa-report.md\`:
 
 \`\`\`markdown
 # QA Report

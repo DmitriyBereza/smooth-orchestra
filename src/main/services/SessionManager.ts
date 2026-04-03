@@ -28,6 +28,7 @@ export class SessionManager {
   private projectContext: string = '';
   private scheduleTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionFilePath: string;
+  private orchestraDir: string;
 
   constructor(
     private agentPool: AgentPool,
@@ -37,7 +38,8 @@ export class SessionManager {
     private projectStore?: ProjectStore,
     orchestraDir?: string,
   ) {
-    this.sessionFilePath = path.join(orchestraDir ?? path.join(projectPath, '.orchestra'), 'session.json');
+    this.orchestraDir = orchestraDir ?? path.join(projectPath, '.orchestra');
+    this.sessionFilePath = path.join(this.orchestraDir, 'session.json');
     this.loadSession();
     this.setupEventListeners();
   }
@@ -441,12 +443,16 @@ export class SessionManager {
     const taskId = this.currentSession.task.id;
     const { title, description } = this.currentSession.task;
 
+    // Absolute path to this task's artifact directory — agents must use this
+    // so they write to Orchestra's .orchestra/ dir, not their CWD project's .orchestra/
+    const artifactDir = this.artifactManager.getTaskDir(taskId);
+
     // Build context from previous stage artifacts
     const artifactContext = this.artifactManager.buildContextForRole(taskId, role, stage);
 
     // Build prompts
-    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage);
-    const taskPrompt = buildTaskPrompt(role, taskId, title, description, artifactContext, stage);
+    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage, artifactDir);
+    const taskPrompt = buildTaskPrompt(role, taskId, title, description, artifactContext, stage, undefined, artifactDir);
 
     // Create and start the agent
     const agent = this.agentPool.createAgent(role, taskId);
@@ -784,14 +790,15 @@ export class SessionManager {
     }));
 
     // Build shared prompt context once (identical across subtasks)
+    const artifactDir = this.artifactManager.getTaskDir(taskId);
     const artifactContext = this.artifactManager.buildContextForRole(taskId, 'developer');
-    const systemPrompt = buildSystemPrompt('developer', this.projectContext);
+    const systemPrompt = buildSystemPrompt('developer', this.projectContext, undefined, artifactDir);
 
     // Spawn a developer agent for each subtask
     for (const subtask of this.currentSession.subtasks) {
       try {
         // Agents handle their own branching
-        const taskPrompt = this.buildSubtaskPrompt(taskId, subtask, artifactContext);
+        const taskPrompt = this.buildSubtaskPrompt(taskId, subtask, artifactContext, artifactDir);
 
         // Create agent — AgentPool manages one per role, so we call createAgent
         // which will return a new AgentProcess with a unique id
@@ -821,7 +828,9 @@ export class SessionManager {
     taskId: string,
     subtask: SubtaskState,
     artifactContext: string,
+    artifactDir?: string,
   ): string {
+    const dir = artifactDir ?? `.orchestra/tasks/${taskId}`;
     return [
       `# Task Assignment — Subtask ${subtask.index}`,
       ``,
@@ -831,8 +840,8 @@ export class SessionManager {
       `**Your git branch**: ${subtask.gitBranch}`,
       ``,
       `IMPORTANT: Only modify files assigned to you. Other files are locked by other developers.`,
-      `Write your dev-notes to: .orchestra/tasks/${taskId}/dev-notes-${subtask.index}.md`,
-      `Write your QA spec to: .orchestra/tasks/${taskId}/qa-spec-${subtask.index}.md`,
+      `Write your dev-notes to: ${dir}/dev-notes-${subtask.index}.md`,
+      `Write your QA spec to: ${dir}/qa-spec-${subtask.index}.md`,
       ``,
       `# Context from Previous Stages`,
       ``,

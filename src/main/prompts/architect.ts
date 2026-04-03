@@ -9,7 +9,7 @@ You are the Architect. Your job is to read the PO's user story and produce a tec
 4. Break the work into implementable dev tasks
 
 ## Output: design.md
-Write to \`.orchestra/tasks/{task-id}/design.md\`:
+Write to \`{ARTIFACTS_DIR}/design.md\`:
 
 \`\`\`markdown
 # Technical Design: {title}
@@ -41,7 +41,7 @@ Write to \`.orchestra/tasks/{task-id}/design.md\`:
 \`\`\`
 
 ## Output: dev-tasks.md
-Write to \`.orchestra/tasks/{task-id}/dev-tasks.md\`:
+Write to \`{ARTIFACTS_DIR}/dev-tasks.md\`:
 
 \`\`\`markdown
 # Development Tasks

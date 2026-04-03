@@ -19,11 +19,14 @@ const ROLE_PROMPTS: Record<AgentRole, string> = {
  * 1. Base context (team structure, communication protocol)
  * 2. Project context (codebase info, constraints)
  * 3. Role-specific prompt (may vary by stage, e.g. tech-lead design vs code review)
+ *
+ * @param artifactDir - Absolute path to this task's artifact directory, injected in place of {ARTIFACTS_DIR}
  */
 export function buildSystemPrompt(
   role: AgentRole,
   projectContext: string,
   stage?: PipelineStage,
+  artifactDir?: string,
 ): string {
   const base = buildBaseContext(projectContext);
   let rolePrompt = ROLE_PROMPTS[role];
@@ -33,7 +36,15 @@ export function buildSystemPrompt(
     rolePrompt = TECH_LEAD_CODE_REVIEW_PROMPT;
   }
 
-  return `${base}\n\n${rolePrompt}`;
+  let combined = `${base}\n\n${rolePrompt}`;
+
+  // Replace placeholder with absolute artifact directory so agents write to the right place
+  // regardless of which project they have as their CWD
+  if (artifactDir) {
+    combined = combined.replaceAll('{ARTIFACTS_DIR}', artifactDir);
+  }
+
+  return combined;
 }
 
 /**
@@ -48,7 +59,9 @@ export function buildTaskPrompt(
   artifactContext: string,
   _stage?: PipelineStage,
   subtask?: { index: number; files: string[]; title: string },
+  artifactDir?: string,
 ): string {
+  const artifactsPath = artifactDir ?? `.orchestra/tasks/${taskId}`;
   const parts = [
     `# Task Assignment`,
     ``,
@@ -56,7 +69,7 @@ export function buildTaskPrompt(
     `**Title**: ${taskTitle}`,
     `**Description**: ${taskDescription}`,
     ``,
-    `**Your artifacts directory**: \`.orchestra/tasks/${taskId}/\``,
+    `**Your artifacts directory**: \`${artifactsPath}/\``,
   ];
 
   if (subtask) {

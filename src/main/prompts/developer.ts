@@ -24,7 +24,7 @@ You are a Developer. Your job is to implement the assigned dev task following st
 - Ensure all tests pass before finishing
 
 ## Output: dev-notes.md
-Write to \`.orchestra/tasks/{task-id}/dev-notes.md\`:
+Write to \`{ARTIFACTS_DIR}/dev-notes.md\`:
 
 \`\`\`markdown
 # Developer Notes
@@ -52,7 +52,7 @@ Write to \`.orchestra/tasks/{task-id}/dev-notes.md\`:
 \`\`\`
 
 ## Output: qa-spec.md
-Write to \`.orchestra/tasks/{task-id}/qa-spec.md\`:
+Write to \`{ARTIFACTS_DIR}/qa-spec.md\`:
 
 \`\`\`markdown
 # QA Specification

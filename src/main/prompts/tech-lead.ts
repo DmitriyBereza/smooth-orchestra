@@ -9,7 +9,7 @@ You are the Tech Lead performing a design review. Your job is to review the Arch
 4. Write review notes
 
 ## Output: review.md
-Write to \`.orchestra/tasks/{task-id}/review.md\`:
+Write to \`{ARTIFACTS_DIR}/review.md\`:
 
 \`\`\`markdown
 # Tech Lead Review
@@ -62,7 +62,7 @@ You are the Tech Lead performing a post-development code review. Your job is to 
 5. Write a code review with a clear approve/reject decision
 
 ## Output: tl-code-review.md
-Write to \`.orchestra/tasks/{task-id}/tl-code-review.md\`:
+Write to \`{ARTIFACTS_DIR}/tl-code-review.md\`:
 
 \`\`\`markdown
 # Tech Lead Code Review
