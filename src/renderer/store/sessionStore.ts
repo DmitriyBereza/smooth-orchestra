@@ -227,6 +227,17 @@ interface OrchestraStore {
   events: Array<{ timestamp: string; message: string; type: string }>;
   addEvent: (message: string, type: string) => void;
 
+  // Session history
+  sessionHistory: SessionState[];
+  setSessionHistory: (history: SessionState[]) => void;
+
+  // Hydrate agent outputs from snapshot (bulk)
+  hydrateAgentOutputs: (outputs: Record<string, string[]>) => void;
+
+  // Active agent tab (shared between PipelineView and AgentPanel)
+  activeAgentTab: AgentRole;
+  setActiveAgentTab: (role: AgentRole) => void;
+
   // Event filters
   eventFilters: {
     category: string | null;
@@ -292,6 +303,33 @@ export const useStore = create<OrchestraStore>((set) => ({
         ...state.events,
       ].slice(0, 200), // Keep last 200 events
     })),
+
+  // Session history
+  sessionHistory: [],
+  setSessionHistory: (history) => set({ sessionHistory: history }),
+
+  // Hydrate agent outputs from snapshot
+  hydrateAgentOutputs: (outputs) =>
+    set(() => {
+      const hydrated = { ...EMPTY_AGENT_OUTPUTS };
+      for (const [role, lines] of Object.entries(outputs)) {
+        if (role in hydrated) {
+          (hydrated as any)[role] = lines.map((line: string, i: number) => ({
+            id: `snapshot-${role}-${i}`,
+            role,
+            type: 'stdout' as const,
+            content: line,
+            timestamp: new Date().toISOString(),
+            taskId: '',
+          }));
+        }
+      }
+      return { agentOutputs: hydrated };
+    }),
+
+  // Active agent tab
+  activeAgentTab: 'po' as AgentRole,
+  setActiveAgentTab: (role) => set({ activeAgentTab: role }),
 
   // Event filters
   eventFilters: { category: null, role: null, search: '' },

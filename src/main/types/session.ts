@@ -80,6 +80,7 @@ export interface SessionState {
   activePipeline?: PipelineStage[]; // confirmed by user at review gate
   jiraIssueKey?: string | null; // linked Jira issue (e.g. "TRA-42")
   pipelineType?: PipelineType; // which pipeline domain this session uses
+  reviewLoopCount?: number; // how many times review has sent back to dev (caps at MAX_REVIEW_LOOPS)
 }
 
 // ---------------------------------------------------------------------------

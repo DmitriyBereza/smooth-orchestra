@@ -19,7 +19,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) =>
             key={project.id}
             style={{
               ...styles.card,
-              borderColor: isSelected ? 'var(--accent-blue)' : 'var(--border-color)',
+              borderColor: isSelected ? 'var(--border-active)' : 'var(--border-input)',
+              backgroundColor: isSelected ? 'var(--brand-muted)' : 'var(--bg-secondary)',
             }}
             onClick={() => toggleProject(project.id)}
           >
@@ -31,10 +32,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) =>
                   onClick={(e) => { e.stopPropagation(); onEdit(project); }}
                   title="Edit"
                 >
-                  Edit
+                  edit
                 </button>
                 <button
-                  style={{ ...styles.iconButton, color: 'var(--accent-red)' }}
+                  style={{ ...styles.iconButton, color: 'var(--state-error)' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (confirm(`Delete project "${project.name}"?`)) {
@@ -43,7 +44,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) =>
                   }}
                   title="Delete"
                 >
-                  Del
+                  del
                 </button>
               </div>
             </div>
@@ -63,9 +64,9 @@ export const ProjectList: React.FC<ProjectListProps> = ({ projects, onEdit }) =>
             {isSelected && (
               <div style={{
                 ...styles.selectedBadge,
-                color: isPrimary ? 'var(--accent-blue)' : 'var(--accent-green)',
+                color: isPrimary ? 'var(--brand-primary)' : 'var(--state-success)',
               }}>
-                {isPrimary ? 'Primary (CWD)' : 'Included'}
+                {isPrimary ? 'primary (cwd)' : 'included'}
               </div>
             )}
           </div>
@@ -79,45 +80,45 @@ const styles: Record<string, React.CSSProperties> = {
   list: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: '8px',
   },
   card: {
-    padding: 10,
-    backgroundColor: 'var(--bg-secondary)',
-    borderRadius: 6,
-    border: '1px solid var(--border-color)',
+    padding: '10px',
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid',
     cursor: 'pointer',
-    transition: 'border-color 0.15s',
+    transition: 'border-color var(--transition-fast)',
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: '4px',
   },
   projectName: {
-    fontSize: 13,
-    fontWeight: 600,
+    fontSize: 'var(--text-sm)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-body)',
     color: 'var(--text-primary)',
   },
   cardActions: {
     display: 'flex',
-    gap: 6,
+    gap: '6px',
   },
   iconButton: {
     padding: '2px 6px',
     backgroundColor: 'transparent',
     color: 'var(--text-muted)',
     border: 'none',
-    borderRadius: 3,
-    fontSize: 11,
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
   path: {
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    fontFamily: 'monospace',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -125,21 +126,21 @@ const styles: Record<string, React.CSSProperties> = {
   labels: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: 4,
-    marginTop: 6,
+    gap: '4px',
+    marginTop: '6px',
   },
   label: {
     padding: '2px 8px',
     backgroundColor: 'var(--bg-tertiary)',
     color: 'var(--text-secondary)',
-    borderRadius: 10,
-    fontSize: 11,
-    fontFamily: 'var(--font-sans)',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
   },
   selectedBadge: {
-    marginTop: 6,
-    fontSize: 11,
-    color: 'var(--accent-blue)',
-    fontWeight: 600,
+    marginTop: '6px',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
+    fontWeight: 'var(--weight-semibold)',
   },
 };

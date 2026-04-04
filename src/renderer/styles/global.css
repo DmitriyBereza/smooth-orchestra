@@ -1,3 +1,20 @@
+/* ─── Font Face Declarations ──────────────────────────────────────── */
+@font-face {
+  font-family: 'Geist';
+  src: url('../../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('../../../node_modules/geist/dist/fonts/geist-mono/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,28 +22,137 @@
 }
 
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-card: #1e293b;
-  --border-color: #475569;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent-blue: #3b82f6;
-  --accent-purple: #8b5cf6;
-  --accent-orange: #f97316;
-  --accent-green: #22c55e;
-  --accent-red: #ef4444;
-  --accent-yellow: #eab308;
-  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Typography */
+  --font-heading: 'Geist', 'Inter', -apple-system, sans-serif;
+  --font-body:    'Geist', 'Inter', -apple-system, sans-serif;
+  --font-mono:    'Geist Mono', 'JetBrains Mono', 'SF Mono', monospace;
+
+  /* Type Scale */
+  --text-xs:   10px;
+  --text-sm:   12px;
+  --text-base: 13px;
+  --text-md:   14px;
+  --text-lg:   16px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
+  --text-3xl:  32px;
+
+  /* Font Weights */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Spacing */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Border Radius */
+  --radius-none: 0px;
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   6px;
+  --radius-xl:   8px;
+  --radius-full: 9999px;
+
+  /* Backgrounds */
+  --bg-primary:   #08090E;
+  --bg-secondary: #0D1017;
+  --bg-tertiary:  #141824;
+  --bg-card:      #0D1017;
+  --bg-overlay:   rgba(0,0,0,0.75);
+
+  /* Text */
+  --text-primary:   #E8F4FD;
+  --text-secondary: #7BA7C4;
+  --text-muted:     #4D7A99;
+  --text-on-accent: #08090E;
+  --text-code:      #00D4FF;
+
+  /* Borders */
+  --border-color:  rgba(0,212,255,0.12);  /* decorative separators ONLY */
+  --border-subtle: rgba(0,212,255,0.06);
+  --border-active: rgba(0,212,255,0.4);
+  --border-input:  rgba(0,212,255,0.35);  /* all interactive element borders */
+
+  /* Brand */
+  --brand-primary: #00D4FF;
+  --brand-hover:   #00B8DB;
+  --brand-muted:   rgba(0,212,255,0.10);
+
+  /* Focus */
+  --focus-ring: #00D4FF;
+
+  /* Semantic States */
+  --state-success: #00E676;
+  --state-warning: #FFB300;
+  --state-error:   #FF5252;
+  --state-info:    #67E8F9;
+  --state-neutral: #4D7A99;
+
+  /* Semantic State Muted (for badge backgrounds) */
+  --state-success-muted: rgba(0,230,118,0.13);
+  --state-warning-muted: rgba(255,179,0,0.13);
+  --state-error-muted:   rgba(255,82,82,0.13);
+  --state-neutral-muted: rgba(77,122,153,0.13);
+  --brand-primary-muted: rgba(0,212,255,0.13);
+
+  /* Role Colors */
+  --role-po:        #2196F3;
+  --role-architect: #CE93D8;
+  --role-developer: #00E676;
+  --role-techlead:  #FF9800;
+  --role-qa:        #FF5252;
+
+  /* Role Glow (for active tab shadows) */
+  --role-po-glow:        rgba(33,150,243,0.2);
+  --role-architect-glow: rgba(206,147,216,0.2);
+  --role-developer-glow: rgba(0,230,118,0.2);
+  --role-techlead-glow:  rgba(255,152,0,0.2);
+  --role-qa-glow:        rgba(255,82,82,0.2);
+
+  /* Status Bar */
+  --status-bar-bg:        #000000;
+  --status-bar-text:      #4D7A99;
+  --status-bar-accent:    #00D4FF;
+  --status-bar-attention: #FFB300;
+
+  /* Pipeline type badges */
+  --pipeline-dev-color:       #2196F3;
+  --pipeline-marketing-color: #FF4081;
+  --pipeline-design-color:    #CE93D8;
+
+  /* Shadows */
+  --shadow-sm:         0 1px 3px rgba(0,0,0,0.6);
+  --shadow-md:         0 2px 8px rgba(0,0,0,0.7), inset 0 1px 0 rgba(0,212,255,0.04);
+  --shadow-lg:         0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(0,212,255,0.08);
+  --shadow-glow-cyan:  0 0 8px rgba(0,212,255,0.5), 0 0 24px rgba(0,212,255,0.2);
+  --shadow-glow-amber: 0 0 8px rgba(255,179,0,0.5), 0 0 24px rgba(255,179,0,0.2);
+
+  /* Transitions */
+  --transition-fast: 100ms ease-out;
+  --transition-med:  180ms ease-out;
+  --transition-slow: 280ms ease-in-out;
+
+  /* Jira Badges */
+  --jira-badge-color:  #00D4FF;
+  --jira-badge-bg:     rgba(0,212,255,0.10);
+  --jira-badge-border: rgba(0,212,255,0.25);
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-size: var(--text-base);
   overflow: hidden;
   height: 100vh;
 }
@@ -37,7 +163,13 @@ body {
   flex-direction: column;
 }
 
-/* Scrollbar styling */
+/* ─── Focus Visible ──────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─── Scrollbar styling ──────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -49,40 +181,93 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--bg-tertiary);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
+  background: var(--border-input);
 }
 
-/* Animation for pulsing items needing attention */
-@keyframes pulse-border {
-  0%, 100% { border-color: var(--accent-yellow); }
-  50% { border-color: transparent; }
+/* ─── Keyframe Animations ────────────────────────────────────────── */
+@keyframes signal-attention {
+  0%, 100% {
+    border-left-color: var(--state-warning);
+    box-shadow: var(--shadow-glow-amber);
+  }
+  50% {
+    border-left-color: rgba(255,179,0,0.5);
+    box-shadow: -2px 0 6px rgba(255,179,0,0.2);
+  }
 }
 
-.needs-attention {
-  animation: pulse-border 2s ease-in-out infinite;
+@keyframes signal-glow-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0,212,255,0.6), 0 0 16px rgba(0,212,255,0.2); }
+  50%       { box-shadow: 0 0 3px rgba(0,212,255,0.3); }
 }
 
-/* Status dot */
+@keyframes signal-dot-run {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
+  50%       { opacity: 0.5; filter: none; }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Animation Utility Classes ──────────────────────────────────── */
+.signal-attention-card {
+  border-left: 4px solid var(--state-warning);
+  animation: signal-attention 2s ease-in-out infinite;
+}
+
+.signal-running-dot {
+  animation: signal-dot-run 1.5s ease-in-out infinite;
+}
+
+.signal-glow-pulse {
+  animation: signal-glow-pulse 2s ease-in-out infinite;
+}
+
+.signal-cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ─── Status Dot ──────────────────────────────────────────────────── */
 .status-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   display: inline-block;
 }
 
-.status-dot.idle { background: var(--text-muted); }
-.status-dot.running { background: var(--accent-blue); animation: pulse 1.5s infinite; }
-.status-dot.completed { background: var(--accent-green); }
-.status-dot.failed { background: var(--accent-red); }
-.status-dot.killed { background: var(--accent-orange); }
+.status-dot.idle      { background: var(--text-muted); }
+.status-dot.running   { background: var(--brand-primary); }
+.status-dot.running.signal-running-dot { animation: signal-dot-run 1.5s ease-in-out infinite; }
+.status-dot.completed { background: var(--state-success); }
+.status-dot.failed    { background: var(--state-error); }
+.status-dot.killed    { background: var(--state-warning); }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+/* ─── prefers-reduced-motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .signal-attention-card,
+  .signal-running-dot,
+  .signal-glow-pulse,
+  .signal-cursor-blink,
+  .spin {
+    animation: none;
+  }
+  * {
+    transition-duration: 0ms !important;
+  }
 }
 
 /* ─── Mobile responsive ──────────────────────────────────────────── */

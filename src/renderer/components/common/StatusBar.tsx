@@ -12,26 +12,52 @@ export const StatusBar: React.FC = () => {
     0,
   );
 
+  // Needs attention if review or merge approval required
+  const needsAttention = session && (
+    session.currentStage === 'awaiting_user_review' ||
+    session.currentStage === 'awaiting_merge_approval' ||
+    session.currentStage === 'awaiting_rejection_routing'
+  );
+
+  const textColor = needsAttention ? 'var(--status-bar-attention)' : 'var(--status-bar-text)';
+
   return (
     <div style={styles.container}>
       <div style={styles.left}>
-        <span style={styles.item}>
+        {/* Logotype collapses to ">_" in status bar */}
+        <span style={{ color: 'var(--status-bar-accent)', fontWeight: 'var(--weight-bold)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+          {'>_'}
+        </span>
+
+        <span style={{ ...styles.separator }}>|</span>
+
+        <span style={{ ...styles.item, display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span
-            className={`status-dot ${connected ? 'completed' : 'failed'}`}
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: 'var(--radius-full)',
+              background: connected ? 'var(--status-bar-accent)' : 'var(--state-error)',
+              display: 'inline-block',
+              boxShadow: connected ? 'var(--shadow-glow-cyan)' : 'none',
+              flexShrink: 0,
+            }}
           />
-          Smooth Orchestra
+          <span style={{ color: textColor }}>
+            {connected ? 'connected' : 'disconnected'}
+          </span>
         </span>
 
         {session && (
           <>
             <span style={styles.separator}>|</span>
-            <span style={styles.item}>
+            <span style={{ ...styles.item, color: textColor }}>
               {session.task.id}: {STAGE_DISPLAY[session.currentStage]}
             </span>
             {session.gitBranch && (
               <>
                 <span style={styles.separator}>|</span>
-                <span style={styles.item}>
+                <span style={{ ...styles.item, color: textColor }}>
                   <GitIcon /> {session.gitBranch}
                 </span>
               </>
@@ -42,14 +68,14 @@ export const StatusBar: React.FC = () => {
 
       <div style={styles.right}>
         {runningCount > 0 && (
-          <span style={styles.item}>
+          <span style={{ ...styles.item, color: textColor }}>
             {runningCount} agent{runningCount > 1 ? 's' : ''} running
           </span>
         )}
         {totalTokens > 0 && (
           <>
             <span style={styles.separator}>|</span>
-            <span style={styles.item}>
+            <span style={{ ...styles.item, color: 'var(--status-bar-text)' }}>
               {totalTokens.toLocaleString()} tokens
             </span>
           </>
@@ -67,31 +93,33 @@ const GitIcon: React.FC = () => (
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: '4px 16px',
-    backgroundColor: 'var(--accent-blue)',
+    padding: '0 12px',
+    backgroundColor: 'var(--status-bar-bg)',
+    height: '26px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    fontSize: 11,
-    color: 'white',
     flexShrink: 0,
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    color: 'var(--status-bar-text)',
   },
   left: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
+    gap: '8px',
   },
   right: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
+    gap: '8px',
   },
   item: {
     display: 'flex',
     alignItems: 'center',
-    gap: 4,
+    gap: '4px',
   },
   separator: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'var(--border-color)',
   },
 };

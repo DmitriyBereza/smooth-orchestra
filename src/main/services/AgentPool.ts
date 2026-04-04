@@ -129,6 +129,19 @@ export class AgentPool {
   }
 
   /**
+   * Get recent output lines for all agents, keyed by role.
+   * Returns the last `limit` lines per agent for snapshot hydration.
+   */
+  getRecentOutputs(limit = 50): Record<string, string[]> {
+    const outputs: Record<string, string[]> = {};
+    for (const agent of this.agents.values()) {
+      const lines = agent.getOutput();
+      outputs[agent.role] = lines.slice(-limit);
+    }
+    return outputs;
+  }
+
+  /**
    * Check if any agent is currently running.
    */
   hasRunningAgents(): boolean {
