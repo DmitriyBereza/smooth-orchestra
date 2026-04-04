@@ -127,6 +127,12 @@ export function getSharedPipelineConfig(type: PipelineType): SharedPipelineConfi
   return SHARED_PIPELINE_CONFIGS[type];
 }
 
+/** Get the agent roles for a pipeline type (derived from modelSelectorRoles) */
+export function getRolesForPipeline(type: PipelineType | undefined): string[] {
+  const config = SHARED_PIPELINE_CONFIGS[type ?? 'development'];
+  return config.modelSelectorRoles.map((r) => r.role);
+}
+
 /** Get the display name for a pipeline type */
 export function getPipelineDisplayName(type: PipelineType): string {
   return SHARED_PIPELINE_CONFIGS[type].displayName;
