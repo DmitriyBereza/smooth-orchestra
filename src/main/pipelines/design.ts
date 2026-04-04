@@ -86,7 +86,7 @@ export const DESIGN_PIPELINE_CONFIG: PipelineTypeConfig = {
       reads: ['story', 'research'],
     },
     'ui-designer': {
-      writes: ['design-spec'],
+      writes: ['design-spec', 'brand-book-1', 'brand-book-2', 'brand-book-3'],
       reads: ['story', 'research', 'ux-spec'],
     },
     'design-executor': {
@@ -95,11 +95,11 @@ export const DESIGN_PIPELINE_CONFIG: PipelineTypeConfig = {
     },
     'design-reviewer': {
       writes: ['design-review'],
-      reads: ['story', 'research', 'ux-spec', 'design-spec'],
+      reads: ['story', 'research', 'ux-spec', 'design-spec', 'brand-book-1', 'brand-book-2', 'brand-book-3'],
     },
     'design-qa': {
       writes: ['design-qa-report'],
-      reads: ['story', 'ux-spec', 'design-spec', 'design-review'],
+      reads: ['story', 'ux-spec', 'design-spec', 'design-review', 'brand-book-1', 'brand-book-2', 'brand-book-3'],
     },
   },
 

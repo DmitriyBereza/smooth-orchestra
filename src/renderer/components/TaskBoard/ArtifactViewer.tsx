@@ -6,6 +6,14 @@ interface ArtifactViewerProps {
   label: string;
 }
 
+/**
+ * Returns true if this artifact type produces HTML content that should
+ * be rendered in a sandboxed iframe rather than displayed as plain text.
+ */
+export function isHtmlArtifact(artifactType: string): boolean {
+  return artifactType.startsWith('brand-book-');
+}
+
 export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifactType, label }) => {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -75,8 +83,32 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
       </button>
 
       {expanded && (
-        <div style={styles.content}>
-          <pre style={styles.pre}>{content}</pre>
+        <div style={isHtmlArtifact(artifactType) ? styles.htmlContent : styles.content}>
+          {isHtmlArtifact(artifactType) ? (
+            <>
+              <iframe
+                srcDoc={content}
+                sandbox="allow-same-origin"
+                style={styles.iframe}
+                title={`${label} preview`}
+              />
+              <div style={styles.htmlActions}>
+                <button
+                  type="button"
+                  style={styles.openButton}
+                  onClick={() => {
+                    const blob = new Blob([content], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                  }}
+                >
+                  Open in browser
+                </button>
+              </div>
+            </>
+          ) : (
+            <pre style={styles.pre}>{content}</pre>
+          )}
         </div>
       )}
     </div>
@@ -135,5 +167,33 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'var(--font-sans)',
     whiteSpace: 'pre-wrap' as const,
     wordBreak: 'break-word' as const,
+  },
+  htmlContent: {
+    borderTop: '1px solid var(--border-color)',
+    padding: 0,
+  },
+  iframe: {
+    width: '100%',
+    height: 600,
+    border: 'none',
+    display: 'block',
+  },
+  htmlActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    padding: '8px 12px',
+    borderTop: '1px solid var(--border-color)',
+    backgroundColor: 'var(--bg-secondary)',
+  },
+  openButton: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: 'var(--accent-blue)',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--accent-blue)',
+    borderRadius: 4,
+    padding: '4px 12px',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-sans)',
   },
 };

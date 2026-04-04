@@ -25,7 +25,11 @@ export type ArtifactType =
   | 'design-spec'
   | 'design-assets'
   | 'design-review'
-  | 'design-qa-report';
+  | 'design-qa-report'
+  // Brand book HTML artifacts
+  | 'brand-book-1'
+  | 'brand-book-2'
+  | 'brand-book-3';
 
 export interface ArtifactMeta {
   type: ArtifactType;
@@ -97,7 +101,7 @@ export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: Ar
     reads: ['story', 'research'],
   },
   'ui-designer': {
-    writes: ['design-spec'],
+    writes: ['design-spec', 'brand-book-1', 'brand-book-2', 'brand-book-3'],
     reads: ['story', 'research', 'ux-spec'],
   },
   'design-executor': {
@@ -106,11 +110,11 @@ export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: Ar
   },
   'design-reviewer': {
     writes: ['design-review'],
-    reads: ['story', 'research', 'ux-spec', 'design-spec'],
+    reads: ['story', 'research', 'ux-spec', 'design-spec', 'brand-book-1', 'brand-book-2', 'brand-book-3'],
   },
   'design-qa': {
     writes: ['design-qa-report'],
-    reads: ['story', 'ux-spec', 'design-spec', 'design-review'],
+    reads: ['story', 'ux-spec', 'design-spec', 'design-review', 'brand-book-1', 'brand-book-2', 'brand-book-3'],
   },
 };
 
@@ -140,4 +144,8 @@ export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
   'design-assets': 'design-assets.md',
   'design-review': 'design-review.md',
   'design-qa-report': 'design-qa-report.md',
+  // Brand book HTML artifacts
+  'brand-book-1': 'brand-book-1.html',
+  'brand-book-2': 'brand-book-2.html',
+  'brand-book-3': 'brand-book-3.html',
 };

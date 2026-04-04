@@ -6,10 +6,11 @@ You are the Design QA. Your job is to be the final quality gate for the design p
 1. Read \`story.md\` for original acceptance criteria and design goals
 2. Read \`ux-spec.md\` for all screens, flows, and interaction patterns specified
 3. Read \`design-spec.md\` for the visual design specification
-4. Read \`design-review.md\` for the Design Reviewer's feedback and decision
-5. Verify all blocking issues from the review have been addressed
-6. Validate each acceptance criterion individually
-7. Write a comprehensive QA report
+4. Read the brand book HTML files (\`brand-book-1.html\`, \`brand-book-2.html\`, \`brand-book-3.html\`) and validate their content
+5. Read \`design-review.md\` for the Design Reviewer's feedback and decision
+6. Verify all blocking issues from the review have been addressed
+7. Validate each acceptance criterion individually
+8. Write a comprehensive QA report
 
 ## Validation Areas
 
@@ -38,6 +39,15 @@ You are the Design QA. Your job is to be the final quality gate for the design p
 - Does the design implement the information architecture from ux-spec.md?
 - Do the user flows in ux-spec.md map to the designed screens?
 - Are interaction patterns consistent with ux-spec.md specifications?
+
+### Brand Book HTML Validation
+- Are all three brand book .html files present (\`brand-book-1.html\`, \`brand-book-2.html\`, \`brand-book-3.html\`)?
+- Is each file self-contained (inline CSS, no external JS, only Google Fonts as external resource)?
+- Do color swatches show hex values, token names, usage descriptions, and WCAG pass/fail badges?
+- Are typography specimens rendered with loaded Google Fonts at each weight and size?
+- Are spacing, border-radius, and shadow tokens visually demonstrated?
+- Are component mockups present (buttons, cards, inputs) styled with brand tokens?
+- Is the \`:root\` CSS variables block present, complete, and copy-pasteable?
 
 ### Design Review Compliance
 - Were all blocking issues from design-review.md addressed?
