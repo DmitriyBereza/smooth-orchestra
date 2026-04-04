@@ -4,15 +4,7 @@ import { SHARED_PIPELINE_CONFIGS, COMMON_BOOKEND_STAGES } from '../../../shared/
 import {
   FileText, TreeStructure, Code, ShieldCheck, BugBeetle,
 } from '@phosphor-icons/react';
-
-const ROLE_COLOR: Record<string, string> = {
-  po:        'var(--role-po)',
-  architect: 'var(--role-architect)',
-  developer: 'var(--role-developer)',
-  techlead:  'var(--role-techlead)',
-  'tech-lead': 'var(--role-techlead)',
-  qa:        'var(--role-qa)',
-};
+import { ROLE_COLOR } from '../../utils/roleColors';
 
 const ROLE_ICON: Record<string, React.ReactElement> = {
   po:        <FileText weight="fill" size={12} />,
@@ -74,7 +66,7 @@ function getStageInfo(stage: PipelineStage, pipelineType: PipelineType): React.R
     case 'done':
       return <span style={{ color: 'var(--state-success)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>Pipeline complete</span>;
     case 'awaiting_user_review':
-      return <span style={{ color: 'var(--state-warning)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} className="signal-attention-card" >Awaiting review</span>;
+      return <span style={{ display: 'inline-block', color: 'var(--state-warning)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} className="signal-attention-card" >Awaiting review</span>;
     case 'awaiting_rejection_routing':
       return <span style={{ color: 'var(--state-error)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>QA rejected — action required</span>;
     case 'awaiting_merge_approval':
@@ -99,6 +91,7 @@ function getStageInfo(stage: PipelineStage, pipelineType: PipelineType): React.R
 
 export const PipelineView: React.FC = () => {
   const session = useStore((s) => s.session);
+  const setActiveAgentTab = useStore((s) => s.setActiveAgentTab);
   const currentStage = session?.currentStage || 'idle';
   const pipelineType: PipelineType = session?.pipelineType ?? session?.task?.pipelineType ?? 'development';
 
@@ -166,6 +159,15 @@ export const PipelineView: React.FC = () => {
                   background: isActive ? 'var(--brand-muted)' : 'transparent',
                   opacity: isFailed && !isCompleted && !isActive ? 0.4 : 1,
                   flexShrink: 0,
+                  cursor: step.role ? 'pointer' : 'default',
+                }}
+                onClick={() => {
+                  if (step.role) {
+                    // Map stage names to agent roles (e.g., 'tl-code-review' -> 'tech-lead')
+                    const roleMap: Record<string, string> = { 'tl-code-review': 'tech-lead' };
+                    const agentRole = roleMap[step.role] ?? step.role;
+                    setActiveAgentTab(agentRole as any);
+                  }
                 }}
               >
                 {/* 4px dot */}

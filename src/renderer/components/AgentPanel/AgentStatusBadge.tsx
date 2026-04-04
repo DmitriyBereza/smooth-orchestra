@@ -1,19 +1,11 @@
 import React from 'react';
 import { AgentStatus } from '../../store/sessionStore';
+import { ROLE_COLOR } from '../../utils/roleColors';
 
 interface AgentStatusBadgeProps {
   status: AgentStatus;
   role?: string;
 }
-
-const ROLE_COLOR: Record<string, string> = {
-  po:          'var(--role-po)',
-  architect:   'var(--role-architect)',
-  developer:   'var(--role-developer)',
-  'tech-lead': 'var(--role-techlead)',
-  techlead:    'var(--role-techlead)',
-  qa:          'var(--role-qa)',
-};
 
 const STATUS_LABELS: Record<AgentStatus, string> = {
   idle: 'idle',

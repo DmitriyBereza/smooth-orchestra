@@ -41,6 +41,8 @@ export function useSocket() {
     addEvent,
     setSubtasks,
     updateSubtask,
+    setSessionHistory,
+    hydrateAgentOutputs,
   } = useStore();
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
@@ -68,11 +70,17 @@ export function useSocket() {
     });
 
     // Session events
-    s.on('session:snapshot', (data: { session: any; agents: any[] }) => {
+    s.on('session:snapshot', (data: { session: any; agents: any[]; agentOutputs?: Record<string, string[]>; history?: any[] }) => {
       setSession(data.session);
       setAgents(data.agents);
       if (data.session?.subtasks) {
         setSubtasks(data.session.subtasks);
+      }
+      if (data.agentOutputs) {
+        hydrateAgentOutputs(data.agentOutputs);
+      }
+      if (data.history) {
+        setSessionHistory(data.history);
       }
     });
 

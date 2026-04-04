@@ -239,6 +239,11 @@ export class SocketServer {
       });
     }
 
+    // Session history endpoint
+    app.get('/api/sessions/history', (_req: Request, res: Response) => {
+      res.json(this.sessionManager.getSessionHistory());
+    });
+
     // ── Jira routes ───────────────────────────────────────────────────────────
     if (this.jiraService) {
       const jira = this.jiraService;
@@ -442,11 +447,13 @@ export class SocketServer {
     this.io.on('connection', (socket: Socket) => {
       console.log(`[SocketServer] Client connected: ${socket.id}`);
 
-      // Send current state snapshot
+      // Send current state snapshot (including recent agent outputs and history)
       const session = this.sessionManager.getSession();
       socket.emit('session:snapshot', {
         session,
         agents: this.agentPool.getAllAgentInfo(),
+        agentOutputs: this.agentPool.getRecentOutputs(50),
+        history: this.sessionManager.getSessionHistory(),
       });
 
       // Send project list on connect

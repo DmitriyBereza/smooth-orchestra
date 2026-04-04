@@ -30,10 +30,12 @@ export class SessionManager {
   private projectContext: string = '';
   private scheduleTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionFilePath: string;
+  private historyFilePath: string;
   private orchestraDir: string;
   /** Tracks how many times each stage has been continued after max-turns. */
   private stageContinuations = new Map<string, number>();
   private static readonly MAX_CONTINUATIONS = 3;
+  private static readonly MAX_REVIEW_LOOPS = 3;
 
   constructor(
     private agentPool: AgentPool,
@@ -45,6 +47,7 @@ export class SessionManager {
   ) {
     this.orchestraDir = orchestraDir ?? path.join(projectPath, '.orchestra');
     this.sessionFilePath = path.join(this.orchestraDir, 'session.json');
+    this.historyFilePath = path.join(this.orchestraDir, 'session-history.json');
     this.loadSession();
     this.setupEventListeners();
   }
@@ -151,6 +154,45 @@ export class SessionManager {
       if (userActionStages.includes(session.currentStage)) {
         console.log(`[SessionManager] Session waiting for user action at: ${session.currentStage}`);
         return;
+      }
+
+      // Resume rate-limited sessions — re-schedule the retry timer
+      if (session.retryAt && session.rateLimitedStage) {
+        const delayMs = new Date(session.retryAt).getTime() - Date.now();
+        const stage = session.rateLimitedStage;
+        const config = this.getConfig();
+        const role = config.stageToRole[stage] ?? (stage === 'po' ? 'po' : undefined);
+
+        if (role) {
+          if (delayMs > 0) {
+            console.log(`[SessionManager] Rate-limited session — retrying ${stage} in ${Math.round(delayMs / 1000)}s`);
+            setTimeout(async () => {
+              if (!this.currentSession || this.currentSession.currentStage === 'failed') return;
+              console.log(`[SessionManager] Rate limit cleared — re-spawning ${stage}`);
+              this.currentSession.retryAt = null;
+              this.currentSession.rateLimitedStage = null;
+              this.persistSession();
+              try {
+                await this.spawnAgentForStage(role as AgentRole, stage);
+              } catch (err) {
+                console.error(`[SessionManager] Failed to resume after rate limit:`, err);
+              }
+            }, delayMs);
+          } else {
+            // Retry time already passed — resume immediately
+            console.log(`[SessionManager] Rate limit already cleared — re-spawning ${stage} now`);
+            session.retryAt = null;
+            session.rateLimitedStage = null;
+            setTimeout(async () => {
+              try {
+                await this.spawnAgentForStage(role as AgentRole, stage);
+              } catch (err) {
+                console.error(`[SessionManager] Failed to resume after rate limit:`, err);
+              }
+            }, 1000);
+          }
+          return;
+        }
       }
 
       // For active agent stages, the agent process died on restart.
@@ -450,6 +492,50 @@ export class SessionManager {
   }
 
   /**
+   * Get session history (completed/failed sessions).
+   */
+  getSessionHistory(): SessionState[] {
+    try {
+      if (!fs.existsSync(this.historyFilePath)) return [];
+      const raw = fs.readFileSync(this.historyFilePath, 'utf-8');
+      return JSON.parse(raw) as SessionState[];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Archive the current session to history when it reaches a terminal state.
+   */
+  private archiveSession(): void {
+    if (!this.currentSession) return;
+    try {
+      const history = this.getSessionHistory();
+      // Avoid duplicates
+      if (!history.some(s => s.id === this.currentSession!.id)) {
+        history.unshift(this.currentSession);
+      }
+      // Keep last 50 sessions
+      const trimmed = history.slice(0, 50);
+      const tmpPath = `${this.historyFilePath}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(trimmed, null, 2), 'utf-8');
+      fs.renameSync(tmpPath, this.historyFilePath);
+    } catch (err) {
+      console.error('[SessionManager] Failed to archive session:', err);
+    }
+  }
+
+  /**
+   * Get artifacts list for a task (names + file paths).
+   */
+  getTaskArtifacts(taskId: string): { name: string; path: string }[] {
+    return this.artifactManager.listArtifacts(taskId).map(a => ({
+      name: a.type,
+      path: a.path,
+    }));
+  }
+
+  /**
    * Transition the pipeline to a new stage.
    */
   private async transitionTo(stage: PipelineStage): Promise<void> {
@@ -458,6 +544,11 @@ export class SessionManager {
     const from = this.currentSession.currentStage;
     this.currentSession.currentStage = stage;
     this.persistSession();
+
+    // Archive to history when reaching a terminal state
+    if (this.isTerminalStage(stage)) {
+      this.archiveSession();
+    }
 
     eventBus.emit('session:stage-changed', {
       sessionId: this.currentSession.id,
@@ -508,6 +599,7 @@ export class SessionManager {
     // Create and start the agent
     const agent = this.agentPool.createAgent(role, taskId);
     this.currentSession.assignedAgents[role] = agent.id;
+    this.persistSession();
 
     const modelForRole = this.currentSession.models?.[role] || undefined;
     await agent.start(systemPrompt, taskPrompt, this.projectPath, modelForRole);
@@ -589,8 +681,57 @@ export class SessionManager {
       if (role !== expectedRole) return;
 
       if (exitCode !== 0) {
-        // Check if this was a max-turns exit — if so, resume instead of failing
         const agent = this.agentPool.getAgentById(agentId || '');
+
+        // Check if this was a rate-limit exit — schedule retry instead of failing
+        if (agent?.rateLimited && agent.lastSessionId) {
+          const retryMs = agent.rateLimitRetryMs ?? 5 * 60_000;
+          const retryAt = new Date(Date.now() + retryMs).toISOString();
+          const retryCount = (this.currentSession.rateLimitRetries ?? 0) + 1;
+
+          console.log(`[SessionManager] Rate limit hit for ${stage} — scheduling retry #${retryCount} at ${retryAt} (${Math.round(retryMs / 1000)}s)`);
+
+          this.currentSession.retryAt = retryAt;
+          this.currentSession.rateLimitedStage = stage;
+          this.currentSession.rateLimitRetries = retryCount;
+          this.persistSession();
+
+          eventBus.emit('session:rate-limited', {
+            sessionId: this.currentSession.id,
+            taskId,
+            stage,
+            retryAt,
+            retryCount,
+            message: agent.rateLimitMessage,
+          });
+
+          // Schedule the retry
+          const sessionId = agent.lastSessionId;
+          setTimeout(async () => {
+            if (!this.currentSession || this.currentSession.task.id !== taskId) return;
+            if (this.currentSession.currentStage === 'failed') return; // user aborted
+
+            console.log(`[SessionManager] Rate limit retry — resuming ${stage} (session: ${sessionId})`);
+            this.currentSession.retryAt = null;
+            this.currentSession.rateLimitedStage = null;
+            this.persistSession();
+
+            eventBus.emit('session:stage-resumed', {
+              sessionId: this.currentSession.id,
+              stage,
+            });
+
+            try {
+              await this.resumeAgentForStage(role, stage, sessionId);
+            } catch (err) {
+              console.error(`[SessionManager] Failed to resume after rate limit:`, err);
+            }
+          }, retryMs);
+
+          return;
+        }
+
+        // Check if this was a max-turns exit — if so, resume instead of failing
         if (agent?.maxTurnsReached && agent.lastSessionId) {
           const continuationKey = `${this.currentSession.id}:${stage}`;
           const count = this.stageContinuations.get(continuationKey) ?? 0;
@@ -766,10 +907,20 @@ export class SessionManager {
       const decision = reviewContent ? this.parseArtifactDecision(reviewContent) : null;
 
       if (decision === 'CHANGES_REQUESTED') {
-        await this.transitionTo(reviewConfig.rejectTarget);
-        return;
+        const loopCount = (this.currentSession.reviewLoopCount ?? 0) + 1;
+        this.currentSession.reviewLoopCount = loopCount;
+        this.persistSession();
+
+        if (loopCount >= SessionManager.MAX_REVIEW_LOOPS) {
+          console.warn(`[SessionManager] Review loop limit reached (${loopCount}/${SessionManager.MAX_REVIEW_LOOPS}) — advancing despite CHANGES_REQUESTED`);
+          // Fall through to normal advancement instead of looping back
+        } else {
+          console.log(`[SessionManager] Review requested changes — looping back to ${reviewConfig.rejectTarget} (loop ${loopCount}/${SessionManager.MAX_REVIEW_LOOPS})`);
+          await this.transitionTo(reviewConfig.rejectTarget);
+          return;
+        }
       }
-      // If approved, fall through to normal advancement
+      // If approved (or loop limit reached), fall through to normal advancement
     }
 
     // Check if this is the QA stage — handle rejection routing

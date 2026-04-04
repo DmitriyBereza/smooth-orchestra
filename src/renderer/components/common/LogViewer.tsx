@@ -40,7 +40,7 @@ export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded
 
   useEffect(() => {
     if (listRef.current) {
-      listRef.current.scrollTop = 0;
+      listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [events]);
 

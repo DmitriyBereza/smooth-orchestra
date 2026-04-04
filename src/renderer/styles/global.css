@@ -98,12 +98,26 @@
   --state-info:    #67E8F9;
   --state-neutral: #4D7A99;
 
+  /* Semantic State Muted (for badge backgrounds) */
+  --state-success-muted: rgba(0,230,118,0.13);
+  --state-warning-muted: rgba(255,179,0,0.13);
+  --state-error-muted:   rgba(255,82,82,0.13);
+  --state-neutral-muted: rgba(77,122,153,0.13);
+  --brand-primary-muted: rgba(0,212,255,0.13);
+
   /* Role Colors */
   --role-po:        #2196F3;
   --role-architect: #CE93D8;
   --role-developer: #00E676;
   --role-techlead:  #FF9800;
   --role-qa:        #FF5252;
+
+  /* Role Glow (for active tab shadows) */
+  --role-po-glow:        rgba(33,150,243,0.2);
+  --role-architect-glow: rgba(206,147,216,0.2);
+  --role-developer-glow: rgba(0,230,118,0.2);
+  --role-techlead-glow:  rgba(255,152,0,0.2);
+  --role-qa-glow:        rgba(255,82,82,0.2);
 
   /* Status Bar */
   --status-bar-bg:        #000000;

@@ -7,21 +7,13 @@ import {
   useStore,
 } from '../../store/sessionStore';
 import { AgentStatusBadge } from './AgentStatusBadge';
+import { ROLE_COLOR } from '../../utils/roleColors';
 
 interface AgentTabProps {
   role: AgentRole;
   subtaskId?: string;
   agentId?: string;
 }
-
-const ROLE_COLOR: Record<string, string> = {
-  po:          'var(--role-po)',
-  architect:   'var(--role-architect)',
-  developer:   'var(--role-developer)',
-  'tech-lead': 'var(--role-techlead)',
-  techlead:    'var(--role-techlead)',
-  qa:          'var(--role-qa)',
-};
 
 const EVENT_TAG_COLOR: Record<string, string> = {
   agent:    'var(--role-developer)',
@@ -81,14 +73,16 @@ export const AgentTab: React.FC<AgentTabProps> = ({ role }) => {
           </div>
         ) : (
           messages.map((msg) => (
-            <div
-              key={msg.id}
-              style={{
-                ...styles.line,
-                color: msg.type === 'stderr' ? 'var(--state-error)' : 'var(--text-secondary)',
-              }}
-            >
-              {formatOutput(msg.content)}
+            <div key={msg.id} style={styles.line}>
+              <span style={styles.timestamp}>
+                {new Date(msg.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span style={{ ...styles.tag, color: EVENT_TAG_COLOR[msg.type] || 'var(--text-secondary)' }}>
+                [{msg.type}]
+              </span>
+              <span style={{ color: msg.type === 'stderr' ? 'var(--state-error)' : 'var(--text-secondary)' }}>
+                {formatOutput(msg.content)}
+              </span>
             </div>
           ))
         )}
@@ -171,8 +165,24 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-muted)',
   },
   line: {
+    display: 'flex',
+    alignItems: 'baseline',
     whiteSpace: 'pre-wrap' as const,
     wordBreak: 'break-word' as const,
     marginBottom: '2px',
+  },
+  timestamp: {
+    color: 'var(--text-muted)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    flexShrink: 0,
+    marginRight: '6px',
+  },
+  tag: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-bold)',
+    flexShrink: 0,
+    marginRight: '6px',
   },
 };

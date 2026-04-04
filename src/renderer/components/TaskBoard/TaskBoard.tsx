@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useStore } from '../../store/sessionStore';
+import { useStore, SessionState, STAGE_DISPLAY } from '../../store/sessionStore';
 import { useProjectStore } from '../../store/projectStore';
 import { NewTaskForm } from './NewTaskForm';
 import { TaskCard } from './TaskCard';
+import { TaskHistoryCard } from './TaskHistoryCard';
 import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { useSocketCommands } from '../../hooks/useSocket';
 import { JiraImportPanel, JiraIssue } from './JiraImportPanel';
@@ -16,6 +17,20 @@ function useIsMobile() {
   }, []);
   return isMobile;
 }
+
+const TaskHistory: React.FC = () => {
+  const history = useStore((s) => s.sessionHistory);
+  if (history.length === 0) return null;
+
+  return (
+    <div style={styles.taskSection}>
+      <h3 style={styles.sectionTitle}>history ({history.length})</h3>
+      {history.map((session) => (
+        <TaskHistoryCard key={session.id} session={session} />
+      ))}
+    </div>
+  );
+};
 
 export const TaskBoard: React.FC = () => {
   const session = useStore((s) => s.session);
@@ -97,6 +112,8 @@ export const TaskBoard: React.FC = () => {
             />
           </div>
         )}
+
+        <TaskHistory />
       </div>
     </div>
   );

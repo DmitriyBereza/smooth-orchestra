@@ -1,17 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AgentRole, ROLE_DISPLAY_NAMES, ROLE_COLORS, useStore, SubtaskState } from '../../store/sessionStore';
 import { AgentTab } from './AgentTab';
 import { getRolesForPipeline } from '../../../shared/pipeline-configs';
 import { Circle, CircleNotch, CheckCircle, XCircle } from '@phosphor-icons/react';
-
-const ROLE_COLOR: Record<string, string> = {
-  po:           'var(--role-po)',
-  architect:    'var(--role-architect)',
-  developer:    'var(--role-developer)',
-  'tech-lead':  'var(--role-techlead)',
-  techlead:     'var(--role-techlead)',
-  qa:           'var(--role-qa)',
-};
+import { ROLE_COLOR, ROLE_GLOW } from '../../utils/roleColors';
 
 function SubtaskStatusIcon({ status }: { status: SubtaskState['status'] }) {
   switch (status) {
@@ -27,7 +19,8 @@ function SubtaskStatusIcon({ status }: { status: SubtaskState['status'] }) {
 }
 
 export const AgentPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AgentRole>('po');
+  const activeTab = useStore((s) => s.activeAgentTab);
+  const setActiveTab = useStore((s) => s.setActiveAgentTab);
   const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
   const session = useStore((s) => s.session);
   const agents = useStore((s) => s.agents);
@@ -66,7 +59,7 @@ export const AgentPanel: React.FC = () => {
                   borderBottom: `2px solid ${roleColor}`,
                   color: 'var(--text-primary)',
                   background: 'var(--brand-muted)',
-                  boxShadow: `0 2px 8px ${roleColor}33`,
+                  boxShadow: `0 2px 8px ${ROLE_GLOW[role] ?? 'transparent'}`,
                 } : {
                   borderBottom: '2px solid transparent',
                   color: 'var(--text-muted)',

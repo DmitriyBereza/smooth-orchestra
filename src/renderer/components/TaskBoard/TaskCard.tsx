@@ -3,6 +3,7 @@ import { SessionState, STAGE_DISPLAY, PipelineStage, PipelineType } from '../../
 import { ArtifactViewer } from './ArtifactViewer';
 import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
 import { Circle, CircleNotch, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { ROLE_COLOR } from '../../utils/roleColors';
 
 interface TaskCardProps {
   session: SessionState;
@@ -14,15 +15,6 @@ interface TaskCardProps {
   onApproveMerge?: () => void;
   onRejectMerge?: (feedback: string) => void;
 }
-
-const ROLE_COLOR: Record<string, string> = {
-  po:        'var(--role-po)',
-  architect: 'var(--role-architect)',
-  developer: 'var(--role-developer)',
-  techlead:  'var(--role-techlead)',
-  'tech-lead': 'var(--role-techlead)',
-  qa:        'var(--role-qa)',
-};
 
 function SubtaskIcon({ status, role }: { status: string; role: string }) {
   const roleColor = ROLE_COLOR[role] || 'var(--text-muted)';
@@ -101,6 +93,19 @@ function getStageColor(stage: PipelineStage): string {
     case 'awaiting_merge_approval': return 'var(--state-warning)';
     case 'scheduled': return 'var(--role-architect)';
     default: return 'var(--brand-primary)';
+  }
+}
+
+function getStageBgColor(stage: PipelineStage): string {
+  switch (stage) {
+    case 'done': return 'var(--state-success-muted)';
+    case 'failed': return 'var(--state-error-muted)';
+    case 'rejected': return 'var(--state-error-muted)';
+    case 'awaiting_rejection_routing': return 'var(--state-error-muted)';
+    case 'awaiting_user_review': return 'var(--state-warning-muted)';
+    case 'awaiting_merge_approval': return 'var(--state-warning-muted)';
+    case 'scheduled': return 'rgba(206,147,216,0.13)';
+    default: return 'var(--brand-primary-muted)';
   }
 }
 
@@ -224,7 +229,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         <span
           style={{
             ...styles.badge,
-            backgroundColor: `${getStageColor(session.currentStage)}22`,
+            backgroundColor: getStageBgColor(session.currentStage),
             color: getStageColor(session.currentStage),
           }}
         >
