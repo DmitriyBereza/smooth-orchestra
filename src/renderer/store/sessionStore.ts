@@ -64,6 +64,7 @@ export interface SessionState {
   projectPath?: string;
   proposedPipeline?: PipelineStage[];
   activePipeline?: PipelineStage[];
+  jiraIssueKey?: string | null;
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {

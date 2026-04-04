@@ -12,3 +12,6 @@ export { parseDevTasks } from './SubtaskParser';
 export type { ParsedSubtask } from './SubtaskParser';
 export { EventLogger } from './EventLogger';
 export { ProjectStore } from './ProjectStore';
+export { JiraService } from './JiraService';
+export type { JiraConfig, JiraIssueInfo } from './JiraService';
+export { JiraSyncListener } from './JiraSyncListener';

@@ -5,6 +5,7 @@ import { NewTaskForm } from './NewTaskForm';
 import { TaskCard } from './TaskCard';
 import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { useSocketCommands } from '../../hooks/useSocket';
+import { JiraImportPanel, JiraIssue } from './JiraImportPanel';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -24,7 +25,15 @@ export const TaskBoard: React.FC = () => {
   const commands = useSocketCommands();
   const isMobile = useIsMobile();
 
+  // Jira import state — populated when user clicks "Use" on an issue
+  const [jiraImport, setJiraImport] = useState<{ title: string; description: string; key: string } | null>(null);
+
+  const handleJiraImport = (issue: JiraIssue) => {
+    setJiraImport({ title: issue.summary, description: issue.description, key: issue.key });
+  };
+
   const isTaskInProgress = session && !['done', 'failed', 'idle'].includes(session.currentStage);
+  const formDisabled = !connected || !!isTaskInProgress || selectedProjectIds.length === 0;
 
   return (
     <div style={styles.container} className="task-board-container">
@@ -54,9 +63,17 @@ export const TaskBoard: React.FC = () => {
           </div>
         )}
 
+        <JiraImportPanel onImport={handleJiraImport} disabled={!connected} />
+
         <NewTaskForm
-          onSubmit={(title, description, scheduledAt, models) => commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models)}
-          disabled={!connected || !!isTaskInProgress || selectedProjectIds.length === 0}
+          onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue) => {
+            commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models, jiraIssueKey, createJiraIssue);
+            setJiraImport(null);
+          }}
+          disabled={formDisabled}
+          initialTitle={jiraImport?.title}
+          initialDescription={jiraImport?.description}
+          initialJiraKey={jiraImport?.key}
         />
 
         {session && (
