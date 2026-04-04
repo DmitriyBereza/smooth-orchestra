@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PipelineType } from '../../store/sessionStore';
 import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
+import { Code, Megaphone, Palette } from '@phosphor-icons/react';
 
 type AgentRole = string;
 
@@ -38,10 +39,10 @@ const DELAY_PRESETS = [
   { label: '2 hr', minutes: 120 },
 ];
 
-const PIPELINE_TYPE_OPTIONS: { type: PipelineType; label: string; description: string; icon: string; color: string }[] = [
-  { type: 'development', label: 'Dev', description: 'Software engineering', icon: '💻', color: 'var(--pipeline-dev-color)' },
-  { type: 'marketing', label: 'Marketing', description: 'Campaign & content', icon: '📣', color: 'var(--pipeline-marketing-color)' },
-  { type: 'design', label: 'Design', description: 'UX/UI design', icon: '🎨', color: 'var(--pipeline-design-color)' },
+const PIPELINE_TYPE_OPTIONS: { type: PipelineType; label: string; description: string; icon: React.ReactNode; color: string }[] = [
+  { type: 'development', label: 'Dev', description: 'Software engineering', icon: <Code weight="bold" size={16} />, color: 'var(--pipeline-dev-color)' },
+  { type: 'marketing', label: 'Marketing', description: 'Campaign & content', icon: <Megaphone weight="bold" size={16} />, color: 'var(--pipeline-marketing-color)' },
+  { type: 'design', label: 'Design', description: 'UX/UI design', icon: <Palette weight="bold" size={16} />, color: 'var(--pipeline-design-color)' },
 ];
 
 function toLocalDatetimeValue(date: Date): string {

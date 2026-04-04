@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { SessionState, STAGE_DISPLAY, PipelineStage, PipelineType } from '../../store/sessionStore';
 import { ArtifactViewer } from './ArtifactViewer';
 import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
-import { Circle, CircleNotch, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { Circle, CircleNotch, CheckCircle, XCircle, Megaphone, Palette } from '@phosphor-icons/react';
 import { ROLE_COLOR } from '../../utils/roleColors';
 
 interface TaskCardProps {
@@ -223,7 +223,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
             ...styles.pipelineTypeBadge,
             ...(pipelineType === 'marketing' ? styles.pipelineTypeBadgeMarketing : styles.pipelineTypeBadgeDesign),
           }}>
-            {pipelineType === 'marketing' ? '📣' : '🎨'} {SHARED_PIPELINE_CONFIGS[pipelineType].displayName}
+            {pipelineType === 'marketing' ? <Megaphone weight="bold" size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} /> : <Palette weight="bold" size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />} {SHARED_PIPELINE_CONFIGS[pipelineType].displayName}
           </span>
         )}
         <span
