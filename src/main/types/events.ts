@@ -14,6 +14,7 @@ export interface OrchestraEventMap {
   'session:stage-changed': (data: { sessionId: string; from: PipelineStage; to: PipelineStage }) => void;
   'session:completed': (data: { sessionId: string; taskId: string }) => void;
   'session:failed': (data: { sessionId: string; taskId: string; error: string }) => void;
+  'session:stage-continued': (data: { sessionId: string; stage: string; continuation: number }) => void;
 
   // Subtask events (parallel dev)
   'session:subtask-started': (data: { taskId: string; subtaskId: string; agentId: string }) => void;

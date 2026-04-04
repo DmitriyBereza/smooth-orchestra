@@ -13,8 +13,13 @@ function useIsMobile() {
 }
 
 interface NewTaskFormProps {
-  onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>) => void;
+  onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean) => void;
   disabled?: boolean;
+  /** Pre-fill from a Jira import */
+  initialTitle?: string;
+  initialDescription?: string;
+  initialJiraKey?: string;
+  jiraConfigured?: boolean;
 }
 
 const MODEL_OPTIONS = [
@@ -46,15 +51,24 @@ function toLocalDatetimeValue(date: Date): string {
   return local.toISOString().slice(0, 16);
 }
 
-export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled }) => {
+export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, jiraConfigured }) => {
   const isMobile = useIsMobile();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
+  const [jiraIssueKey, setJiraIssueKey] = useState(initialJiraKey ?? '');
+  const [createJiraIssue, setCreateJiraIssue] = useState(false);
   const [models, setModels] = useState<Partial<Record<AgentRole, string>>>({});
   const [showModels, setShowModels] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<'now' | 'delay' | 'custom'>('now');
   const [delayMinutes, setDelayMinutes] = useState<number | null>(null);
   const [customDatetime, setCustomDatetime] = useState('');
+
+  // Sync when parent injects new Jira import values
+  React.useEffect(() => {
+    if (initialTitle) setTitle(initialTitle);
+    if (initialDescription) setDescription(initialDescription);
+    if (initialJiraKey !== undefined) setJiraIssueKey(initialJiraKey ?? '');
+  }, [initialTitle, initialDescription, initialJiraKey]);
 
   const setModelForRole = (role: AgentRole, value: string) => {
     setModels((prev) => {
@@ -94,13 +108,22 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled }) 
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
     const modelsToSend = Object.keys(models).length > 0 ? models as Record<string, string> : undefined;
-    onSubmit(title.trim(), description.trim(), getScheduledAt(), modelsToSend);
+    onSubmit(
+      title.trim(),
+      description.trim(),
+      getScheduledAt(),
+      modelsToSend,
+      jiraIssueKey.trim() || undefined,
+      createJiraIssue && !jiraIssueKey.trim(),
+    );
     setTitle('');
     setDescription('');
     setModels({});
     setScheduleMode('now');
     setDelayMinutes(null);
     setCustomDatetime('');
+    setJiraIssueKey('');
+    setCreateJiraIssue(false);
   };
 
   const scheduleLabel = (() => {
@@ -269,6 +292,36 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled }) 
           />
         )}
       </div>
+
+      {/* Jira linking */}
+      {jiraConfigured !== false && (
+        <div style={styles.jiraSection}>
+          {jiraIssueKey ? (
+            <div style={styles.jiraLinked}>
+              <span style={styles.jiraKey}>{jiraIssueKey}</span>
+              <span style={styles.jiraLinkedLabel}>linked</span>
+              <button
+                type="button"
+                style={styles.jiraUnlink}
+                onClick={() => setJiraIssueKey('')}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <label style={styles.jiraCheckbox}>
+              <input
+                type="checkbox"
+                checked={createJiraIssue}
+                onChange={(e) => setCreateJiraIssue(e.target.checked)}
+                disabled={disabled}
+                style={{ marginRight: 6 }}
+              />
+              <span style={styles.jiraCheckboxLabel}>Create Jira issue</span>
+            </label>
+          )}
+        </div>
+      )}
 
       <button
         type="submit"
@@ -459,6 +512,51 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'var(--font-sans)',
     outline: 'none',
     colorScheme: 'dark',
+  },
+  jiraSection: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  jiraCheckbox: {
+    display: 'flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    fontFamily: 'var(--font-sans)',
+  },
+  jiraCheckboxLabel: {
+    fontSize: 12,
+    color: 'var(--text-muted)',
+  },
+  jiraLinked: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '4px 8px',
+    backgroundColor: 'rgba(0, 82, 204, 0.15)',
+    border: '1px solid rgba(0, 82, 204, 0.4)',
+    borderRadius: 4,
+  },
+  jiraKey: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#4D9FFF',
+    fontFamily: 'var(--font-mono)',
+  },
+  jiraLinkedLabel: {
+    fontSize: 10,
+    color: 'var(--text-muted)',
+    flex: 1,
+  },
+  jiraUnlink: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--text-muted)',
+    fontSize: 11,
+    padding: 0,
+    fontFamily: 'var(--font-sans)',
   },
   button: {
     padding: '10px 16px',

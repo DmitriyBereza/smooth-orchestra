@@ -29,6 +29,9 @@ export class SessionManager {
   private scheduleTimer: ReturnType<typeof setTimeout> | null = null;
   private sessionFilePath: string;
   private orchestraDir: string;
+  /** Tracks how many times each stage has been continued after max-turns. */
+  private stageContinuations = new Map<string, number>();
+  private static readonly MAX_CONTINUATIONS = 3;
 
   constructor(
     private agentPool: AgentPool,
@@ -154,7 +157,7 @@ export class SessionManager {
    * The first project is the "primary" (used as CWD for agents).
    * Agents handle git branching themselves — no upfront branch creation.
    */
-  async createTask(title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Partial<Record<AgentRole, string>>): Promise<SessionState> {
+  async createTask(title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Partial<Record<AgentRole, string>>, jiraIssueKey?: string): Promise<SessionState> {
     if (this.currentSession && !this.isTerminalStage(this.currentSession.currentStage)) {
       throw new Error('A task is already in progress. Complete or abort it first.');
     }
@@ -246,6 +249,7 @@ export class SessionManager {
       projectId: primary.id,
       projectName: projects.map((p) => p.name).join(', '),
       projectPath: primary.path,
+      jiraIssueKey: jiraIssueKey ?? null,
     };
 
     this.persistSession();
@@ -463,6 +467,23 @@ export class SessionManager {
   }
 
   /**
+   * Resume an agent for the current stage using a previous session ID.
+   * Used when the agent hit max-turns and needs to continue from where it left off.
+   */
+  private async resumeAgentForStage(role: AgentRole, stage: PipelineStage, resumeSessionId: string): Promise<void> {
+    if (!this.currentSession) return;
+
+    const taskId = this.currentSession.task.id;
+    const agent = this.agentPool.createAgent(role, taskId);
+    this.currentSession.assignedAgents[role] = agent.id;
+    this.persistSession();
+
+    const modelForRole = this.currentSession.models?.[role] || undefined;
+    // Pass empty strings for prompts — they're ignored when resumeSessionId is set
+    await agent.start('', '', this.projectPath, modelForRole, resumeSessionId);
+  }
+
+  /**
    * Set up event listeners for pipeline progression.
    */
   private setupEventListeners(): void {
@@ -518,6 +539,30 @@ export class SessionManager {
       if (role !== expectedRole) return;
 
       if (exitCode !== 0) {
+        // Check if this was a max-turns exit — if so, resume instead of failing
+        const agent = this.agentPool.getAgentById(agentId || '');
+        if (agent?.maxTurnsReached && agent.lastSessionId) {
+          const continuationKey = `${this.currentSession.id}:${stage}`;
+          const count = this.stageContinuations.get(continuationKey) ?? 0;
+
+          if (count < SessionManager.MAX_CONTINUATIONS) {
+            this.stageContinuations.set(continuationKey, count + 1);
+            const sessionId = agent.lastSessionId;
+            console.log(`[SessionManager] Max-turns hit for ${stage} — resuming session ${sessionId} (continuation ${count + 1}/${SessionManager.MAX_CONTINUATIONS})`);
+
+            eventBus.emit('session:stage-continued', {
+              sessionId: this.currentSession.id,
+              stage,
+              continuation: count + 1,
+            });
+
+            await this.resumeAgentForStage(role, stage, sessionId);
+            return;
+          }
+
+          console.warn(`[SessionManager] Max continuations (${SessionManager.MAX_CONTINUATIONS}) reached for stage ${stage} — marking failed`);
+        }
+
         // Agent failed — halt pipeline
         this.currentSession.error = `Agent ${role} exited with code ${exitCode}`;
         await this.transitionTo('failed');
@@ -530,15 +575,16 @@ export class SessionManager {
         return;
       }
 
-      // Agent completed successfully — advance pipeline
+      // Agent completed successfully — reset continuation counter and advance
+      this.stageContinuations.delete(`${this.currentSession.id}:${stage}`);
       await this.advancePipeline(stage);
     });
 
     // Handle user commands from the frontend
-    eventBus.on('command:create-task', async ({ title, description, projectIds, scheduledAt, models }: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<AgentRole, string>> }) => {
-      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, scheduled: ${scheduledAt ?? 'now'}, models: ${JSON.stringify(models ?? {})})`);
+    eventBus.on('command:create-task', async ({ title, description, projectIds, scheduledAt, models, jiraIssueKey }: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<AgentRole, string>>; jiraIssueKey?: string }) => {
+      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, scheduled: ${scheduledAt ?? 'now'}, jira: ${jiraIssueKey ?? 'none'})`);
       try {
-        await this.createTask(title, description, projectIds, scheduledAt, models);
+        await this.createTask(title, description, projectIds, scheduledAt, models, jiraIssueKey);
       } catch (err: any) {
         console.error('[SessionManager] Failed to create task:', err.message, err.stack);
       }

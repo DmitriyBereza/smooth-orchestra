@@ -59,6 +59,7 @@ export interface SessionState {
   projectPath?: string; // target project path (for agent cwd on restore)
   proposedPipeline?: PipelineStage[]; // suggested by PO based on complexity
   activePipeline?: PipelineStage[]; // confirmed by user at review gate
+  jiraIssueKey?: string | null; // linked Jira issue (e.g. "TRA-42")
 }
 
 // Stages that can appear in activePipeline (after PO / user review)

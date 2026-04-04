@@ -52,12 +52,12 @@ export function useSocket() {
 
     s.on('connect', () => {
       setConnected(true);
-      addEvent('Connected to Orchestra server', 'system');
+      addEvent('Connected to Smooth Orchestra server', 'system');
     });
 
     s.on('disconnect', () => {
       setConnected(false);
-      addEvent('Disconnected from Orchestra server', 'system');
+      addEvent('Disconnected from Smooth Orchestra server', 'system');
     });
 
     s.on('connect_error', (err: Error) => {
@@ -147,6 +147,10 @@ export function useSocket() {
       addEvent(`QA rejected task: ${data.reason}`, 'error');
     });
 
+    s.on('session:stage-continued', (data: { sessionId: string; stage: string; continuation: number }) => {
+      addEvent(`Agent hit max-turns — resuming ${data.stage} (continuation ${data.continuation}/3)`, 'agent');
+    });
+
     return () => {
       s.removeAllListeners();
       s.disconnect();
@@ -160,10 +164,10 @@ export function useSocket() {
  * Returns stable command functions that emit on the shared socket.
  */
 export function useSocketCommands() {
-  const createTask = useCallback((title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Record<string, string>) => {
+  const createTask = useCallback((title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean) => {
     if (!socket) return;
-    console.log('[Orchestra] Emitting command:create-task', { title, description, projectIds, scheduledAt, models });
-    socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models });
+    console.log('[Smooth Orchestra] Emitting command:create-task', { title, projectIds, scheduledAt, jiraIssueKey, createJiraIssue });
+    socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models, jiraIssueKey, createJiraIssue });
   }, []);
 
   const approveSpec = useCallback((sessionId: string, pipeline?: string[]) => {
@@ -195,4 +199,5 @@ export function useSocketCommands() {
   }, []);
 
   return { createTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge };
+
 }

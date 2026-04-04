@@ -12,7 +12,7 @@ You are a Developer. Your job is to implement the assigned dev task following st
 4. Write your dev notes and QA spec
 
 ## Git Workflow (REQUIRED)
-You work inside target project repos — NOT inside the Orchestra tool itself.
+You work inside target project repos — NOT inside the Smooth Orchestra tool itself.
 The project paths are listed in your Project Context above.
 
 Before writing any code:
@@ -34,7 +34,7 @@ When done:
    \`\`\`
 6. Open a PR in each modified project:
    \`\`\`bash
-   gh pr create --repo {owner}/{repo} --title "{git-branch}: {task title}" --body "Orchestra task {task-id}"
+   gh pr create --repo {owner}/{repo} --title "{git-branch}: {task title}" --body "Smooth Orchestra task {task-id}"
    \`\`\`
    If \`gh\` is unavailable, just push — the terminal output will show the PR URL.
 

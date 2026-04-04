@@ -16,6 +16,8 @@ export class AgentProcess {
   public rateLimited = false;
   public rateLimitRetryMs: number | null = null;
   public rateLimitMessage: string = '';
+  public maxTurnsReached = false;
+  public lastSessionId: string | null = null;
 
   private process: ChildProcess | null = null;
   private outputBuffer: string[] = [];
@@ -39,22 +41,37 @@ export class AgentProcess {
     taskPrompt: string,
     workingDirectory: string,
     model?: string,
+    resumeSessionId?: string,
   ): Promise<void> {
     if (this.status === 'running') {
       throw new Error(`Agent ${this.id} is already running`);
     }
 
     this.status = 'running';
+    this.maxTurnsReached = false;
 
-    // Spawn claude CLI in print mode with streaming JSON output
-    const args = [
-      '-p', taskPrompt,
-      '--system-prompt', systemPrompt,
-      '--output-format', 'stream-json',
-      '--max-turns', '50',
-      '--verbose',
-      '--dangerously-skip-permissions',
-    ];
+    let args: string[];
+
+    if (resumeSessionId) {
+      // Resume an existing session — no need to re-supply prompts
+      args = [
+        '--resume', resumeSessionId,
+        '--output-format', 'stream-json',
+        '--max-turns', '200',
+        '--verbose',
+        '--dangerously-skip-permissions',
+      ];
+      console.log(`[AgentProcess] Resuming session ${resumeSessionId} for ${this.role}`);
+    } else {
+      args = [
+        '-p', taskPrompt,
+        '--system-prompt', systemPrompt,
+        '--output-format', 'stream-json',
+        '--max-turns', '200',
+        '--verbose',
+        '--dangerously-skip-permissions',
+      ];
+    }
 
     if (model) {
       args.push('--model', model);
@@ -187,8 +204,19 @@ export class AgentProcess {
   private tryParseTokenUsage(line: string): void {
     try {
       const data = JSON.parse(line);
-      if (data.type === 'usage' || data.usage) {
-        const usage = data.usage || data;
+
+      // Capture session ID and detect max-turns from the final result line
+      if (data.type === 'result') {
+        if (data.session_id) this.lastSessionId = data.session_id as string;
+        if (data.subtype === 'error_max_turns') {
+          this.maxTurnsReached = true;
+          console.log(`[AgentProcess] ${this.role} hit max-turns (session: ${this.lastSessionId})`);
+        }
+      }
+
+      // Accumulate token usage
+      if (data.usage) {
+        const usage = data.usage;
         if (usage.input_tokens) this.tokensUsed.input += usage.input_tokens;
         if (usage.output_tokens) this.tokensUsed.output += usage.output_tokens;
       }

@@ -8,3 +8,16 @@ out/
 *.log
 .DS_Store
 .claude/worktrees/
+
+# Sensitive config — never commit these
+.orchestra/jira.json
+.orchestra/session.json
+.orchestra/projects.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Machine-specific Claude Code permissions (auto-generated per machine)
+.claude/settings.local.json

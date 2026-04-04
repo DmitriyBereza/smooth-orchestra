@@ -112,6 +112,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
     >
       <div style={styles.header}>
         <span style={styles.taskId}>{session.task.id}</span>
+        {session.jiraIssueKey && (
+          <span style={styles.jiraBadge} title={`Linked Jira issue: ${session.jiraIssueKey}`}>
+            {session.jiraIssueKey}
+          </span>
+        )}
         <span
           style={{
             ...styles.badge,
@@ -422,6 +427,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
+  },
+  jiraBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    fontFamily: 'var(--font-mono)',
+    padding: '2px 6px',
+    borderRadius: 3,
+    backgroundColor: 'rgba(0, 82, 204, 0.2)',
+    color: '#4D9FFF',
+    border: '1px solid rgba(0, 82, 204, 0.4)',
+    textDecoration: 'none',
+    letterSpacing: '0.03em',
   },
   badge: {
     fontSize: 11,

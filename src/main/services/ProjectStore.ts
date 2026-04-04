@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import { ProjectRecord } from '../types/project';
 
 /**
@@ -8,6 +9,10 @@ import { ProjectRecord } from '../types/project';
  */
 export class ProjectStore {
   constructor(private filePath: string) {
+    const dir = path.dirname(this.filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     if (!fs.existsSync(this.filePath)) {
       fs.writeFileSync(this.filePath, JSON.stringify([]), 'utf-8');
     }

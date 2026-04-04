@@ -13,6 +13,7 @@ import { ProjectStore } from './ProjectStore';
 import { ProjectRecord } from '../types/project';
 import { ArtifactType, ARTIFACT_FILENAMES } from '../types/artifacts';
 import { PipelineStage } from '../types/session';
+import { JiraService, JiraConfig } from './JiraService';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -175,6 +176,7 @@ export class SocketServer {
     private eventLogger?: EventLogger,
     private projectStore?: ProjectStore,
     private artifactManager?: ArtifactManager,
+    private jiraService?: JiraService,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
@@ -234,6 +236,67 @@ export class SocketServer {
         const { taskId } = req.params;
         const artifacts = am.listArtifacts(taskId);
         res.json(artifacts);
+      });
+    }
+
+    // ── Jira routes ───────────────────────────────────────────────────────────
+    if (this.jiraService) {
+      const jira = this.jiraService;
+
+      // GET /api/jira/config — return public config (token masked)
+      app.get('/api/jira/config', (_req: Request, res: Response) => {
+        res.json({ config: jira.getPublicConfig(), configured: jira.isConfigured() });
+      });
+
+      // POST /api/jira/config — save config
+      app.post('/api/jira/config', (req: Request, res: Response) => {
+        const { siteUrl, cloudId, projectKey, email, apiToken } = req.body as Partial<JiraConfig>;
+        if (!siteUrl || !email || !apiToken || !projectKey) {
+          res.status(400).json({ error: 'siteUrl, cloudId, projectKey, email, apiToken are required' });
+          return;
+        }
+        jira.saveConfig({ siteUrl, cloudId: cloudId ?? '', projectKey, email, apiToken });
+        res.json({ ok: true });
+      });
+
+      // GET /api/jira/issues?status=To+Do — list issues (default: To Do)
+      app.get('/api/jira/issues', async (req: Request, res: Response) => {
+        if (!jira.isConfigured()) {
+          res.status(503).json({ error: 'Jira not configured' });
+          return;
+        }
+        const status = (req.query.status as string) || 'To Do';
+        const maxResults = Math.min(Number(req.query.maxResults) || 30, 50);
+        try {
+          const config = jira.getPublicConfig();
+          const projectKey = config?.projectKey ?? '';
+          const jql = `project = "${projectKey}" AND status = "${status}" ORDER BY updated DESC`;
+          const issues = await jira.fetchIssues(jql, maxResults);
+          res.json({ issues });
+        } catch (err: any) {
+          console.error('[SocketServer] /api/jira/issues failed:', err.message);
+          res.status(502).json({ error: err.message });
+        }
+      });
+
+      // POST /api/jira/issues — create a new Jira issue from an Orchestra task
+      app.post('/api/jira/issues', async (req: Request, res: Response) => {
+        if (!jira.isConfigured()) {
+          res.status(503).json({ error: 'Jira not configured' });
+          return;
+        }
+        const { summary, description } = req.body as { summary?: string; description?: string };
+        if (!summary) {
+          res.status(400).json({ error: 'summary is required' });
+          return;
+        }
+        try {
+          const key = await jira.createIssue(summary, description ?? '');
+          res.status(201).json({ key });
+        } catch (err: any) {
+          console.error('[SocketServer] POST /api/jira/issues failed:', err.message);
+          res.status(502).json({ error: err.message });
+        }
       });
     }
 
@@ -366,6 +429,10 @@ export class SocketServer {
     eventBus.on('session:qa-rejection', (data) => {
       this.io.emit('session:qa-rejection', data);
     });
+
+    eventBus.on('session:stage-continued', (data) => {
+      this.io.emit('session:stage-continued', data);
+    });
   }
 
   /**
@@ -388,8 +455,21 @@ export class SocketServer {
       }
 
       // Route commands to EventBus
-      socket.on('command:create-task', (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Record<string, string> }) => {
+      socket.on('command:create-task', async (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Record<string, string>; jiraIssueKey?: string; createJiraIssue?: boolean }) => {
         console.log(`[SocketServer] Received command:create-task`, data);
+
+        // If asked to create a new Jira issue (Orchestra → Jira direction)
+        if (data.createJiraIssue && this.jiraService?.isConfigured() && !data.jiraIssueKey) {
+          try {
+            const key = await this.jiraService.createIssue(data.title, data.description);
+            data = { ...data, jiraIssueKey: key, createJiraIssue: false };
+            console.log(`[SocketServer] Created Jira issue ${key} for task "${data.title}"`);
+          } catch (err: any) {
+            console.error('[SocketServer] Failed to create Jira issue:', err.message);
+            // Continue without Jira key rather than blocking task creation
+          }
+        }
+
         eventBus.emit('command:create-task', data);
       });
 

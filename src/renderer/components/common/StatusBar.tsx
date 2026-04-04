@@ -19,7 +19,7 @@ export const StatusBar: React.FC = () => {
           <span
             className={`status-dot ${connected ? 'completed' : 'failed'}`}
           />
-          Orchestra
+          Smooth Orchestra
         </span>
 
         {session && (
