@@ -15,7 +15,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div style={styles.wrapper}>
       <form onSubmit={handleSubmit} style={styles.form}>
-        <h1 style={styles.title}>Orchestra</h1>
+        <h1 style={styles.title}>Smooth Orchestra</h1>
         <p style={styles.subtitle}>AI Dev Team</p>
 
         {error && <div style={styles.error}>{error}</div>}

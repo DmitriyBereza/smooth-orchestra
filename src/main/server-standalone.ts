@@ -1,5 +1,5 @@
 /**
- * Standalone server mode — runs the Orchestra backend without Electron.
+ * Standalone server mode — runs the Smooth Orchestra backend without Electron.
  * Use this for development with a regular browser at http://localhost:5173
  *
  * Usage: npm run dev:web
@@ -17,6 +17,8 @@ import {
   SocketServer,
   UserStore,
   ProjectStore,
+  JiraService,
+  JiraSyncListener,
 } from './services';
 
 const projectPath = process.cwd();
@@ -39,8 +41,8 @@ function ensureOrchestraDir(): void {
 }
 
 async function main(): Promise<void> {
-  console.log('[Orchestra] Starting standalone server...');
-  console.log(`[Orchestra] Project path: ${projectPath}`);
+  console.log('[Smooth Orchestra] Starting standalone server...');
+  console.log(`[Smooth Orchestra] Project path: ${projectPath}`);
 
   ensureOrchestraDir();
 
@@ -54,8 +56,8 @@ async function main(): Promise<void> {
     const seedEmail = process.env.SEED_EMAIL || 'admin@orchestra.local';
     const seedPassword = process.env.SEED_PASSWORD || 'orchestra';
     await authService.signup(seedEmail, seedPassword);
-    console.log(`[Orchestra] Seeded admin user: ${seedEmail} (password: ${seedPassword})`);
-    console.log(`[Orchestra] Set SEED_EMAIL and SEED_PASSWORD env vars to customize.`);
+    console.log(`[Smooth Orchestra] Seeded admin user: ${seedEmail} (password: ${seedPassword})`);
+    console.log(`[Smooth Orchestra] Set SEED_EMAIL and SEED_PASSWORD env vars to customize.`);
   }
 
   // Initialize services
@@ -86,18 +88,27 @@ async function main(): Promise<void> {
   // Initialize event logger
   const eventLogger = new EventLogger(orchestraDir);
 
-  // Start socket server (with auth, event logger, and project store)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager);
+  // Initialize Jira integration (config lives in .orchestra/jira.json)
+  const jiraService = new JiraService(orchestraDir);
+  new JiraSyncListener(jiraService, () => sessionManager.getSession());
+  if (jiraService.isConfigured()) {
+    console.log('[Smooth Orchestra] Jira integration active');
+  } else {
+    console.log('[Smooth Orchestra] Jira not configured — set up via Settings in the UI');
+  }
+
+  // Start socket server (with auth, event logger, project store, and Jira)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService);
   await socketServer.start();
 
-  console.log('[Orchestra] Server ready. Open http://localhost:5173 in your browser.');
-  console.log('[Orchestra] Socket.io listening on port 3333');
-  console.log('[Orchestra] Auth endpoints available at /auth/signup and /auth/login');
-  console.log(`[Orchestra] User store: ${userStorePath}`);
+  console.log('[Smooth Orchestra] Server ready. Open http://localhost:5173 in your browser.');
+  console.log('[Smooth Orchestra] Socket.io listening on port 3333');
+  console.log('[Smooth Orchestra] Auth endpoints available at /auth/signup and /auth/login');
+  console.log(`[Smooth Orchestra] User store: ${userStorePath}`);
 
   // Graceful shutdown
   process.on('SIGINT', async () => {
-    console.log('\n[Orchestra] Shutting down...');
+    console.log('\n[Smooth Orchestra] Shutting down...');
     agentPool.killAll();
     await socketServer.stop();
     process.exit(0);
@@ -111,6 +122,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error('[Orchestra] Fatal error:', err);
+  console.error('[Smooth Orchestra] Fatal error:', err);
   process.exit(1);
 });
