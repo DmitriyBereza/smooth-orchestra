@@ -66,8 +66,8 @@ export const TaskBoard: React.FC = () => {
         <JiraImportPanel onImport={handleJiraImport} disabled={!connected} />
 
         <NewTaskForm
-          onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue) => {
-            commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models, jiraIssueKey, createJiraIssue);
+          onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType) => {
+            commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType);
             setJiraImport(null);
           }}
           disabled={formDisabled}

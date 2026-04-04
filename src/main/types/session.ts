@@ -1,28 +1,47 @@
 import { AgentRole } from './agent';
 
+export type PipelineType = 'development' | 'marketing' | 'design';
+
 export type PipelineStage =
+  // System stages (shared)
   | 'idle'
   | 'scheduled'
   | 'rate-limited'
   | 'po'
   | 'awaiting_user_review'
+  | 'awaiting_rejection_routing'
+  | 'awaiting_merge_approval'
+  | 'done'
+  | 'failed'
+  | 'rejected'
+  // Development pipeline stages
+  | 'tech-researcher'
   | 'architect'
   | 'tech-lead'
   | 'developer'
   | 'tl-code-review'
   | 'parallel-dev'
   | 'qa'
-  | 'awaiting_rejection_routing'
-  | 'awaiting_merge_approval'
-  | 'done'
-  | 'failed'
-  | 'rejected';
+  // Marketing pipeline stages
+  | 'marketing-researcher'
+  | 'marketing-strategist'
+  | 'copywriter'
+  | 'creative-director'
+  | 'marketing-qa'
+  // Design pipeline stages
+  | 'design-researcher'
+  | 'ux-designer'
+  | 'ui-designer'
+  | 'design-executor'
+  | 'design-reviewer'
+  | 'design-qa';
 
 export interface TaskDefinition {
   id: string;
   title: string;
   description: string;
   createdAt: string;
+  pipelineType?: PipelineType;
 }
 
 export interface SubtaskState {
@@ -60,10 +79,18 @@ export interface SessionState {
   proposedPipeline?: PipelineStage[]; // suggested by PO based on complexity
   activePipeline?: PipelineStage[]; // confirmed by user at review gate
   jiraIssueKey?: string | null; // linked Jira issue (e.g. "TRA-42")
+  pipelineType?: PipelineType; // which pipeline domain this session uses
 }
 
-// Stages that can appear in activePipeline (after PO / user review)
+// ---------------------------------------------------------------------------
+// Legacy constants — kept for backward compatibility during transition.
+// New code should use PipelineRegistry from src/main/pipelines/registry.ts
+// @deprecated Use getPipelineConfig(type).allStages instead
+// ---------------------------------------------------------------------------
+
+/** @deprecated */
 export const PIPELINE_STAGES: PipelineStage[] = [
+  'tech-researcher',
   'architect',
   'tech-lead',
   'developer',
@@ -71,6 +98,7 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   'qa',
 ];
 
+/** @deprecated */
 export const DEFAULT_PIPELINE: PipelineStage[] = [
   'architect',
   'tech-lead',
@@ -79,6 +107,7 @@ export const DEFAULT_PIPELINE: PipelineStage[] = [
   'qa',
 ];
 
+/** @deprecated */
 export const PIPELINE_ORDER: PipelineStage[] = [
   'idle',
   'po',
@@ -93,13 +122,28 @@ export const PIPELINE_ORDER: PipelineStage[] = [
   'done',
 ];
 
+/** @deprecated Use getPipelineConfig(type).stageToRole instead */
 export const STAGE_TO_ROLE: Partial<Record<PipelineStage, AgentRole>> = {
   po: 'po',
+  'tech-researcher': 'tech-researcher',
   architect: 'architect',
   'tech-lead': 'tech-lead',
   developer: 'developer',
   'tl-code-review': 'tech-lead',
   qa: 'qa',
+  // Marketing
+  'marketing-researcher': 'marketing-researcher',
+  'marketing-strategist': 'marketing-strategist',
+  copywriter: 'copywriter',
+  'creative-director': 'creative-director',
+  'marketing-qa': 'marketing-qa',
+  // Design
+  'design-researcher': 'design-researcher',
+  'ux-designer': 'ux-designer',
+  'ui-designer': 'ui-designer',
+  'design-executor': 'design-executor',
+  'design-reviewer': 'design-reviewer',
+  'design-qa': 'design-qa',
 };
 
 export function getNextStage(current: PipelineStage): PipelineStage {

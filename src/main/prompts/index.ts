@@ -1,13 +1,23 @@
-import { AgentRole, PipelineStage } from '../types';
+import { AgentRole, PipelineStage, PipelineType } from '../types';
 import { buildBaseContext } from './base';
-import { PO_PROMPT } from './po';
+import { buildPOPrompt, PO_PROMPT } from './po';
 import { ARCHITECT_PROMPT } from './architect';
 import { TECH_LEAD_PROMPT, TECH_LEAD_CODE_REVIEW_PROMPT } from './tech-lead';
 import { DEVELOPER_PROMPT } from './developer';
 import { QA_PROMPT } from './qa';
+import { TECH_RESEARCHER_PROMPT } from './tech-researcher';
+// Import all pipeline-type-specific prompts
+import { getPipelineConfig } from '../pipelines/registry';
+// Ensure all pipelines are registered
+import '../pipelines';
 
-const ROLE_PROMPTS: Record<AgentRole, string> = {
+/**
+ * Fallback role prompts for backward compatibility.
+ * New roles use pipeline config's rolePrompts map.
+ */
+const LEGACY_ROLE_PROMPTS: Partial<Record<AgentRole, string>> = {
   po: PO_PROMPT,
+  'tech-researcher': TECH_RESEARCHER_PROMPT,
   architect: ARCHITECT_PROMPT,
   'tech-lead': TECH_LEAD_PROMPT,
   developer: DEVELOPER_PROMPT,
@@ -18,28 +28,47 @@ const ROLE_PROMPTS: Record<AgentRole, string> = {
  * Build the complete system prompt for an agent, combining:
  * 1. Base context (team structure, communication protocol)
  * 2. Project context (codebase info, constraints)
- * 3. Role-specific prompt (may vary by stage, e.g. tech-lead design vs code review)
+ * 3. Role-specific prompt (varies by stage and pipeline type)
  *
+ * @param role - The agent role
+ * @param projectContext - Project context string
+ * @param stage - Current pipeline stage (used for stage-specific overrides)
  * @param artifactDir - Absolute path to this task's artifact directory, injected in place of {ARTIFACTS_DIR}
+ * @param pipelineType - Pipeline type for domain-specific prompt dispatch
  */
 export function buildSystemPrompt(
   role: AgentRole,
   projectContext: string,
   stage?: PipelineStage,
   artifactDir?: string,
+  pipelineType: PipelineType = 'development',
 ): string {
   const base = buildBaseContext(projectContext);
-  let rolePrompt = ROLE_PROMPTS[role];
+  let rolePrompt: string;
 
-  // Override prompt when the tech-lead is doing a code review
-  if (stage === 'tl-code-review' && role === 'tech-lead') {
+  // PO prompt varies by pipeline type
+  if (role === 'po') {
+    rolePrompt = buildPOPrompt(pipelineType);
+  }
+  // Override prompt when the tech-lead is doing a code review (development pipeline)
+  else if (stage === 'tl-code-review' && role === 'tech-lead') {
     rolePrompt = TECH_LEAD_CODE_REVIEW_PROMPT;
+  }
+  // Try to get prompt from the pipeline config's rolePrompts map
+  else {
+    const config = getPipelineConfig(pipelineType);
+    const configPrompt = config.rolePrompts[role];
+    if (configPrompt) {
+      rolePrompt = configPrompt;
+    } else {
+      // Fall back to legacy prompts for backward compatibility
+      rolePrompt = LEGACY_ROLE_PROMPTS[role] ?? `## Your Role: ${role}\n\nProcess the current stage and write your output artifacts.\n`;
+    }
   }
 
   let combined = `${base}\n\n${rolePrompt}`;
 
   // Replace placeholder with absolute artifact directory so agents write to the right place
-  // regardless of which project they have as their CWD
   if (artifactDir) {
     combined = combined.replaceAll('{ARTIFACTS_DIR}', artifactDir);
   }

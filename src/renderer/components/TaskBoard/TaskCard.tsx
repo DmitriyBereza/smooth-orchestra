@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { SessionState, STAGE_DISPLAY, PipelineStage } from '../../store/sessionStore';
+import { SessionState, STAGE_DISPLAY, PipelineStage, PipelineType } from '../../store/sessionStore';
 import { ArtifactViewer } from './ArtifactViewer';
+import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
 
 interface TaskCardProps {
   session: SessionState;
@@ -13,15 +14,58 @@ interface TaskCardProps {
   onRejectMerge?: (feedback: string) => void;
 }
 
-const PIPELINE_STAGE_OPTIONS: { stage: string; label: string; description: string }[] = [
-  { stage: 'architect', label: 'Architect', description: 'Design doc & task breakdown' },
-  { stage: 'tech-lead', label: 'Tech Lead', description: 'Design review & approval' },
-  { stage: 'developer', label: 'Developer', description: 'Implementation (always required)' },
-  { stage: 'tl-code-review', label: 'TL Code Review', description: 'Post-dev code review' },
-  { stage: 'qa', label: 'QA', description: 'Automated testing & verification' },
-];
+/** Get pipeline stage options and config for the session's pipeline type */
+function getPipelineStageOptions(pipelineType: PipelineType = 'development') {
+  const config = SHARED_PIPELINE_CONFIGS[pipelineType];
+  return config.allStages.map(({ stage, label, description }) => ({ stage, label, description }));
+}
 
-const DEFAULT_FULL_PIPELINE = ['architect', 'tech-lead', 'developer', 'tl-code-review', 'qa'];
+function getDefaultPipeline(pipelineType: PipelineType = 'development'): string[] {
+  return SHARED_PIPELINE_CONFIGS[pipelineType].defaultPipeline;
+}
+
+function getRequiredStage(pipelineType: PipelineType = 'development'): string {
+  return SHARED_PIPELINE_CONFIGS[pipelineType].requiredStage;
+}
+
+/** Determine which artifact viewers to show for the merge approval screen */
+function getMergeApprovalArtifacts(pipelineType: PipelineType = 'development'): { type: string; label: string }[] {
+  switch (pipelineType) {
+    case 'marketing':
+      return [
+        { type: 'marketing-qa-report', label: 'Marketing QA Report' },
+        { type: 'copy', label: 'Copy' },
+      ];
+    case 'design':
+      return [
+        { type: 'design-qa-report', label: 'Design QA Report' },
+        { type: 'design-spec', label: 'Design Spec' },
+      ];
+    default:
+      return [
+        { type: 'qa-report', label: 'QA Report' },
+        { type: 'dev-notes', label: 'Dev Notes' },
+      ];
+  }
+}
+
+/** Determine which artifact type represents the "QA report" for rejection routing */
+function getQaReportArtifact(pipelineType: PipelineType = 'development'): string {
+  switch (pipelineType) {
+    case 'marketing': return 'marketing-qa-report';
+    case 'design': return 'design-qa-report';
+    default: return 'qa-report';
+  }
+}
+
+/** Get the rejection routing label for the "send to doer" button */
+function getSendToDoerLabel(pipelineType: PipelineType = 'development'): string {
+  switch (pipelineType) {
+    case 'marketing': return 'Send Back to Copywriter';
+    case 'design': return 'Send Back to UI Designer';
+    default: return 'Send Back to Dev';
+  }
+}
 
 function getStageColor(stage: PipelineStage): string {
   switch (stage) {
@@ -66,6 +110,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
   const [mergeFeedback, setMergeFeedback] = React.useState('');
   const [descExpanded, setDescExpanded] = React.useState(false);
   const [hasQuestions, setHasQuestions] = React.useState(false);
+
+  // Get pipeline type from session (default to 'development' for backward compat)
+  const pipelineType: PipelineType = session.pipelineType ?? session.task?.pipelineType ?? 'development';
+
+  // Derive pipeline-specific config
+  const PIPELINE_STAGE_OPTIONS = getPipelineStageOptions(pipelineType);
+  const DEFAULT_FULL_PIPELINE = getDefaultPipeline(pipelineType);
+  const requiredStage = getRequiredStage(pipelineType);
+  const mergeArtifacts = getMergeApprovalArtifacts(pipelineType);
+  const qaReportArtifact = getQaReportArtifact(pipelineType);
+  const sendToDoerLabel = getSendToDoerLabel(pipelineType);
+
   const [selectedPipeline, setSelectedPipeline] = React.useState<string[]>(
     session.proposedPipeline ?? DEFAULT_FULL_PIPELINE,
   );
@@ -78,7 +134,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
   }, [session.proposedPipeline?.join(',')]);
 
   const toggleStage = (stage: string) => {
-    if (stage === 'developer') return; // always required
+    if (stage === requiredStage) return; // always required
     setSelectedPipeline((prev) =>
       prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage],
     );
@@ -115,6 +171,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         {session.jiraIssueKey && (
           <span style={styles.jiraBadge} title={`Linked Jira issue: ${session.jiraIssueKey}`}>
             {session.jiraIssueKey}
+          </span>
+        )}
+        {/* Pipeline type badge */}
+        {pipelineType !== 'development' && (
+          <span style={{
+            ...styles.pipelineTypeBadge,
+            ...(pipelineType === 'marketing' ? styles.pipelineTypeBadgeMarketing : styles.pipelineTypeBadgeDesign),
+          }}>
+            {pipelineType === 'marketing' ? '📣' : '🎨'} {SHARED_PIPELINE_CONFIGS[pipelineType].displayName}
           </span>
         )}
         <span
@@ -156,7 +221,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
           <ArtifactViewer
             taskId={session.task.id}
             artifactType="story"
-            label="PO Spec"
+            label="Spec"
           />
           {hasQuestions && (
             <ArtifactViewer
@@ -168,25 +233,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         </>
       )}
 
-      {isAwaitingMergeApproval && (
-        <>
-          <ArtifactViewer
-            taskId={session.task.id}
-            artifactType="qa-report"
-            label="QA Report"
-          />
-          <ArtifactViewer
-            taskId={session.task.id}
-            artifactType="dev-notes"
-            label="Dev Notes"
-          />
-        </>
-      )}
+      {/* Merge approval artifacts — pipeline-type-aware */}
+      {isAwaitingMergeApproval && mergeArtifacts.map(({ type, label }) => (
+        <ArtifactViewer
+          key={type}
+          taskId={session.task.id}
+          artifactType={type as any}
+          label={label}
+        />
+      ))}
 
+      {/* QA rejection artifact — pipeline-type-aware */}
       {session.currentStage === 'awaiting_rejection_routing' && (
         <ArtifactViewer
           taskId={session.task.id}
-          artifactType="qa-report"
+          artifactType={qaReportArtifact as any}
           label="QA Report"
         />
       )}
@@ -204,7 +265,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         <div style={styles.actions}>
           {!showReject && !showAnswerQuestions ? (
             <>
-              {/* Pipeline selector */}
+              {/* Pipeline selector — pipeline-type-aware */}
               <div style={styles.pipelineSelector}>
                 <div style={styles.pipelineSelectorHeader}>
                   <span style={styles.pipelineSelectorTitle}>Pipeline</span>
@@ -215,7 +276,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
                 <div style={styles.pipelineStages}>
                   {PIPELINE_STAGE_OPTIONS.map(({ stage, label, description }) => {
                     const isSelected = selectedPipeline.includes(stage);
-                    const isRequired = stage === 'developer';
+                    const isRequired = stage === requiredStage;
                     return (
                       <button
                         key={stage}
@@ -317,6 +378,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         </div>
       )}
 
+      {/* Rejection routing — pipeline-type-aware labels */}
       {session.currentStage === 'awaiting_rejection_routing' && (
         <div style={styles.actions}>
           <div style={{ ...styles.feedbackBox, borderLeft: '3px solid var(--accent-red)' }}>
@@ -330,7 +392,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
             )}
             <div style={styles.feedbackActions}>
               <button style={styles.rejectBtn} onClick={() => onRouteRejection?.('send_to_dev')}>
-                Send Back to Dev
+                {sendToDoerLabel}
               </button>
               <button
                 style={{ ...styles.cancelBtn, color: 'var(--accent-red)' }}
@@ -349,7 +411,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
           {!showMergeReject ? (
             <>
               <button style={styles.approveBtn} onClick={onApproveMerge}>
-                Approve Merge
+                Approve &amp; Done
               </button>
               <button style={styles.rejectBtn} onClick={() => setShowMergeReject(true)}>
                 Request Changes
@@ -358,7 +420,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
           ) : (
             <div style={styles.feedbackBox}>
               <textarea
-                placeholder="What needs to change before merge?"
+                placeholder="What needs to change before approval?"
                 value={mergeFeedback}
                 onChange={(e) => setMergeFeedback(e.target.value)}
                 style={styles.feedbackInput}
@@ -422,6 +484,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap' as const,
+    gap: 4,
   },
   taskId: {
     fontSize: 11,
@@ -439,6 +503,20 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(0, 82, 204, 0.4)',
     textDecoration: 'none',
     letterSpacing: '0.03em',
+  },
+  pipelineTypeBadge: {
+    fontSize: 10,
+    fontWeight: 600,
+    padding: '2px 6px',
+    borderRadius: 4,
+  },
+  pipelineTypeBadgeMarketing: {
+    backgroundColor: 'rgba(236, 72, 153, 0.15)',
+    color: '#EC4899',
+  },
+  pipelineTypeBadgeDesign: {
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    color: '#8B5CF6',
   },
   badge: {
     fontSize: 11,

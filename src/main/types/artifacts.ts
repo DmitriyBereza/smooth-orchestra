@@ -1,6 +1,7 @@
 import { PipelineStage } from './session';
 
 export type ArtifactType =
+  // Development pipeline artifacts
   | 'story'
   | 'questions'
   | 'answers'
@@ -11,7 +12,20 @@ export type ArtifactType =
   | 'qa-spec'
   | 'review'
   | 'tl-code-review'
-  | 'qa-report';
+  | 'qa-report'
+  // Cross-pipeline research artifact
+  | 'research'
+  // Marketing pipeline artifacts
+  | 'brief'
+  | 'copy'
+  | 'creative-review'
+  | 'marketing-qa-report'
+  // Design pipeline artifacts
+  | 'ux-spec'
+  | 'design-spec'
+  | 'design-assets'
+  | 'design-review'
+  | 'design-qa-report';
 
 export interface ArtifactMeta {
   type: ArtifactType;
@@ -23,13 +37,18 @@ export interface ArtifactMeta {
 }
 
 export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: ArtifactType[] }> = {
+  // Development pipeline
   po: {
     writes: ['story', 'questions', 'pipeline'],
     reads: ['answers'],
   },
+  'tech-researcher': {
+    writes: ['research'],
+    reads: ['story'],
+  },
   architect: {
     writes: ['design', 'dev-tasks'],
-    reads: ['story'],
+    reads: ['story', 'research'],
   },
   'tech-lead': {
     writes: ['review'],
@@ -47,9 +66,56 @@ export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: Ar
     writes: ['qa-report'],
     reads: ['story', 'qa-spec', 'dev-notes'],
   },
+  // Marketing pipeline
+  'marketing-researcher': {
+    writes: ['research'],
+    reads: ['story'],
+  },
+  'marketing-strategist': {
+    writes: ['brief'],
+    reads: ['story', 'research'],
+  },
+  copywriter: {
+    writes: ['copy'],
+    reads: ['story', 'research', 'brief'],
+  },
+  'creative-director': {
+    writes: ['creative-review'],
+    reads: ['story', 'brief', 'copy'],
+  },
+  'marketing-qa': {
+    writes: ['marketing-qa-report'],
+    reads: ['story', 'brief', 'copy', 'creative-review'],
+  },
+  // Design pipeline
+  'design-researcher': {
+    writes: ['research'],
+    reads: ['story'],
+  },
+  'ux-designer': {
+    writes: ['ux-spec'],
+    reads: ['story', 'research'],
+  },
+  'ui-designer': {
+    writes: ['design-spec'],
+    reads: ['story', 'research', 'ux-spec'],
+  },
+  'design-executor': {
+    writes: ['design-assets'],
+    reads: ['design-spec', 'ux-spec'],
+  },
+  'design-reviewer': {
+    writes: ['design-review'],
+    reads: ['story', 'research', 'ux-spec', 'design-spec'],
+  },
+  'design-qa': {
+    writes: ['design-qa-report'],
+    reads: ['story', 'ux-spec', 'design-spec', 'design-review'],
+  },
 };
 
 export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
+  // Development
   story: 'story.md',
   questions: 'questions.md',
   answers: 'answers.md',
@@ -61,4 +127,17 @@ export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
   review: 'review.md',
   'tl-code-review': 'tl-code-review.md',
   'qa-report': 'qa-report.md',
+  // Cross-pipeline
+  research: 'research.md',
+  // Marketing
+  brief: 'brief.md',
+  copy: 'copy.md',
+  'creative-review': 'creative-review.md',
+  'marketing-qa-report': 'marketing-qa-report.md',
+  // Design
+  'ux-spec': 'ux-spec.md',
+  'design-spec': 'design-spec.md',
+  'design-assets': 'design-assets.md',
+  'design-review': 'design-review.md',
+  'design-qa-report': 'design-qa-report.md',
 };
