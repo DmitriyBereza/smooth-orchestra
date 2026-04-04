@@ -27,7 +27,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
 
     fetch(`/api/artifacts/${encodeURIComponent(taskId)}/${encodeURIComponent(artifactType)}`)
       .then(async (res) => {
-        if (res.status === 404) return null; // artifact simply doesn't exist — hide quietly
+        if (res.status === 404) return null;
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `HTTP ${res.status}`);
@@ -52,7 +52,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
       <div style={styles.container}>
         <div style={styles.header}>
           <span style={styles.label}>{label}</span>
-          <span style={styles.loadingDot}>Loading...</span>
+          <span style={styles.loadingDot}>loading...</span>
         </div>
       </div>
     );
@@ -63,7 +63,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
       <div style={styles.container}>
         <div style={styles.header}>
           <span style={styles.label}>{label}</span>
-          <span style={styles.errorText}>{error}</span>
+          <span style={styles.errorText}>error: {error}</span>
         </div>
       </div>
     );
@@ -79,7 +79,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
         onClick={() => setExpanded(!expanded)}
       >
         <span style={styles.label}>{label}</span>
-        <span style={styles.toggle}>{expanded ? '\u25B2' : '\u25BC'}</span>
+        <span style={styles.toggle}>{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded && (
@@ -102,7 +102,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
                     window.open(url, '_blank');
                   }}
                 >
-                  Open in browser
+                  open in browser
                 </button>
               </div>
             </>
@@ -117,8 +117,8 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ taskId, artifact
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    borderRadius: 6,
-    border: '1px solid var(--border-color)',
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--border-input)',
     backgroundColor: 'var(--bg-secondary)',
     overflow: 'hidden',
   },
@@ -131,40 +131,43 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
     border: 'none',
     width: '100%',
-    fontFamily: 'var(--font-sans)',
+    fontFamily: 'var(--font-mono)',
   },
   label: {
-    fontSize: 12,
-    fontWeight: 600,
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
   toggle: {
-    fontSize: 10,
+    fontSize: 'var(--text-xs)',
     color: 'var(--text-muted)',
+    fontFamily: 'var(--font-mono)',
   },
   loadingDot: {
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    fontStyle: 'italic',
   },
   errorText: {
-    fontSize: 11,
-    color: 'var(--accent-red)',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--state-error)',
   },
   content: {
-    maxHeight: 400,
+    maxHeight: '400px',
     overflowY: 'auto' as const,
     borderTop: '1px solid var(--border-color)',
     padding: '12px',
   },
   pre: {
     margin: 0,
-    fontSize: 12,
-    lineHeight: 1.6,
+    fontSize: 'var(--text-sm)',
+    lineHeight: 1.4,
     color: 'var(--text-secondary)',
-    fontFamily: 'var(--font-sans)',
+    fontFamily: 'var(--font-mono)',
     whiteSpace: 'pre-wrap' as const,
     wordBreak: 'break-word' as const,
   },
@@ -186,14 +189,14 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'var(--bg-secondary)',
   },
   openButton: {
-    fontSize: 12,
-    fontWeight: 500,
-    color: 'var(--accent-blue)',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-medium)',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--brand-primary)',
     backgroundColor: 'transparent',
-    border: '1px solid var(--accent-blue)',
-    borderRadius: 4,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-md)',
     padding: '4px 12px',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
 };

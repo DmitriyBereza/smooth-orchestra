@@ -2,13 +2,13 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useStore } from '../../store/sessionStore';
 
 const EVENT_COLORS: Record<string, string> = {
-  system: 'var(--text-muted)',
-  session: 'var(--accent-blue)',
-  agent: 'var(--accent-purple)',
-  artifact: 'var(--accent-green)',
-  git: 'var(--accent-orange)',
-  lock: 'var(--text-secondary)',
-  error: 'var(--accent-red)',
+  system:   'var(--text-muted)',
+  session:  'var(--role-po)',
+  agent:    'var(--role-developer)',
+  artifact: 'var(--state-success)',
+  git:      'var(--role-techlead)',
+  lock:     'var(--text-secondary)',
+  error:    'var(--state-error)',
 };
 
 function relativeTime(isoTimestamp: string): string {
@@ -40,7 +40,7 @@ export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded
 
   useEffect(() => {
     if (listRef.current) {
-      listRef.current.scrollTop = 0; // Events are prepended, newest first
+      listRef.current.scrollTop = 0;
     }
   }, [events]);
 
@@ -59,9 +59,9 @@ export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <span style={styles.title}>
-            Event Log ({filteredEvents.length}/{events.length})
+            event log ({filteredEvents.length}/{events.length})
           </span>
-          <span style={styles.toggle}>{isExpanded ? '\u25BC' : '\u25B2'}</span>
+          <span style={styles.toggle}>{isExpanded ? '▼' : '▲'}</span>
         </div>
       )}
 
@@ -73,13 +73,13 @@ export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded
               onChange={(e) => setEventFilter({ category: e.target.value || null })}
               style={styles.filterSelect}
             >
-              <option value="">All Types</option>
-              <option value="session">Session</option>
-              <option value="agent">Agent</option>
-              <option value="artifact">Artifact</option>
-              <option value="git">Git</option>
-              <option value="lock">Lock</option>
-              <option value="error">Error</option>
+              <option value="">all types</option>
+              <option value="session">session</option>
+              <option value="agent">agent</option>
+              <option value="artifact">artifact</option>
+              <option value="git">git</option>
+              <option value="lock">lock</option>
+              <option value="error">error</option>
             </select>
 
             <select
@@ -87,17 +87,17 @@ export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded
               onChange={(e) => setEventFilter({ role: e.target.value || null })}
               style={styles.filterSelect}
             >
-              <option value="">All Roles</option>
-              <option value="po">Product Owner</option>
-              <option value="architect">Architect</option>
-              <option value="tech-lead">Tech Lead</option>
-              <option value="developer">Developer</option>
-              <option value="qa">QA Engineer</option>
+              <option value="">all roles</option>
+              <option value="po">product owner</option>
+              <option value="architect">architect</option>
+              <option value="tech-lead">tech lead</option>
+              <option value="developer">developer</option>
+              <option value="qa">qa engineer</option>
             </select>
 
             <input
               type="text"
-              placeholder="Search events..."
+              placeholder="> search events_"
               value={filters.search}
               onChange={(e) => setEventFilter({ search: e.target.value })}
               style={styles.searchInput}
@@ -106,7 +106,7 @@ export const LogViewer: React.FC<{ forceExpanded?: boolean }> = ({ forceExpanded
 
           <div ref={listRef} style={styles.list}>
             {filteredEvents.length === 0 ? (
-              <div style={styles.empty}>No events yet</div>
+              <div style={styles.empty}>{'> awaiting task'}<span className="signal-cursor-blink" style={{ marginLeft: '2px' }}>_</span></div>
             ) : (
               filteredEvents.map((event, i) => (
                 <div key={i} style={styles.event}>
@@ -141,7 +141,6 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'var(--bg-secondary)',
     display: 'flex',
     flexDirection: 'column',
-    transition: 'height 0.2s ease',
     overflow: 'hidden',
     flexShrink: 0,
   },
@@ -155,19 +154,20 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   title: {
-    fontSize: 11,
-    fontWeight: 600,
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
   toggle: {
-    fontSize: 10,
+    fontSize: 'var(--text-xs)',
     color: 'var(--text-muted)',
   },
   filterBar: {
     display: 'flex',
-    gap: 8,
+    gap: '8px',
     padding: '4px 16px',
     borderBottom: '1px solid var(--border-color)',
     alignItems: 'center',
@@ -175,20 +175,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
   filterSelect: {
     padding: '2px 6px',
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     backgroundColor: 'var(--bg-tertiary)',
     color: 'var(--text-secondary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 3,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-sm)',
     outline: 'none',
   },
   searchInput: {
     padding: '2px 8px',
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     backgroundColor: 'var(--bg-tertiary)',
     color: 'var(--text-primary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 3,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-sm)',
     outline: 'none',
     flex: 1,
   },
@@ -197,29 +199,38 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
     padding: '4px 16px',
     fontFamily: 'var(--font-mono)',
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
     lineHeight: 1.8,
   },
   empty: {
+    display: 'flex',
+    alignItems: 'center',
     color: 'var(--text-muted)',
-    fontStyle: 'italic',
     padding: '8px 0',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
   },
   event: {
     display: 'flex',
-    gap: 8,
+    gap: '8px',
     alignItems: 'baseline',
   },
   timestamp: {
     color: 'var(--text-muted)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
     flexShrink: 0,
   },
   typeBadge: {
-    fontWeight: 600,
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-bold)',
     flexShrink: 0,
   },
   message: {
     color: 'var(--text-secondary)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
     wordBreak: 'break-word' as const,
   },
 };

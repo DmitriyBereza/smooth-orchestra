@@ -17,7 +17,6 @@ function useIsMobile() {
 interface NewTaskFormProps {
   onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean, pipelineType?: PipelineType) => void;
   disabled?: boolean;
-  /** Pre-fill from a Jira import */
   initialTitle?: string;
   initialDescription?: string;
   initialJiraKey?: string;
@@ -40,9 +39,9 @@ const DELAY_PRESETS = [
 ];
 
 const PIPELINE_TYPE_OPTIONS: { type: PipelineType; label: string; description: string; icon: string; color: string }[] = [
-  { type: 'development', label: 'Dev', description: 'Software engineering', icon: '💻', color: '#22C55E' },
-  { type: 'marketing', label: 'Marketing', description: 'Campaign & content', icon: '📣', color: '#EC4899' },
-  { type: 'design', label: 'Design', description: 'UX/UI design', icon: '🎨', color: '#8B5CF6' },
+  { type: 'development', label: 'Dev', description: 'Software engineering', icon: '💻', color: 'var(--pipeline-dev-color)' },
+  { type: 'marketing', label: 'Marketing', description: 'Campaign & content', icon: '📣', color: 'var(--pipeline-marketing-color)' },
+  { type: 'design', label: 'Design', description: 'UX/UI design', icon: '🎨', color: 'var(--pipeline-design-color)' },
 ];
 
 function toLocalDatetimeValue(date: Date): string {
@@ -64,14 +63,12 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   const [customDatetime, setCustomDatetime] = useState('');
   const [pipelineType, setPipelineType] = useState<PipelineType>('development');
 
-  // Sync when parent injects new Jira import values
   React.useEffect(() => {
     if (initialTitle) setTitle(initialTitle);
     if (initialDescription) setDescription(initialDescription);
     if (initialJiraKey !== undefined) setJiraIssueKey(initialJiraKey ?? '');
   }, [initialTitle, initialDescription, initialJiraKey]);
 
-  // Get roles for the currently selected pipeline type
   const pipelineConfig = SHARED_PIPELINE_CONFIGS[pipelineType];
   const agentRolesForPipeline = pipelineConfig.modelSelectorRoles;
 
@@ -99,7 +96,6 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     }
   };
 
-  // When pipeline type changes, clear model selections (roles change)
   const handlePipelineTypeChange = (type: PipelineType) => {
     setPipelineType(type);
     setModels({});
@@ -136,44 +132,42 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     setCustomDatetime('');
     setJiraIssueKey('');
     setCreateJiraIssue(false);
-    // Don't reset pipelineType — user likely wants same pipeline type for next task
   };
 
   const scheduleLabel = (() => {
     if (scheduleMode === 'delay' && delayMinutes) {
-      return `Start in ${delayMinutes >= 60 ? `${delayMinutes / 60} hr` : `${delayMinutes} min`}`;
+      return `start in ${delayMinutes >= 60 ? `${delayMinutes / 60} hr` : `${delayMinutes} min`}`;
     }
     if (scheduleMode === 'custom' && customDatetime) {
-      return `Start at ${new Date(customDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return `start at ${new Date(customDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
     return null;
   })();
 
-  // Check if all roles have the same model (for the "All" quick-set)
   const allSameModel = (() => {
     const values = Object.values(models);
     if (values.length === 0) return '';
     if (values.length === agentRolesForPipeline.length && new Set(values).size === 1) return values[0];
-    return null; // mixed
+    return null;
   })();
 
   const modelSummary = (() => {
     const count = Object.keys(models).length;
-    if (count === 0) return 'Default';
+    if (count === 0) return 'default';
     if (allSameModel) {
       const opt = MODEL_OPTIONS.find((m) => m.value === allSameModel);
-      return `All: ${opt?.label ?? allSameModel}`;
+      return `all: ${opt?.label ?? allSameModel}`;
     }
     return `${count} customized`;
   })();
 
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
-      <h3 style={styles.heading}>New Task</h3>
+      <h3 style={styles.heading}>new task</h3>
 
       {/* Pipeline type selector */}
       <div style={styles.pipelineSection}>
-        <span style={styles.sectionLabel}>Pipeline</span>
+        <span style={styles.sectionLabel}>select pipeline</span>
         <div style={styles.pipelineOptions}>
           {PIPELINE_TYPE_OPTIONS.map((opt) => (
             <button
@@ -198,14 +192,20 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
 
       <input
         type="text"
-        placeholder="Task title..."
+        placeholder="> task title_"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         style={styles.input}
+        onFocus={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-active)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-input)';
+        }}
         disabled={disabled}
       />
       <textarea
-        placeholder="Describe what you want. Be specific about requirements, expected behavior, and any constraints..."
+        placeholder="> describe requirements, expected behavior, constraints..."
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         style={styles.textarea}
@@ -220,16 +220,16 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
           style={styles.modelToggle}
           onClick={() => setShowModels(!showModels)}
         >
-          <span style={styles.sectionLabel}>Models</span>
+          <span style={styles.sectionLabel}>models</span>
           <span style={styles.modelSummary}>{modelSummary}</span>
-          <span style={styles.chevron}>{showModels ? '\u25B2' : '\u25BC'}</span>
+          <span style={styles.chevron}>{showModels ? '▲' : '▼'}</span>
         </button>
 
         {showModels && (
           <div style={styles.modelPanel}>
             {/* Quick-set all */}
             <div style={styles.modelRow}>
-              <span style={{ ...styles.roleLabel, fontWeight: 700 }}>All</span>
+              <span style={{ ...styles.roleLabel, fontWeight: 'var(--weight-bold)' }}>all</span>
               <div style={styles.modelButtons}>
                 {MODEL_OPTIONS.map((opt) => (
                   <button
@@ -250,7 +250,6 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
 
             <div style={styles.modelDivider} />
 
-            {/* Per-role selectors — only roles for the selected pipeline type */}
             {agentRolesForPipeline.map(({ role, label, color }) => (
               <div key={role} style={styles.modelRow}>
                 <span style={{ ...styles.roleLabel, color }}>{label}</span>
@@ -279,7 +278,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
       {/* Schedule controls */}
       <div style={styles.scheduleSection}>
         <div style={styles.scheduleHeader}>
-          <span style={styles.sectionLabel}>Schedule</span>
+          <span style={styles.sectionLabel}>schedule</span>
           <div style={styles.modeTabs}>
             {(['now', 'delay', 'custom'] as const).map((mode) => (
               <button
@@ -295,7 +294,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
                 }}
                 disabled={disabled}
               >
-                {mode === 'now' ? 'Now' : mode === 'delay' ? 'Delay' : 'Time'}
+                {mode}
               </button>
             ))}
           </div>
@@ -356,7 +355,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
                 disabled={disabled}
                 style={{ marginRight: 6 }}
               />
-              <span style={styles.jiraCheckboxLabel}>Create Jira issue</span>
+              <span style={styles.jiraCheckboxLabel}>create jira issue</span>
             </label>
           )}
         </div>
@@ -371,7 +370,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
         }}
         disabled={disabled || !title.trim() || !description.trim()}
       >
-        {scheduleLabel ?? 'Start Pipeline'}
+        {scheduleLabel ?? './run pipeline'}
       </button>
     </form>
   );
@@ -381,65 +380,69 @@ const styles: Record<string, React.CSSProperties> = {
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
+    gap: '12px',
   },
   heading: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: 'var(--text-primary)',
-    marginBottom: 4,
+    fontSize: 'var(--text-sm)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--text-secondary)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '4px',
   },
   pipelineSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 6,
+    gap: '6px',
   },
   pipelineOptions: {
     display: 'flex',
-    gap: 6,
+    gap: '6px',
   },
   pipelineBtn: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: '4px',
     padding: '6px 8px',
     backgroundColor: 'var(--bg-tertiary)',
     color: 'var(--text-muted)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 6,
-    fontSize: 12,
-    fontWeight: 500,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-sm)',
+    fontWeight: 'var(--weight-medium)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
-    transition: 'all 0.1s',
   },
   pipelineBtnActive: {
-    backgroundColor: 'transparent',
-    fontWeight: 600,
+    backgroundColor: 'var(--brand-muted)',
+    fontWeight: 'var(--weight-semibold)',
   },
   pipelineIcon: {
-    fontSize: 14,
+    fontSize: '14px',
   },
   input: {
-    padding: '10px 12px',
-    backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 6,
+    padding: '8px 0',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '1px solid var(--border-input)',
+    borderRadius: 0,
     color: 'var(--text-primary)',
-    fontSize: 14,
-    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-base)',
+    fontFamily: 'var(--font-mono)',
     outline: 'none',
+    width: '100%',
   },
   textarea: {
-    padding: '10px 12px',
+    padding: '8px 10px',
     backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 6,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-md)',
     color: 'var(--text-primary)',
-    fontSize: 13,
-    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-base)',
+    fontFamily: 'var(--font-mono)',
     resize: 'vertical' as const,
     outline: 'none',
     lineHeight: 1.5,
@@ -451,49 +454,52 @@ const styles: Record<string, React.CSSProperties> = {
   modelToggle: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
+    gap: '8px',
     padding: '6px 0',
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
+    fontFamily: 'var(--font-mono)',
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: 600,
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
   },
   modelSummary: {
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-secondary)',
     flex: 1,
     textAlign: 'right' as const,
   },
   chevron: {
-    fontSize: 9,
+    fontSize: '9px',
     color: 'var(--text-muted)',
   },
   modelPanel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 6,
+    gap: '6px',
     padding: '8px 10px',
     backgroundColor: 'var(--bg-secondary)',
-    borderRadius: 6,
-    border: '1px solid var(--border-color)',
-    marginTop: 4,
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--border-input)',
+    marginTop: '4px',
   },
   modelRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
+    gap: '8px',
   },
   roleLabel: {
-    fontSize: 11,
-    fontWeight: 600,
-    width: 80,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
+    fontWeight: 'var(--weight-semibold)',
+    width: '80px',
     flexShrink: 0,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -501,7 +507,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modelButtons: {
     display: 'flex',
-    gap: 4,
+    gap: '4px',
     flex: 1,
   },
   modelBtn: {
@@ -509,26 +515,27 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'var(--bg-tertiary)',
     color: 'var(--text-muted)',
     border: '1px solid transparent',
-    borderRadius: 3,
-    fontSize: 10,
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
     flex: 1,
     textAlign: 'center' as const,
   },
   modelBtnActive: {
-    backgroundColor: 'var(--accent-blue)',
-    color: 'white',
+    backgroundColor: 'var(--brand-muted)',
+    color: 'var(--brand-primary)',
+    border: '1px solid var(--border-input)',
   },
   modelDivider: {
-    height: 1,
+    height: '1px',
     backgroundColor: 'var(--border-color)',
     margin: '2px 0',
   },
   scheduleSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: '8px',
   },
   scheduleHeader: {
     display: 'flex',
@@ -537,21 +544,21 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modeTabs: {
     display: 'flex',
-    gap: 2,
+    gap: '2px',
     backgroundColor: 'var(--bg-tertiary)',
-    borderRadius: 4,
-    padding: 2,
+    borderRadius: 'var(--radius-md)',
+    padding: '2px',
   },
   modeTab: {
     padding: '4px 10px',
     backgroundColor: 'transparent',
     color: 'var(--text-muted)',
     border: 'none',
-    borderRadius: 3,
-    fontSize: 11,
-    fontWeight: 500,
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-medium)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
   modeTabActive: {
     backgroundColor: 'var(--bg-secondary)',
@@ -559,32 +566,32 @@ const styles: Record<string, React.CSSProperties> = {
   },
   presets: {
     display: 'flex',
-    gap: 6,
+    gap: '6px',
     flexWrap: 'wrap' as const,
   },
   presetButton: {
     padding: '5px 12px',
     backgroundColor: 'var(--bg-tertiary)',
     color: 'var(--text-secondary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 4,
-    fontSize: 12,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
   presetActive: {
-    backgroundColor: 'var(--accent-blue)',
-    color: 'white',
-    borderColor: 'var(--accent-blue)',
+    backgroundColor: 'var(--brand-muted)',
+    color: 'var(--brand-primary)',
+    borderColor: 'var(--border-active)',
   },
   datetimeInput: {
     padding: '8px 10px',
     backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 4,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-md)',
     color: 'var(--text-primary)',
-    fontSize: 13,
-    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-base)',
+    fontFamily: 'var(--font-mono)',
     outline: 'none',
     colorScheme: 'dark',
   },
@@ -596,31 +603,33 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
-    fontSize: 12,
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    fontFamily: 'var(--font-sans)',
   },
   jiraCheckboxLabel: {
-    fontSize: 12,
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
   },
   jiraLinked: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
+    gap: '6px',
     padding: '4px 8px',
-    backgroundColor: 'rgba(0, 82, 204, 0.15)',
-    border: '1px solid rgba(0, 82, 204, 0.4)',
-    borderRadius: 4,
+    backgroundColor: 'var(--jira-badge-bg)',
+    border: '1px solid var(--jira-badge-border)',
+    borderRadius: 'var(--radius-md)',
   },
   jiraKey: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: '#4D9FFF',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-bold)',
     fontFamily: 'var(--font-mono)',
+    color: 'var(--jira-badge-color)',
   },
   jiraLinkedLabel: {
-    fontSize: 10,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
     flex: 1,
   },
@@ -629,22 +638,22 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     cursor: 'pointer',
     color: 'var(--text-muted)',
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
     padding: 0,
-    fontFamily: 'var(--font-sans)',
+    fontFamily: 'var(--font-mono)',
   },
   button: {
     padding: '10px 16px',
-    backgroundColor: 'var(--accent-blue)',
-    color: 'white',
+    backgroundColor: 'var(--brand-primary)',
+    color: 'var(--text-on-accent)',
     border: 'none',
-    borderRadius: 6,
-    fontSize: 14,
-    fontWeight: 600,
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-md)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
   buttonScheduled: {
-    backgroundColor: 'var(--accent-purple)',
+    backgroundColor: 'var(--role-architect)',
   },
 };

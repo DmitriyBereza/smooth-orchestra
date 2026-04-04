@@ -37,31 +37,49 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onClose }) =>
 
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
-      <div style={styles.formTitle}>{project ? 'Edit Project' : 'New Project'}</div>
+      <div style={styles.formTitle}>{project ? 'edit project' : 'new project'}</div>
 
       <input
         type="text"
-        placeholder="Project name"
+        placeholder="> project name_"
         value={name}
         onChange={(e) => setName(e.target.value)}
         style={styles.input}
+        onFocus={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-active)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-input)';
+        }}
         autoFocus
       />
 
       <input
         type="text"
-        placeholder="Code location (absolute path)"
+        placeholder="> absolute path_"
         value={path}
         onChange={(e) => setPath(e.target.value)}
         style={styles.input}
+        onFocus={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-active)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-input)';
+        }}
       />
 
       <input
         type="text"
-        placeholder="Labels (comma-separated, e.g. frontend, react, api)"
+        placeholder="> labels (comma-separated)_"
         value={labelInput}
         onChange={(e) => setLabelInput(e.target.value)}
         style={styles.input}
+        onFocus={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-active)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderBottomColor = 'var(--border-input)';
+        }}
       />
 
       <div style={styles.actions}>
@@ -70,7 +88,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onClose }) =>
           onClick={onClose}
           style={styles.cancelButton}
         >
-          Cancel
+          cancel
         </button>
         <button
           type="submit"
@@ -80,7 +98,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onClose }) =>
           }}
           disabled={!name.trim() || !path.trim() || saving}
         >
-          {saving ? 'Saving...' : project ? 'Update' : 'Add'}
+          {saving ? 'saving...' : project ? './update' : './add'}
         </button>
       </div>
     </form>
@@ -91,53 +109,56 @@ const styles: Record<string, React.CSSProperties> = {
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
-    padding: 12,
+    gap: '8px',
+    padding: '12px',
     backgroundColor: 'var(--bg-secondary)',
-    borderRadius: 6,
-    border: '1px solid var(--border-color)',
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--border-input)',
   },
   formTitle: {
-    fontSize: 13,
-    fontWeight: 600,
+    fontSize: 'var(--text-sm)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-primary)',
-    marginBottom: 4,
+    marginBottom: '4px',
   },
   input: {
-    padding: '8px 10px',
-    backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 4,
+    padding: '8px 0',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '1px solid var(--border-input)',
+    borderRadius: 0,
     color: 'var(--text-primary)',
-    fontSize: 13,
-    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
     outline: 'none',
+    width: '100%',
   },
   actions: {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 4,
+    gap: '8px',
+    marginTop: '4px',
   },
   cancelButton: {
     padding: '6px 12px',
     backgroundColor: 'transparent',
     color: 'var(--text-secondary)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 4,
-    fontSize: 12,
+    border: '1px solid var(--border-input)',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
   saveButton: {
     padding: '6px 12px',
-    backgroundColor: 'var(--accent-blue)',
-    color: 'white',
+    backgroundColor: 'var(--brand-primary)',
+    color: 'var(--text-on-accent)',
     border: 'none',
-    borderRadius: 4,
-    fontSize: 12,
-    fontWeight: 600,
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--text-sm)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
   },
 };

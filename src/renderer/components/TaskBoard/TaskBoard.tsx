@@ -25,7 +25,6 @@ export const TaskBoard: React.FC = () => {
   const commands = useSocketCommands();
   const isMobile = useIsMobile();
 
-  // Jira import state — populated when user clicks "Use" on an issue
   const [jiraImport, setJiraImport] = useState<{ title: string; description: string; key: string } | null>(null);
 
   const handleJiraImport = (issue: JiraIssue) => {
@@ -38,13 +37,20 @@ export const TaskBoard: React.FC = () => {
   return (
     <div style={styles.container} className="task-board-container">
       <div style={styles.header}>
-        <h2 style={styles.title}>Task Board</h2>
+        <h2 style={styles.title}>task board</h2>
         <div style={styles.connectionStatus}>
           <span
-            className={`status-dot ${connected ? 'completed' : 'failed'}`}
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: 'var(--radius-full)',
+              background: connected ? 'var(--state-success)' : 'var(--state-error)',
+              display: 'inline-block',
+              boxShadow: connected ? '0 0 4px var(--state-success)' : 'none',
+            }}
           />
           <span style={styles.connectionText}>
-            {connected ? 'Connected' : 'Disconnected'}
+            {connected ? 'connected' : 'disconnected'}
           </span>
         </div>
       </div>
@@ -59,7 +65,7 @@ export const TaskBoard: React.FC = () => {
 
         {selectedProjectIds.length === 0 && (
           <div style={styles.projectHint}>
-            Select one or more projects above before creating a task
+            {'> select project to create task'}
           </div>
         )}
 
@@ -78,7 +84,7 @@ export const TaskBoard: React.FC = () => {
 
         {session && (
           <div style={styles.taskSection}>
-            <h3 style={styles.sectionTitle}>Current Task</h3>
+            <h3 style={styles.sectionTitle}>current task</h3>
             <TaskCard
               session={session}
               onApprove={(pipeline) => commands.approveSpec(session.id, pipeline)}
@@ -115,48 +121,53 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   title: {
-    fontSize: 14,
-    fontWeight: 700,
-    color: 'var(--text-primary)',
+    fontSize: 'var(--text-sm)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--text-secondary)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
   },
   connectionStatus: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
+    gap: '6px',
   },
   connectionText: {
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
   },
   content: {
-    padding: 16,
+    padding: '16px',
     flex: 1,
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: 20,
+    gap: '20px',
   },
   taskSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: '8px',
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: 600,
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--weight-semibold)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
   divider: {
-    height: 1,
+    height: '1px',
     backgroundColor: 'var(--border-color)',
     margin: '4px 0',
   },
   projectHint: {
-    fontSize: 12,
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
     color: 'var(--text-muted)',
-    fontStyle: 'italic',
     padding: '8px 0',
   },
 };
