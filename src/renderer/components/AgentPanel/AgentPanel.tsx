@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AgentRole, ROLE_DISPLAY_NAMES, ROLE_COLORS, useStore, SubtaskState } from '../../store/sessionStore';
 import { AgentTab } from './AgentTab';
-
-const ROLES: AgentRole[] = ['po', 'architect', 'tech-lead', 'developer', 'qa'];
+import { getRolesForPipeline } from '../../../shared/pipeline-configs';
 
 const SUBTASK_STATUS_ICON: Record<SubtaskState['status'], string> = {
   pending: '-',
@@ -18,13 +17,26 @@ export const AgentPanel: React.FC = () => {
   const agents = useStore((s) => s.agents);
   const subtasks = useStore((s) => s.subtasks);
 
+  const pipelineType = session?.pipelineType;
+  const roles = useMemo(
+    () => getRolesForPipeline(pipelineType) as AgentRole[],
+    [pipelineType],
+  );
+
+  // Reset activeTab to 'po' when pipeline changes and current tab is not in new roles
+  React.useEffect(() => {
+    if (!roles.includes(activeTab)) {
+      setActiveTab('po');
+    }
+  }, [roles, activeTab]);
+
   const isParallelDev = session?.currentStage === 'parallel-dev' && subtasks.length > 0;
   const showSubtaskTabs = isParallelDev && activeTab === 'developer';
 
   return (
     <div style={styles.container} className="agent-panel-container">
       <div style={styles.tabs} className="agent-panel-tabs">
-        {ROLES.map((role) => {
+        {roles.map((role) => {
           const agent = agents.find((a) => a.role === role);
           const isActive = activeTab === role;
           const isRunning = agent?.status === 'running';
