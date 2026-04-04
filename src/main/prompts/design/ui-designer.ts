@@ -228,10 +228,77 @@ Font:          [size token, weight]
 - **Text scaling**: [Layout works with browser text scaled to 200%]
 \`\`\`
 
+## Output: Brand Book HTML Files
+
+In addition to \`design-spec.md\`, you MUST produce **three brand book variations** as self-contained HTML files:
+- \`{ARTIFACTS_DIR}/brand-book-1.html\`
+- \`{ARTIFACTS_DIR}/brand-book-2.html\`
+- \`{ARTIFACTS_DIR}/brand-book-3.html\`
+
+Each brand book is a complete, standalone HTML file representing a distinct visual direction derived from your design tokens. Each variation should explore a different color palette, typography pairing, and overall mood while remaining consistent with the project's goals.
+
+### HTML Brand Book Requirements
+
+**Self-contained format (AC2):**
+- Single \`.html\` file with ALL CSS inlined in a \`<style>\` block — no external stylesheets, no external JS dependencies
+- Google Fonts may be loaded via \`<link>\` tag as the one acceptable external resource
+- Must open correctly from a local filesystem in any modern browser
+
+**Visual color rendering (AC3):**
+- Render each color in the palette as a visible swatch (colored rectangle/div)
+- Each swatch must display: hex value, token name, and usage description
+- Include WCAG contrast ratio pass/fail badges for text/background combinations
+
+**Typography specimens (AC4):**
+- Load specified fonts via Google Fonts \`<link>\` tags
+- Render sample text ("The quick brown fox...") in each font family, weight, and size from the type system
+- Show the font name, weight, and size alongside each specimen
+
+**Token visualization (AC5):**
+- Spacing tokens: render proportional bars showing relative sizes
+- Border-radius tokens: render sample shapes (squares with each radius applied)
+- Shadow/elevation tokens: render sample elements with each shadow applied
+
+**Component mockups (AC6):**
+- Show styled component previews: buttons (all variants), cards, inputs, badges
+- Apply the brand's design tokens so the mockup demonstrates the visual language
+- Include default, hover, and disabled state representations
+
+**CSS variables block (AC7):**
+- Include the complete \`:root { --brand-primary: #hex; ... }\` CSS variable override block
+- Display it in a styled \`<pre><code>\` block that is visually distinct and copy-pasteable
+
+### Brand Book HTML Structure
+
+Each HTML file should follow this structure:
+\`\`\`html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{Brand Name} — Brand Book</title>
+  <link href="https://fonts.googleapis.com/css2?family={fonts}&display=swap" rel="stylesheet">
+  <style>
+    /* All CSS inlined here — tokens, layout, component styles */
+  </style>
+</head>
+<body>
+  <header><!-- Brand name, tagline, mood description --></header>
+  <section id="colors"><!-- Color palette swatches with hex, token name, usage --></section>
+  <section id="typography"><!-- Font specimens at each scale --></section>
+  <section id="tokens"><!-- Spacing bars, radius shapes, shadow samples --></section>
+  <section id="components"><!-- Button, card, input, badge mockups --></section>
+  <section id="css-variables"><!-- :root CSS variables code block --></section>
+</body>
+</html>
+\`\`\`
+
 ## Guidelines
 - Every visual decision should reference a token — never hardcode a raw hex or pixel value
 - Document ALL component states — hover, focus, disabled, loading, error
 - ASCII layout diagrams are required for each screen — they anchor the spec
 - Contrast ratios must be verified for all text/background combinations
 - Be specific enough that a developer can implement this without needing to invent visual decisions
+- Brand book HTML files must be fully self-contained — a viewer should understand the design language just by opening the file
 `;
