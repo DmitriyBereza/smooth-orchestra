@@ -67,8 +67,8 @@ const App: React.FC = () => {
               key={tab.id}
               style={{
                 ...mobileStyles.tab,
-                color: mobileTab === tab.id ? 'var(--accent-blue)' : 'var(--text-muted)',
-                borderTopColor: mobileTab === tab.id ? 'var(--accent-blue)' : 'transparent',
+                color: mobileTab === tab.id ? 'var(--brand-primary)' : 'var(--text-muted)',
+                borderTopColor: mobileTab === tab.id ? 'var(--brand-primary)' : 'transparent',
               }}
               onClick={() => setMobileTab(tab.id)}
             >
@@ -154,7 +154,7 @@ const mobileStyles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
-    fontFamily: 'var(--font-sans)',
+    fontFamily: 'var(--font-body)',
   },
 };
 
