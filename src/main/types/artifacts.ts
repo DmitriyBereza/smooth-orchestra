@@ -60,7 +60,7 @@ export const STAGE_ARTIFACTS: Record<string, { writes: ArtifactType[]; reads: Ar
   },
   developer: {
     writes: ['dev-notes', 'qa-spec'],
-    reads: ['story', 'design', 'dev-tasks', 'review'],
+    reads: ['story', 'design', 'dev-tasks', 'review', 'tl-code-review'],
   },
   'tl-code-review': {
     writes: ['tl-code-review'],

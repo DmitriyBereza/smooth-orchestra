@@ -76,7 +76,7 @@ export const DEVELOPMENT_PIPELINE_CONFIG: PipelineTypeConfig = {
     },
     developer: {
       writes: ['dev-notes', 'qa-spec'],
-      reads: ['story', 'design', 'dev-tasks', 'review'],
+      reads: ['story', 'design', 'dev-tasks', 'review', 'tl-code-review'],
     },
     'tl-code-review': {
       writes: ['tl-code-review'],
