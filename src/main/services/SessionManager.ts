@@ -3,14 +3,12 @@ import path from 'path';
 import { v4 as uuid } from 'uuid';
 import {
   PipelineStage,
+  PipelineType,
   SessionState,
   SubtaskState,
   TaskDefinition,
-  STAGE_TO_ROLE,
-  getNextStage,
   AgentRole,
   DEFAULT_PIPELINE,
-  PIPELINE_STAGES,
 } from '../types';
 import { eventBus } from './EventBus';
 import { AgentPool } from './AgentPool';
@@ -18,9 +16,13 @@ import { ArtifactManager } from './ArtifactManager';
 import { GitManager } from './GitManager';
 import { ProjectStore } from './ProjectStore';
 import { buildSystemPrompt, buildTaskPrompt } from '../prompts';
+import { getPipelineConfig, PipelineTypeConfig } from '../pipelines/registry';
+// Ensure all pipelines are registered
+import '../pipelines';
 
 /**
- * The core pipeline state machine — orchestrates the PO → Architect → Tech Lead → Dev → QA flow.
+ * The core pipeline state machine — orchestrates pipeline flows for development,
+ * marketing, and design pipeline types.
  * Manages one task at a time (MVP constraint).
  */
 export class SessionManager {
@@ -55,6 +57,15 @@ export class SessionManager {
   }
 
   /**
+   * Get the pipeline config for the current session.
+   * Falls back to 'development' for backward compatibility.
+   */
+  private getConfig(): PipelineTypeConfig {
+    const type = this.currentSession?.pipelineType ?? 'development';
+    return getPipelineConfig(type);
+  }
+
+  /**
    * Persist session state to disk (atomic write).
    */
   private persistSession(): void {
@@ -79,6 +90,15 @@ export class SessionManager {
       const session = JSON.parse(raw) as SessionState;
 
       if (!session || !session.task) return;
+
+      // Backward compatibility: default pipelineType for old sessions
+      if (!session.pipelineType) {
+        session.pipelineType = 'development';
+      }
+      // Backward compatibility: default task.pipelineType
+      if (!session.task.pipelineType) {
+        session.task.pipelineType = session.pipelineType;
+      }
 
       // Only restore non-terminal sessions
       if (this.isTerminalStage(session.currentStage)) {
@@ -135,12 +155,13 @@ export class SessionManager {
 
       // For active agent stages, the agent process died on restart.
       // Re-spawn the agent for the current stage.
-      const role = STAGE_TO_ROLE[session.currentStage];
+      const config = this.getConfig();
+      const role = config.stageToRole[session.currentStage] ?? (session.currentStage === 'po' ? 'po' : undefined);
       if (role) {
         console.log(`[SessionManager] Resuming agent for stage: ${session.currentStage} (role: ${role})`);
         setTimeout(async () => {
           try {
-            await this.spawnAgentForStage(role, this.currentSession!.currentStage);
+            await this.spawnAgentForStage(role as AgentRole, this.currentSession!.currentStage);
           } catch (err) {
             console.error(`[SessionManager] Failed to resume agent:`, err);
           }
@@ -157,7 +178,15 @@ export class SessionManager {
    * The first project is the "primary" (used as CWD for agents).
    * Agents handle git branching themselves — no upfront branch creation.
    */
-  async createTask(title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Partial<Record<AgentRole, string>>, jiraIssueKey?: string): Promise<SessionState> {
+  async createTask(
+    title: string,
+    description: string,
+    projectIds?: string[],
+    scheduledAt?: string,
+    models?: Partial<Record<AgentRole, string>>,
+    jiraIssueKey?: string,
+    pipelineType: PipelineType = 'development',
+  ): Promise<SessionState> {
     if (this.currentSession && !this.isTerminalStage(this.currentSession.currentStage)) {
       throw new Error('A task is already in progress. Complete or abort it first.');
     }
@@ -224,12 +253,11 @@ export class SessionManager {
       title,
       description,
       createdAt: new Date().toISOString(),
+      pipelineType,
     };
 
     // Create task directory (artifacts stay in Orchestra's .orchestra/)
     this.artifactManager.getTaskDir(taskId);
-
-    // No upfront branch creation — agents handle git themselves based on which projects they modify
 
     const isScheduled = scheduledAt && new Date(scheduledAt).getTime() > Date.now();
 
@@ -250,6 +278,7 @@ export class SessionManager {
       projectName: projects.map((p) => p.name).join(', '),
       projectPath: primary.path,
       jiraIssueKey: jiraIssueKey ?? null,
+      pipelineType,
     };
 
     this.persistSession();
@@ -276,26 +305,36 @@ export class SessionManager {
 
   /**
    * User approves the spec — set the active pipeline and advance to its first stage.
-   * If no pipeline is provided, uses the PO's proposed pipeline or the full default.
+   * If no pipeline is provided, uses the PO's proposed pipeline or the pipeline's default.
    */
   async approveSpec(pipeline?: PipelineStage[]): Promise<void> {
     if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_user_review') {
       throw new Error('No session awaiting user review');
     }
 
+    const config = this.getConfig();
+    const defaultPipeline = config.defaultPipeline as PipelineStage[];
+
     const activePipeline = pipeline
       ?? this.currentSession.proposedPipeline
-      ?? DEFAULT_PIPELINE;
+      ?? defaultPipeline;
 
-    // Always ensure developer is present
-    if (!activePipeline.includes('developer')) {
-      activePipeline.push('developer');
+    // Ensure required stage is present (e.g., developer, copywriter, ui-designer)
+    if (!activePipeline.includes(config.requiredStage as PipelineStage)) {
+      activePipeline.push(config.requiredStage as PipelineStage);
     }
 
-    this.currentSession.activePipeline = activePipeline;
+    // Validate all stages belong to this pipeline type
+    const validStages = new Set(config.allStages);
+    const filteredPipeline = activePipeline.filter((s) => validStages.has(s));
+    if (filteredPipeline.length === 0) {
+      filteredPipeline.push(config.requiredStage as PipelineStage);
+    }
+
+    this.currentSession.activePipeline = filteredPipeline;
     this.persistSession();
 
-    const firstStage = activePipeline[0] as PipelineStage;
+    const firstStage = filteredPipeline[0] as PipelineStage;
     await this.transitionTo(firstStage);
   }
 
@@ -309,7 +348,7 @@ export class SessionManager {
 
     const taskId = this.currentSession.task.id;
     this.artifactManager.writeArtifact(taskId, 'answers',
-      `# User Feedback — Spec Revision Requested\n\n${feedback}\n\nThe user has reviewed your story and wants changes. Please revise the story based on the feedback above.`);
+      `# User Feedback — Spec Revision Requested\n\n${feedback}\n\nThe user has reviewed your brief and wants changes. Please revise the brief based on the feedback above.`);
 
     await this.transitionTo('po');
   }
@@ -333,7 +372,7 @@ export class SessionManager {
       ...(originalQuestions ? [`## Original Questions\n\n${originalQuestions}\n`, `---\n`] : []),
       `## Answers\n\n${answers}`,
       ``,
-      `Please incorporate these answers into the user story. Do NOT ask these questions again — they have been answered above. Update story.md with the refined spec.`,
+      `Please incorporate these answers into the brief. Do NOT ask these questions again — they have been answered above. Update story.md with the refined spec.`,
     ].join('\n');
 
     this.artifactManager.writeArtifact(taskId, 'answers', answerContent);
@@ -349,7 +388,6 @@ export class SessionManager {
       throw new Error('No session awaiting merge approval');
     }
 
-    // Agents handle branches themselves — merge is manual or handled by the developer agent
     this.currentSession.completedAt = new Date().toISOString();
     this.persistSession();
     await this.transitionTo('done');
@@ -361,7 +399,7 @@ export class SessionManager {
   }
 
   /**
-   * User rejects the merge — send back to developer with feedback.
+   * User rejects the merge — send back to the pipeline's "doer" role with feedback.
    */
   async rejectMerge(feedback: string): Promise<void> {
     if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_merge_approval') {
@@ -372,7 +410,9 @@ export class SessionManager {
     this.artifactManager.writeArtifact(taskId, 'questions',
       `# Merge Review Feedback\n\n${feedback}\n\nPlease address these issues.`);
 
-    await this.transitionTo('developer');
+    // Send back to the required stage (developer / copywriter / ui-designer)
+    const config = this.getConfig();
+    await this.transitionTo(config.requiredStage as PipelineStage);
   }
 
   /**
@@ -425,14 +465,21 @@ export class SessionManager {
       to: stage,
     });
 
-    // Parallel dev stage has its own spawning logic
+    // Parallel dev stage has its own spawning logic (development pipeline only)
     if (stage === 'parallel-dev') {
       await this.spawnParallelDevelopers();
       return;
     }
 
-    // If this stage has an associated agent role, spawn it
-    const role = STAGE_TO_ROLE[stage];
+    // PO always uses 'po' role
+    if (stage === 'po') {
+      await this.spawnAgentForStage('po', stage);
+      return;
+    }
+
+    // Use pipeline config to resolve the role for this stage
+    const config = this.getConfig();
+    const role = config.stageToRole[stage] as AgentRole | undefined;
     if (role) {
       await this.spawnAgentForStage(role, stage);
     }
@@ -446,16 +493,16 @@ export class SessionManager {
 
     const taskId = this.currentSession.task.id;
     const { title, description } = this.currentSession.task;
+    const pipelineType = this.currentSession.pipelineType ?? 'development';
 
     // Absolute path to this task's artifact directory — agents must use this
-    // so they write to Orchestra's .orchestra/ dir, not their CWD project's .orchestra/
     const artifactDir = this.artifactManager.getTaskDir(taskId);
 
     // Build context from previous stage artifacts
     const artifactContext = this.artifactManager.buildContextForRole(taskId, role, stage);
 
-    // Build prompts
-    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage, artifactDir);
+    // Build prompts — pass pipelineType for PO and domain-specific roles
+    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage, artifactDir, pipelineType);
     const taskPrompt = buildTaskPrompt(role, taskId, title, description, artifactContext, stage, undefined, artifactDir);
 
     // Create and start the agent
@@ -492,7 +539,7 @@ export class SessionManager {
 
       const stage = this.currentSession.currentStage;
 
-      // Handle parallel dev completion
+      // Handle parallel dev completion (development pipeline only)
       if (stage === 'parallel-dev' && role === 'developer') {
         const subtask = this.currentSession.subtasks.find(s => s.assignedAgentId === agentId);
         if (!subtask) return;
@@ -526,15 +573,18 @@ export class SessionManager {
             this.currentSession.error = 'One or more subtasks failed';
             await this.transitionTo('failed');
           } else {
+            const config = this.getConfig();
             eventBus.emit('session:all-subtasks-completed', { taskId });
-            await this.transitionTo('qa');
+            // Advance to next stage after developer in activePipeline
+            await this.advancePipeline('developer');
           }
         }
         return;
       }
 
       // Original linear handler for non-parallel stages
-      const expectedRole = STAGE_TO_ROLE[stage];
+      const config = this.getConfig();
+      const expectedRole = stage === 'po' ? 'po' : (config.stageToRole[stage] as AgentRole | undefined);
 
       if (role !== expectedRole) return;
 
@@ -581,10 +631,26 @@ export class SessionManager {
     });
 
     // Handle user commands from the frontend
-    eventBus.on('command:create-task', async ({ title, description, projectIds, scheduledAt, models, jiraIssueKey }: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<AgentRole, string>>; jiraIssueKey?: string }) => {
-      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, scheduled: ${scheduledAt ?? 'now'}, jira: ${jiraIssueKey ?? 'none'})`);
+    eventBus.on('command:create-task', async ({
+      title,
+      description,
+      projectIds,
+      scheduledAt,
+      models,
+      jiraIssueKey,
+      pipelineType,
+    }: {
+      title: string;
+      description: string;
+      projectIds?: string[];
+      scheduledAt?: string;
+      models?: Partial<Record<AgentRole, string>>;
+      jiraIssueKey?: string;
+      pipelineType?: PipelineType;
+    }) => {
+      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, pipeline: ${pipelineType ?? 'development'}, scheduled: ${scheduledAt ?? 'now'}, jira: ${jiraIssueKey ?? 'none'})`);
       try {
-        await this.createTask(title, description, projectIds, scheduledAt, models, jiraIssueKey);
+        await this.createTask(title, description, projectIds, scheduledAt, models, jiraIssueKey, pipelineType ?? 'development');
       } catch (err: any) {
         console.error('[SessionManager] Failed to create task:', err.message, err.stack);
       }
@@ -627,15 +693,25 @@ export class SessionManager {
       if (this.currentSession.currentStage !== 'awaiting_rejection_routing') return;
 
       try {
+        const config = this.getConfig();
+        const taskId = this.currentSession.task.id;
+
         if (routing === 'send_to_dev') {
-          const taskId = this.currentSession.task.id;
-          const qaReport = this.artifactManager.readArtifact(taskId, 'qa-report');
+          // Read QA report artifact (different name per pipeline type)
+          const qaStage = config.qaStage;
+          const qaArtifacts = qaStage ? config.stageArtifacts[qaStage]?.writes ?? [] : [];
+          const qaReportType = qaArtifacts[0]; // first written artifact is the QA report
+          const qaReport = qaReportType
+            ? this.artifactManager.readArtifact(taskId, qaReportType)
+            : null;
+
           this.artifactManager.writeArtifact(
             taskId,
             'questions',
             `# QA Rejection Feedback\n\n${qaReport ?? ''}\n\nPlease fix the issues identified above.`,
           );
-          await this.transitionTo('developer');
+          // Send back to required stage (developer / copywriter / ui-designer)
+          await this.transitionTo(config.requiredStage as PipelineStage);
         } else if (routing === 'escalate_to_po') {
           this.currentSession.qaDecision = null;
           this.currentSession.rejectionReason = null;
@@ -665,11 +741,12 @@ export class SessionManager {
 
   /**
    * Advance the pipeline to the next stage after an agent completes.
-   * Uses activePipeline for dynamic routing; handles special loopback cases.
+   * Uses activePipeline for dynamic routing; handles review loopback via config.
    */
   private async advancePipeline(completedStage: PipelineStage): Promise<void> {
     if (!this.currentSession) return;
     const taskId = this.currentSession.task.id;
+    const config = this.getConfig();
 
     // PO always transitions to awaiting_user_review (pipeline not set yet)
     if (completedStage === 'po') {
@@ -682,15 +759,26 @@ export class SessionManager {
       return;
     }
 
-    // TL code review: might loop back to developer
-    if (completedStage === 'tl-code-review') {
-      await this.handleCodeReviewDecision();
-      return;
+    // Check if this is a review stage with potential loopback
+    const reviewConfig = config.reviewStages.find(r => r.stage === completedStage);
+    if (reviewConfig) {
+      const reviewContent = this.artifactManager.readArtifact(taskId, reviewConfig.decisionArtifact);
+      const decision = reviewContent ? this.parseArtifactDecision(reviewContent) : null;
+
+      if (decision === 'CHANGES_REQUESTED') {
+        await this.transitionTo(reviewConfig.rejectTarget);
+        return;
+      }
+      // If approved, fall through to normal advancement
     }
 
-    // QA: might reject
-    if (completedStage === 'qa') {
-      const qaReport = this.artifactManager.readArtifact(taskId, 'qa-report');
+    // Check if this is the QA stage — handle rejection routing
+    if (completedStage === config.qaStage) {
+      const qaArtifacts = config.stageArtifacts[completedStage as string]?.writes ?? [];
+      const qaReportType = qaArtifacts[0]; // first written artifact is the QA report
+      const qaReport = qaReportType
+        ? this.artifactManager.readArtifact(taskId, qaReportType)
+        : null;
       const decision = qaReport ? this.parseArtifactDecision(qaReport) : null;
 
       if (decision === 'REJECTED' || decision === 'FAIL') {
@@ -711,14 +799,14 @@ export class SessionManager {
     }
 
     // Normal: find next stage in activePipeline
-    const pipeline = this.currentSession.activePipeline ?? DEFAULT_PIPELINE;
+    const pipeline = this.currentSession.activePipeline ?? (config.defaultPipeline as PipelineStage[]);
     const idx = pipeline.indexOf(completedStage);
     const nextStage = (idx !== -1 && idx < pipeline.length - 1)
       ? pipeline[idx + 1] as PipelineStage
       : 'awaiting_merge_approval';
 
-    // developer might become parallel-dev if multiple subtasks were planned
-    if (nextStage === 'developer') {
+    // developer might become parallel-dev if multiple subtasks were planned (development pipeline only)
+    if (nextStage === 'developer' && config.supportsParallelExecution) {
       const devTasksContent = this.artifactManager.readArtifact(taskId, 'dev-tasks');
       const parsed = devTasksContent ? this.parseDevTasks(devTasksContent) : [];
       if (parsed.length > 1) {
@@ -732,10 +820,15 @@ export class SessionManager {
 
   /**
    * Parse the PO's pipeline.md artifact into an ordered list of pipeline stages.
+   * Validates against the current session's pipeline type's valid stages.
    */
   private parsePipelineArtifact(content: string): PipelineStage[] {
+    const config = this.getConfig();
+    const validStagesSet = new Set(config.allStages);
+    const defaultPipeline = config.defaultPipeline as PipelineStage[];
+
     const stagesMatch = content.match(/## Stages\n([\s\S]*?)(?=\n##|$)/);
-    if (!stagesMatch) return DEFAULT_PIPELINE;
+    if (!stagesMatch) return defaultPipeline;
 
     const lines = stagesMatch[1].trim().split('\n');
     const stages: PipelineStage[] = [];
@@ -744,46 +837,23 @@ export class SessionManager {
       const match = line.match(/^[-*]\s+(\S+)/);
       if (match) {
         const stage = match[1].trim() as PipelineStage;
-        if (PIPELINE_STAGES.includes(stage)) {
+        if (validStagesSet.has(stage)) {
           stages.push(stage);
         }
       }
     }
 
-    // Always ensure developer is present
-    if (!stages.includes('developer')) {
-      stages.push('developer');
+    // Always ensure required stage is present
+    if (!stages.includes(config.requiredStage as PipelineStage)) {
+      stages.push(config.requiredStage as PipelineStage);
     }
 
-    return stages.length > 0 ? stages : DEFAULT_PIPELINE;
+    return stages.length > 0 ? stages : defaultPipeline;
   }
 
   private parseArtifactDecision(content: string): string | null {
     const match = content.match(/##\s*(?:Decision|Verdict):\s*(\w+)/i);
     return match ? match[1].toUpperCase() : null;
-  }
-
-  /**
-   * Handle the TL code review decision — approve to next stage or loop back to developer.
-   */
-  private async handleCodeReviewDecision(): Promise<void> {
-    if (!this.currentSession) return;
-
-    const taskId = this.currentSession.task.id;
-    const content = this.artifactManager.readArtifact(taskId, 'tl-code-review');
-    const decision = content ? this.parseArtifactDecision(content) : null;
-
-    if (decision === 'CHANGES_REQUESTED') {
-      await this.transitionTo('developer');
-    } else {
-      // Find next stage after tl-code-review in activePipeline
-      const pipeline = this.currentSession.activePipeline ?? DEFAULT_PIPELINE;
-      const idx = pipeline.indexOf('tl-code-review');
-      const nextStage = (idx !== -1 && idx < pipeline.length - 1)
-        ? pipeline[idx + 1] as PipelineStage
-        : 'awaiting_merge_approval';
-      await this.transitionTo(nextStage);
-    }
   }
 
   private extractRejectionReason(content: string): string {
@@ -838,16 +908,13 @@ export class SessionManager {
     // Build shared prompt context once (identical across subtasks)
     const artifactDir = this.artifactManager.getTaskDir(taskId);
     const artifactContext = this.artifactManager.buildContextForRole(taskId, 'developer');
-    const systemPrompt = buildSystemPrompt('developer', this.projectContext, undefined, artifactDir);
+    const systemPrompt = buildSystemPrompt('developer', this.projectContext, undefined, artifactDir, 'development');
 
     // Spawn a developer agent for each subtask
     for (const subtask of this.currentSession.subtasks) {
       try {
-        // Agents handle their own branching
         const taskPrompt = this.buildSubtaskPrompt(taskId, subtask, artifactContext, artifactDir);
 
-        // Create agent — AgentPool manages one per role, so we call createAgent
-        // which will return a new AgentProcess with a unique id
         const agent = this.agentPool.createAgent('developer', taskId);
         subtask.assignedAgentId = agent.id;
         subtask.status = 'in_progress';

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { PipelineType } from '../../store/sessionStore';
+import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
 
-type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
+type AgentRole = string;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -13,7 +15,7 @@ function useIsMobile() {
 }
 
 interface NewTaskFormProps {
-  onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean) => void;
+  onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean, pipelineType?: PipelineType) => void;
   disabled?: boolean;
   /** Pre-fill from a Jira import */
   initialTitle?: string;
@@ -29,20 +31,18 @@ const MODEL_OPTIONS = [
   { value: 'claude-haiku-4-5-20251001', label: 'Haiku' },
 ];
 
-const AGENT_ROLES: { role: AgentRole; label: string; color: string }[] = [
-  { role: 'po', label: 'PO', color: '#3B82F6' },
-  { role: 'architect', label: 'Architect', color: '#8B5CF6' },
-  { role: 'tech-lead', label: 'Tech Lead', color: '#F97316' },
-  { role: 'developer', label: 'Developer', color: '#22C55E' },
-  { role: 'qa', label: 'QA', color: '#EF4444' },
-];
-
 const DELAY_PRESETS = [
   { label: '5 min', minutes: 5 },
   { label: '15 min', minutes: 15 },
   { label: '30 min', minutes: 30 },
   { label: '1 hr', minutes: 60 },
   { label: '2 hr', minutes: 120 },
+];
+
+const PIPELINE_TYPE_OPTIONS: { type: PipelineType; label: string; description: string; icon: string; color: string }[] = [
+  { type: 'development', label: 'Dev', description: 'Software engineering', icon: '💻', color: '#22C55E' },
+  { type: 'marketing', label: 'Marketing', description: 'Campaign & content', icon: '📣', color: '#EC4899' },
+  { type: 'design', label: 'Design', description: 'UX/UI design', icon: '🎨', color: '#8B5CF6' },
 ];
 
 function toLocalDatetimeValue(date: Date): string {
@@ -57,11 +57,12 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   const [description, setDescription] = useState(initialDescription);
   const [jiraIssueKey, setJiraIssueKey] = useState(initialJiraKey ?? '');
   const [createJiraIssue, setCreateJiraIssue] = useState(false);
-  const [models, setModels] = useState<Partial<Record<AgentRole, string>>>({});
+  const [models, setModels] = useState<Record<string, string>>({});
   const [showModels, setShowModels] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<'now' | 'delay' | 'custom'>('now');
   const [delayMinutes, setDelayMinutes] = useState<number | null>(null);
   const [customDatetime, setCustomDatetime] = useState('');
+  const [pipelineType, setPipelineType] = useState<PipelineType>('development');
 
   // Sync when parent injects new Jira import values
   React.useEffect(() => {
@@ -70,7 +71,11 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     if (initialJiraKey !== undefined) setJiraIssueKey(initialJiraKey ?? '');
   }, [initialTitle, initialDescription, initialJiraKey]);
 
-  const setModelForRole = (role: AgentRole, value: string) => {
+  // Get roles for the currently selected pipeline type
+  const pipelineConfig = SHARED_PIPELINE_CONFIGS[pipelineType];
+  const agentRolesForPipeline = pipelineConfig.modelSelectorRoles;
+
+  const setModelForRole = (role: string, value: string) => {
     setModels((prev) => {
       const next = { ...prev };
       if (value) {
@@ -86,12 +91,18 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     if (!value) {
       setModels({});
     } else {
-      const next: Partial<Record<AgentRole, string>> = {};
-      for (const { role } of AGENT_ROLES) {
+      const next: Record<string, string> = {};
+      for (const { role } of agentRolesForPipeline) {
         next[role] = value;
       }
       setModels(next);
     }
+  };
+
+  // When pipeline type changes, clear model selections (roles change)
+  const handlePipelineTypeChange = (type: PipelineType) => {
+    setPipelineType(type);
+    setModels({});
   };
 
   const getScheduledAt = (): string | undefined => {
@@ -107,7 +118,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
-    const modelsToSend = Object.keys(models).length > 0 ? models as Record<string, string> : undefined;
+    const modelsToSend = Object.keys(models).length > 0 ? models : undefined;
     onSubmit(
       title.trim(),
       description.trim(),
@@ -115,6 +126,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
       modelsToSend,
       jiraIssueKey.trim() || undefined,
       createJiraIssue && !jiraIssueKey.trim(),
+      pipelineType,
     );
     setTitle('');
     setDescription('');
@@ -124,6 +136,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     setCustomDatetime('');
     setJiraIssueKey('');
     setCreateJiraIssue(false);
+    // Don't reset pipelineType — user likely wants same pipeline type for next task
   };
 
   const scheduleLabel = (() => {
@@ -140,7 +153,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   const allSameModel = (() => {
     const values = Object.values(models);
     if (values.length === 0) return '';
-    if (values.length === AGENT_ROLES.length && new Set(values).size === 1) return values[0];
+    if (values.length === agentRolesForPipeline.length && new Set(values).size === 1) return values[0];
     return null; // mixed
   })();
 
@@ -157,6 +170,32 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
       <h3 style={styles.heading}>New Task</h3>
+
+      {/* Pipeline type selector */}
+      <div style={styles.pipelineSection}>
+        <span style={styles.sectionLabel}>Pipeline</span>
+        <div style={styles.pipelineOptions}>
+          {PIPELINE_TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.type}
+              type="button"
+              title={opt.description}
+              style={{
+                ...styles.pipelineBtn,
+                ...(pipelineType === opt.type
+                  ? { ...styles.pipelineBtnActive, borderColor: opt.color, color: opt.color }
+                  : {}),
+              }}
+              onClick={() => handlePipelineTypeChange(opt.type)}
+              disabled={disabled}
+            >
+              <span style={styles.pipelineIcon}>{opt.icon}</span>
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <input
         type="text"
         placeholder="Task title..."
@@ -166,7 +205,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
         disabled={disabled}
       />
       <textarea
-        placeholder="Describe what you want built. Be specific about requirements, expected behavior, and any constraints..."
+        placeholder="Describe what you want. Be specific about requirements, expected behavior, and any constraints..."
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         style={styles.textarea}
@@ -211,8 +250,8 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
 
             <div style={styles.modelDivider} />
 
-            {/* Per-role selectors */}
-            {AGENT_ROLES.map(({ role, label, color }) => (
+            {/* Per-role selectors — only roles for the selected pipeline type */}
+            {agentRolesForPipeline.map(({ role, label, color }) => (
               <div key={role} style={styles.modelRow}>
                 <span style={{ ...styles.roleLabel, color }}>{label}</span>
                 <div style={styles.modelButtons}>
@@ -350,6 +389,39 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary)',
     marginBottom: 4,
   },
+  pipelineSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  pipelineOptions: {
+    display: 'flex',
+    gap: 6,
+  },
+  pipelineBtn: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    padding: '6px 8px',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: 'var(--text-muted)',
+    border: '1px solid var(--border-color)',
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 500,
+    cursor: 'pointer',
+    fontFamily: 'var(--font-sans)',
+    transition: 'all 0.1s',
+  },
+  pipelineBtnActive: {
+    backgroundColor: 'transparent',
+    fontWeight: 600,
+  },
+  pipelineIcon: {
+    fontSize: 14,
+  },
   input: {
     padding: '10px 12px',
     backgroundColor: 'var(--bg-tertiary)',
@@ -421,8 +493,11 @@ const styles: Record<string, React.CSSProperties> = {
   roleLabel: {
     fontSize: 11,
     fontWeight: 600,
-    width: 64,
+    width: 80,
     flexShrink: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
   },
   modelButtons: {
     display: 'flex',

@@ -1,13 +1,46 @@
 import { create } from 'zustand';
 
 // Re-define types for the renderer (no Node.js imports)
-export type AgentRole = 'po' | 'architect' | 'tech-lead' | 'developer' | 'qa';
+export type PipelineType = 'development' | 'marketing' | 'design';
+
+export type AgentRole =
+  // Development pipeline roles
+  | 'po'
+  | 'tech-researcher'
+  | 'architect'
+  | 'tech-lead'
+  | 'developer'
+  | 'qa'
+  // Marketing pipeline roles
+  | 'marketing-researcher'
+  | 'marketing-strategist'
+  | 'copywriter'
+  | 'creative-director'
+  | 'marketing-qa'
+  // Design pipeline roles
+  | 'design-researcher'
+  | 'ux-designer'
+  | 'ui-designer'
+  | 'design-executor'
+  | 'design-reviewer'
+  | 'design-qa';
+
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'killed';
+
 export type PipelineStage =
-  | 'idle' | 'scheduled' | 'po' | 'awaiting_user_review' | 'architect'
-  | 'tech-lead' | 'developer' | 'tl-code-review' | 'parallel-dev' | 'qa'
+  // System stages (shared)
+  | 'idle' | 'scheduled' | 'rate-limited' | 'po' | 'awaiting_user_review'
   | 'awaiting_rejection_routing' | 'awaiting_merge_approval'
-  | 'done' | 'failed' | 'rejected';
+  | 'done' | 'failed' | 'rejected'
+  // Development pipeline stages
+  | 'tech-researcher' | 'architect' | 'tech-lead' | 'developer'
+  | 'tl-code-review' | 'parallel-dev' | 'qa'
+  // Marketing pipeline stages
+  | 'marketing-researcher' | 'marketing-strategist' | 'copywriter'
+  | 'creative-director' | 'marketing-qa'
+  // Design pipeline stages
+  | 'design-researcher' | 'ux-designer' | 'ui-designer'
+  | 'design-executor' | 'design-reviewer' | 'design-qa';
 
 export interface AgentMessage {
   id: string;
@@ -42,6 +75,7 @@ export interface TaskDefinition {
   title: string;
   description: string;
   createdAt: string;
+  pipelineType?: PipelineType;
 }
 
 export interface SessionState {
@@ -65,40 +99,103 @@ export interface SessionState {
   proposedPipeline?: PipelineStage[];
   activePipeline?: PipelineStage[];
   jiraIssueKey?: string | null;
+  pipelineType?: PipelineType;
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
   po: 'Product Owner',
+  'tech-researcher': 'Tech Researcher',
   architect: 'Architect',
   'tech-lead': 'Tech Lead',
   developer: 'Developer',
   qa: 'QA Engineer',
+  'marketing-researcher': 'Marketing Researcher',
+  'marketing-strategist': 'Marketing Strategist',
+  copywriter: 'Copywriter',
+  'creative-director': 'Creative Director',
+  'marketing-qa': 'Marketing QA',
+  'design-researcher': 'Design Researcher',
+  'ux-designer': 'UX Designer',
+  'ui-designer': 'UI Designer',
+  'design-executor': 'Design Executor',
+  'design-reviewer': 'Design Reviewer',
+  'design-qa': 'Design QA',
 };
 
 export const ROLE_COLORS: Record<AgentRole, string> = {
   po: '#3B82F6',
+  'tech-researcher': '#06B6D4',
   architect: '#8B5CF6',
   'tech-lead': '#F97316',
   developer: '#22C55E',
   qa: '#EF4444',
+  'marketing-researcher': '#F59E0B',
+  'marketing-strategist': '#D97706',
+  copywriter: '#EC4899',
+  'creative-director': '#BE185D',
+  'marketing-qa': '#DC2626',
+  'design-researcher': '#0EA5E9',
+  'ux-designer': '#6366F1',
+  'ui-designer': '#8B5CF6',
+  'design-executor': '#A855F7',
+  'design-reviewer': '#7C3AED',
+  'design-qa': '#4F46E5',
 };
 
 export const STAGE_DISPLAY: Record<PipelineStage, string> = {
+  // System
   idle: 'Idle',
   scheduled: 'Scheduled',
+  'rate-limited': 'Rate Limited',
   po: 'Product Owner',
   awaiting_user_review: 'Awaiting Review',
+  awaiting_rejection_routing: 'QA Rejected',
+  awaiting_merge_approval: 'Merge Approval',
+  done: 'Done',
+  failed: 'Failed',
+  rejected: 'Rejected',
+  // Development
+  'tech-researcher': 'Tech Research',
   architect: 'Architect',
   'tech-lead': 'Tech Lead Review',
   developer: 'Development',
   'tl-code-review': 'Code Review',
   'parallel-dev': 'Parallel Dev',
   qa: 'QA Testing',
-  awaiting_rejection_routing: 'QA Rejected',
-  awaiting_merge_approval: 'Merge Approval',
-  done: 'Done',
-  failed: 'Failed',
-  rejected: 'Rejected',
+  // Marketing
+  'marketing-researcher': 'Market Research',
+  'marketing-strategist': 'Strategy',
+  copywriter: 'Copywriting',
+  'creative-director': 'Creative Review',
+  'marketing-qa': 'Marketing QA',
+  // Design
+  'design-researcher': 'Design Research',
+  'ux-designer': 'UX Design',
+  'ui-designer': 'UI Design',
+  'design-executor': 'Design Execution',
+  'design-reviewer': 'Design Review',
+  'design-qa': 'Design QA',
+};
+
+// Initial empty agent outputs — dynamically extended for new roles
+const EMPTY_AGENT_OUTPUTS: Record<AgentRole, AgentMessage[]> = {
+  po: [],
+  'tech-researcher': [],
+  architect: [],
+  'tech-lead': [],
+  developer: [],
+  qa: [],
+  'marketing-researcher': [],
+  'marketing-strategist': [],
+  copywriter: [],
+  'creative-director': [],
+  'marketing-qa': [],
+  'design-researcher': [],
+  'ux-designer': [],
+  'ui-designer': [],
+  'design-executor': [],
+  'design-reviewer': [],
+  'design-qa': [],
 };
 
 interface OrchestraStore {
@@ -153,13 +250,7 @@ export const useStore = create<OrchestraStore>((set) => ({
     })),
 
   // Agent outputs
-  agentOutputs: {
-    po: [],
-    architect: [],
-    'tech-lead': [],
-    developer: [],
-    qa: [],
-  },
+  agentOutputs: { ...EMPTY_AGENT_OUTPUTS },
   addAgentOutput: (message) =>
     set((state) => ({
       agentOutputs: {
@@ -169,7 +260,7 @@ export const useStore = create<OrchestraStore>((set) => ({
     })),
   clearAgentOutputs: () =>
     set({
-      agentOutputs: { po: [], architect: [], 'tech-lead': [], developer: [], qa: [] },
+      agentOutputs: { ...EMPTY_AGENT_OUTPUTS },
     }),
 
   // Agents
