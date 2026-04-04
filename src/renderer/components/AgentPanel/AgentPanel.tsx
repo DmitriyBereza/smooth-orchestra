@@ -8,13 +8,13 @@ import { ROLE_COLOR, ROLE_GLOW } from '../../utils/roleColors';
 function SubtaskStatusIcon({ status }: { status: SubtaskState['status'] }) {
   switch (status) {
     case 'in_progress':
-      return <CircleNotch weight="bold" size={10} className="spin" style={{ color: 'var(--role-developer)' }} />;
+      return <CircleNotch weight="bold" size={12} className="spin" style={{ color: 'var(--role-developer)' }} />;
     case 'completed':
-      return <CheckCircle weight="fill" size={10} style={{ color: 'var(--state-success)' }} />;
+      return <CheckCircle weight="fill" size={12} style={{ color: 'var(--state-success)' }} />;
     case 'failed':
-      return <XCircle weight="fill" size={10} style={{ color: 'var(--state-error)' }} />;
+      return <XCircle weight="fill" size={12} style={{ color: 'var(--state-error)' }} />;
     default:
-      return <Circle weight="bold" size={10} style={{ color: 'var(--text-muted)' }} />;
+      return <Circle weight="bold" size={12} style={{ color: 'var(--text-muted)' }} />;
   }
 }
 

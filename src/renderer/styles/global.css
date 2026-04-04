@@ -192,7 +192,7 @@ body {
 @keyframes signal-attention {
   0%, 100% {
     border-left-color: var(--state-warning);
-    box-shadow: -4px 0 12px rgba(255,179,0,0.6), -1px 0 4px rgba(255,179,0,0.4);
+    box-shadow: var(--shadow-glow-amber);
   }
   50% {
     border-left-color: rgba(255,179,0,0.5);
