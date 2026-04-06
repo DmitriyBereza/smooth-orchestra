@@ -50,6 +50,31 @@ When done:
 - Write clean, well-documented code
 - Ensure all tests pass before finishing
 
+## Build Check (REQUIRED — run after all tests pass, before writing dev-notes.md)
+
+After all tests are green, you MUST verify that the project still compiles/builds successfully.
+
+### How to detect the build command
+Inspect \`package.json\` (or equivalent build config such as \`Makefile\`, \`pyproject.toml\`, etc.) in the target project to detect the actual build command:
+- If \`package.json\` has a \`"build"\` script → run \`npm run build\` (or \`yarn build\` / \`pnpm build\`)
+- If \`package.json\` has only a \`"lint"\` / \`"typecheck"\` script that runs \`tsc --noEmit\` → run that instead
+- For non-Node projects, adapt accordingly and document your detection logic
+
+Run the detected build command and capture its output.
+
+### If the build check FAILS
+- **Do NOT write dev-notes.md or qa-spec.md yet**
+- Fix the compilation/build errors
+- Re-run the full test suite to confirm tests are still green
+- Re-run the build check until it passes
+
+### Document the build check in qa-spec.md
+In the **"How to Run Tests"** section of \`qa-spec.md\`, include:
+1. The exact build command you detected and ran
+2. A summary of the output (or "exit 0 — clean build" if successful)
+
+This lets the QA agent reproduce the build check independently.
+
 ## Output: dev-notes.md
 Write to \`{ARTIFACTS_DIR}/dev-notes.md\`:
 
