@@ -5,6 +5,7 @@ import { NewTaskForm } from './NewTaskForm';
 import { TaskCard } from './TaskCard';
 import { TaskHistoryCard } from './TaskHistoryCard';
 import { ProjectManager } from '../ProjectManager/ProjectManager';
+import { StandbyPanel } from '../Standby/StandbyPanel';
 import { useSocketCommands } from '../../hooks/useSocket';
 import { JiraImportPanel, JiraIssue } from './JiraImportPanel';
 
@@ -112,6 +113,9 @@ export const TaskBoard: React.FC = () => {
             />
           </div>
         )}
+
+        <div style={styles.divider} />
+        <StandbyPanel />
 
         <TaskHistory />
       </div>

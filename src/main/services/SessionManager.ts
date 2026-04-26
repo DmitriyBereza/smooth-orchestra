@@ -15,8 +15,9 @@ import { AgentPool } from './AgentPool';
 import { ArtifactManager } from './ArtifactManager';
 import { GitManager } from './GitManager';
 import { ProjectStore } from './ProjectStore';
-import { buildSystemPrompt, buildTaskPrompt } from '../prompts';
+import { buildSystemPrompt, buildTaskPrompt, PromptExtras } from '../prompts';
 import { getPipelineConfig, PipelineTypeConfig } from '../pipelines/registry';
+import { buildProjectPromptContexts } from './PromptContextBuilder';
 // Ensure all pipelines are registered
 import '../pipelines';
 
@@ -577,6 +578,31 @@ export class SessionManager {
   }
 
   /**
+   * Build per-spawn prompt extras (manualQa / pr blocks) from the primary
+   * project's config. Only the QA stage gets manualQaContext; only the
+   * developer stage gets prContext — every other role gets an empty string
+   * so the placeholders silently disappear.
+   */
+  private buildPromptExtras(role: AgentRole): PromptExtras {
+    if (!this.currentSession) return {};
+    const projectId = this.currentSession.projectId;
+    const project = projectId && this.projectStore
+      ? this.projectStore.findById(projectId)
+      : undefined;
+    const branch = this.currentSession.gitBranch ?? `orchestra/${this.currentSession.task.id}`;
+    const values = {
+      branch,
+      taskId: this.currentSession.task.id,
+      title: this.currentSession.task.title,
+    };
+    const { manualQaContext, prContext } = buildProjectPromptContexts(project, values);
+    return {
+      manualQaContext: role === 'qa' ? manualQaContext : '',
+      prContext: role === 'developer' ? prContext : '',
+    };
+  }
+
+  /**
    * Spawn an agent for the current pipeline stage.
    */
   private async spawnAgentForStage(role: AgentRole, stage: PipelineStage): Promise<void> {
@@ -592,8 +618,11 @@ export class SessionManager {
     // Build context from previous stage artifacts
     const artifactContext = this.artifactManager.buildContextForRole(taskId, role, stage);
 
+    // Build per-stage prompt extras (manual QA URLs, auto-PR config)
+    const extras = this.buildPromptExtras(role);
+
     // Build prompts — pass pipelineType for PO and domain-specific roles
-    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage, artifactDir, pipelineType);
+    const systemPrompt = buildSystemPrompt(role, this.projectContext, stage, artifactDir, pipelineType, extras);
     const taskPrompt = buildTaskPrompt(role, taskId, title, description, artifactContext, stage, undefined, artifactDir);
 
     // Create and start the agent
@@ -1059,7 +1088,8 @@ export class SessionManager {
     // Build shared prompt context once (identical across subtasks)
     const artifactDir = this.artifactManager.getTaskDir(taskId);
     const artifactContext = this.artifactManager.buildContextForRole(taskId, 'developer');
-    const systemPrompt = buildSystemPrompt('developer', this.projectContext, undefined, artifactDir, 'development');
+    const extras = this.buildPromptExtras('developer');
+    const systemPrompt = buildSystemPrompt('developer', this.projectContext, undefined, artifactDir, 'development', extras);
 
     // Spawn a developer agent for each subtask
     for (const subtask of this.currentSession.subtasks) {
