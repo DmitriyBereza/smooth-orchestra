@@ -1,5 +1,6 @@
 import { AgentMessage, AgentRole, AgentStatus } from './agent';
 import { PipelineStage, SessionState } from './session';
+import { BacklogItem, StandbyRole, StandbyState } from './standby';
 
 export interface OrchestraEventMap {
   // Agent events
@@ -50,6 +51,12 @@ export interface OrchestraEventMap {
   'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;
   'command:approve-merge': (data: { sessionId: string }) => void;
   'command:reject-merge': (data: { sessionId: string; feedback: string }) => void;
+
+  // Standby (idle improvement loop) events
+  'standby:state-changed': (data: { state: StandbyState }) => void;
+  'standby:tick-started': (data: { role: StandbyRole; startedAt: string }) => void;
+  'standby:tick-finished': (data: { role: StandbyRole; exitCode: number }) => void;
+  'standby:backlog-changed': (data: { backlog: BacklogItem[] }) => void;
 }
 
 export type OrchestraEvent = keyof OrchestraEventMap;

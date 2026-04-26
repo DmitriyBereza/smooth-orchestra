@@ -24,6 +24,13 @@ const LEGACY_ROLE_PROMPTS: Partial<Record<AgentRole, string>> = {
   qa: QA_PROMPT,
 };
 
+export interface PromptExtras {
+  /** Manual-QA block injected at {MANUAL_QA_CONTEXT}. Empty string when manual QA is off. */
+  manualQaContext?: string;
+  /** Auto-PR block injected at {PR_CONFIG_CONTEXT}. Empty string when auto-PR is off. */
+  prContext?: string;
+}
+
 /**
  * Build the complete system prompt for an agent, combining:
  * 1. Base context (team structure, communication protocol)
@@ -35,6 +42,7 @@ const LEGACY_ROLE_PROMPTS: Partial<Record<AgentRole, string>> = {
  * @param stage - Current pipeline stage (used for stage-specific overrides)
  * @param artifactDir - Absolute path to this task's artifact directory, injected in place of {ARTIFACTS_DIR}
  * @param pipelineType - Pipeline type for domain-specific prompt dispatch
+ * @param extras - Optional manualQa / pr context blocks for placeholder substitution
  */
 export function buildSystemPrompt(
   role: AgentRole,
@@ -42,6 +50,7 @@ export function buildSystemPrompt(
   stage?: PipelineStage,
   artifactDir?: string,
   pipelineType: PipelineType = 'development',
+  extras: PromptExtras = {},
 ): string {
   const base = buildBaseContext(projectContext);
   let rolePrompt: string;
@@ -72,6 +81,10 @@ export function buildSystemPrompt(
   if (artifactDir) {
     combined = combined.replaceAll('{ARTIFACTS_DIR}', artifactDir);
   }
+
+  // Replace context placeholders (empty string when not provided — placeholders silently disappear)
+  combined = combined.replaceAll('{MANUAL_QA_CONTEXT}', extras.manualQaContext ?? '');
+  combined = combined.replaceAll('{PR_CONFIG_CONTEXT}', extras.prContext ?? '');
 
   return combined;
 }

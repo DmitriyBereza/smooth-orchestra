@@ -1,5 +1,23 @@
 import { create } from 'zustand';
 
+export interface ManualQaConfig {
+  mode: 'remote' | 'local' | 'both' | 'off';
+  previewCommand?: string;
+  previewPort?: number;
+  urls?: Record<string, string>;
+}
+
+export interface PrConfig {
+  enabled: boolean;
+  baseBranch?: string;
+  titleTemplate?: string;
+  bodyTemplate?: string;
+}
+
+export interface StandbyProjectConfig {
+  enabled: boolean;
+}
+
 export interface ProjectRecord {
   id: string;
   name: string;
@@ -7,6 +25,9 @@ export interface ProjectRecord {
   labels: string[];
   createdAt: string;
   updatedAt: string;
+  manualQa?: ManualQaConfig;
+  pr?: PrConfig;
+  standby?: StandbyProjectConfig;
 }
 
 const API_BASE = '';
@@ -23,12 +44,27 @@ interface ProjectStore {
   toggleProject: (id: string) => void;
 
   fetchProjects: () => Promise<void>;
-  createProject: (name: string, path: string, labels: string[]) => Promise<ProjectRecord>;
-  updateProject: (id: string, data: { name?: string; path?: string; labels?: string[] }) => Promise<void>;
+  createProject: (
+    name: string,
+    path: string,
+    labels: string[],
+    options?: { manualQa?: ManualQaConfig; pr?: PrConfig; standby?: StandbyProjectConfig },
+  ) => Promise<ProjectRecord>;
+  updateProject: (
+    id: string,
+    data: {
+      name?: string;
+      path?: string;
+      labels?: string[];
+      manualQa?: ManualQaConfig;
+      pr?: PrConfig;
+      standby?: StandbyProjectConfig;
+    },
+  ) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
 }
 
-export const useProjectStore = create<ProjectStore>((set, get) => ({
+export const useProjectStore = create<ProjectStore>((set) => ({
   projects: [],
   selectedProjectId: null,
   selectedProjectIds: [],
@@ -60,11 +96,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
   },
 
-  createProject: async (name, path, labels) => {
+  createProject: async (name, path, labels, options) => {
     const res = await fetch(`${API_BASE}/api/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, path, labels }),
+      body: JSON.stringify({ name, path, labels, ...(options ?? {}) }),
     });
     const project = await res.json();
     set((state) => ({ projects: [...state.projects, project] }));

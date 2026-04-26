@@ -14,6 +14,7 @@ import { ProjectRecord } from '../types/project';
 import { ArtifactType, ARTIFACT_FILENAMES } from '../types/artifacts';
 import { PipelineStage } from '../types/session';
 import { JiraService, JiraConfig } from './JiraService';
+import { StandbyScheduler } from './StandbyScheduler';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -87,10 +88,13 @@ function buildProjectRouter(projectStore: ProjectStore): Router {
 
   // POST /projects — create a new project
   router.post('/', (req: Request, res: Response) => {
-    const { name, path: projectPath, labels } = req.body as {
+    const { name, path: projectPath, labels, manualQa, pr, standby } = req.body as {
       name?: string;
       path?: string;
       labels?: string[];
+      manualQa?: ProjectRecord['manualQa'];
+      pr?: ProjectRecord['pr'];
+      standby?: ProjectRecord['standby'];
     };
 
     if (!name?.trim() || !projectPath?.trim()) {
@@ -106,6 +110,9 @@ function buildProjectRouter(projectStore: ProjectStore): Router {
       labels: (labels ?? []).map((l) => l.trim()).filter(Boolean),
       createdAt: now,
       updatedAt: now,
+      ...(manualQa ? { manualQa } : {}),
+      ...(pr ? { pr } : {}),
+      ...(standby ? { standby } : {}),
     };
 
     projectStore.save(project);
@@ -120,10 +127,13 @@ function buildProjectRouter(projectStore: ProjectStore): Router {
       return;
     }
 
-    const { name, path: projectPath, labels } = req.body as {
+    const { name, path: projectPath, labels, manualQa, pr, standby } = req.body as {
       name?: string;
       path?: string;
       labels?: string[];
+      manualQa?: ProjectRecord['manualQa'];
+      pr?: ProjectRecord['pr'];
+      standby?: ProjectRecord['standby'];
     };
 
     const updated: ProjectRecord = {
@@ -133,6 +143,9 @@ function buildProjectRouter(projectStore: ProjectStore): Router {
       labels: labels !== undefined
         ? labels.map((l) => l.trim()).filter(Boolean)
         : existing.labels,
+      manualQa: manualQa !== undefined ? manualQa : existing.manualQa,
+      pr: pr !== undefined ? pr : existing.pr,
+      standby: standby !== undefined ? standby : existing.standby,
       updatedAt: new Date().toISOString(),
     };
 
@@ -177,6 +190,7 @@ export class SocketServer {
     private projectStore?: ProjectStore,
     private artifactManager?: ArtifactManager,
     private jiraService?: JiraService,
+    private standbyScheduler?: StandbyScheduler,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
@@ -301,6 +315,56 @@ export class SocketServer {
         } catch (err: any) {
           console.error('[SocketServer] POST /api/jira/issues failed:', err.message);
           res.status(502).json({ error: err.message });
+        }
+      });
+    }
+
+    // ── Standby routes ────────────────────────────────────────────────────────
+    if (this.standbyScheduler) {
+      const sb = this.standbyScheduler;
+
+      // GET /api/standby — current state + backlog
+      app.get('/api/standby', (_req: Request, res: Response) => {
+        res.json({ state: sb.getState(), backlog: sb.getBacklog() });
+      });
+
+      // POST /api/standby/toggle — { enabled: boolean }
+      app.post('/api/standby/toggle', (req: Request, res: Response) => {
+        const { enabled } = req.body as { enabled?: boolean };
+        if (typeof enabled !== 'boolean') {
+          res.status(400).json({ error: 'enabled (boolean) is required' });
+          return;
+        }
+        const state = sb.setEnabled(enabled);
+        res.json({ state });
+      });
+
+      // POST /api/standby/backlog/:id/promote — { pipelineType, projectIds }
+      app.post('/api/standby/backlog/:id/promote', async (req: Request, res: Response) => {
+        const { pipelineType, projectIds } = req.body as {
+          pipelineType?: 'development' | 'marketing' | 'design';
+          projectIds?: string[];
+        };
+        if (!pipelineType || !projectIds?.length) {
+          res.status(400).json({ error: 'pipelineType and projectIds are required' });
+          return;
+        }
+        try {
+          const taskId = await sb.promoteItem(req.params.id, pipelineType, projectIds);
+          res.json({ taskId, backlog: sb.getBacklog() });
+        } catch (err: any) {
+          res.status(400).json({ error: err.message });
+        }
+      });
+
+      // POST /api/standby/backlog/:id/dismiss — { reason? }
+      app.post('/api/standby/backlog/:id/dismiss', (req: Request, res: Response) => {
+        const { reason } = req.body as { reason?: string };
+        try {
+          const backlog = sb.dismissItem(req.params.id, reason);
+          res.json({ backlog });
+        } catch (err: any) {
+          res.status(400).json({ error: err.message });
         }
       });
     }
@@ -438,6 +502,20 @@ export class SocketServer {
     eventBus.on('session:stage-continued', (data) => {
       this.io.emit('session:stage-continued', data);
     });
+
+    // Standby events
+    eventBus.on('standby:state-changed', (data) => {
+      this.io.emit('standby:state-changed', data);
+    });
+    eventBus.on('standby:tick-started', (data) => {
+      this.io.emit('standby:tick-started', data);
+    });
+    eventBus.on('standby:tick-finished', (data) => {
+      this.io.emit('standby:tick-finished', data);
+    });
+    eventBus.on('standby:backlog-changed', (data) => {
+      this.io.emit('standby:backlog-changed', data);
+    });
   }
 
   /**
@@ -459,6 +537,14 @@ export class SocketServer {
       // Send project list on connect
       if (this.projectStore) {
         socket.emit('projects:list', this.projectStore.all());
+      }
+
+      // Send standby snapshot on connect
+      if (this.standbyScheduler) {
+        socket.emit('standby:snapshot', {
+          state: this.standbyScheduler.getState(),
+          backlog: this.standbyScheduler.getBacklog(),
+        });
       }
 
       // Route commands to EventBus

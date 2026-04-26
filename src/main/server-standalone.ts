@@ -19,6 +19,7 @@ import {
   ProjectStore,
   JiraService,
   JiraSyncListener,
+  StandbyScheduler,
 } from './services';
 
 const projectPath = process.cwd();
@@ -97,8 +98,12 @@ async function main(): Promise<void> {
     console.log('[Smooth Orchestra] Jira not configured — set up via Settings in the UI');
   }
 
-  // Start socket server (with auth, event logger, project store, and Jira)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService);
+  // Start the standby scheduler (default OFF — user toggles via UI)
+  const standbyScheduler = new StandbyScheduler(orchestraDir, projectPath, sessionManager, projectStore);
+  console.log(`[Smooth Orchestra] Standby scheduler ready (enabled: ${standbyScheduler.getState().enabled})`);
+
+  // Start socket server (with auth, event logger, project store, Jira, and standby)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler);
   await socketServer.start();
 
   console.log('[Smooth Orchestra] Server ready. Open http://localhost:5173 in your browser.');

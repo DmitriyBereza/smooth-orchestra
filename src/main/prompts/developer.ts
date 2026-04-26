@@ -32,11 +32,13 @@ When done:
    \`\`\`bash
    git -C /absolute/path/to/target/project push -u origin {git-branch}
    \`\`\`
-6. Open a PR in each modified project:
+6. Open a PR in each modified project (default behavior — see Auto-PR section below for project-specific overrides):
    \`\`\`bash
    gh pr create --repo {owner}/{repo} --title "{git-branch}: {task title}" --body "Smooth Orchestra task {task-id}"
    \`\`\`
    If \`gh\` is unavailable, just push — the terminal output will show the PR URL.
+
+{PR_CONFIG_CONTEXT}
 
 ## Strict TDD Rules
 1. NEVER write implementation code before writing a failing test
@@ -84,6 +86,9 @@ Write to \`{ARTIFACTS_DIR}/dev-notes.md\`:
 ## Task
 [Which dev task from dev-tasks.md you implemented]
 
+## PR
+[PR URL if you opened one — required when auto-PR is enabled for the project]
+
 ## Implementation Summary
 [What you built and how]
 
@@ -116,11 +121,28 @@ Write to \`{ARTIFACTS_DIR}/qa-spec.md\`:
 
 ### Scenario 1: {name}
 - **Setup**: [preconditions]
-- **Action**: [what to do]
+- **Action**: [what to do — automated test reference]
 - **Expected**: [what should happen]
 
 ### Scenario 2: {name}
 ...
+
+## Click-Through Scenarios (REQUIRED for UI-affecting work)
+Each acceptance criterion that involves a user-visible change MUST have an explicit click-through script the QA agent can execute in a browser.
+
+### Click-Through 1: {AC reference} — {short name}
+- **Starting URL**: [path or template — QA will substitute the deployed URL or local preview URL]
+- **Steps**:
+  1. [click X / fill Y / navigate to Z]
+  2. [next step]
+  3. [...]
+- **Expected DOM state**: [text visible / element present / class applied / route changed to ...]
+- **Expected console**: [no errors / specific log present]
+
+### Click-Through 2: {AC reference} — {short name}
+...
+
+If the work is purely backend / non-UI, write "_No click-through needed — backend-only change._" in this section and explain why.
 
 ## Edge Cases to Verify
 - [Edge case 1]
@@ -131,11 +153,17 @@ Write to \`{ARTIFACTS_DIR}/qa-spec.md\`:
 [exact commands to run tests]
 \\\`\\\`\\\`
 
+## How to Build
+\\\`\\\`\\\`bash
+[exact build command, e.g. npm run build]
+\\\`\\\`\\\`
+[Summary of last build output — "exit 0 — clean build" or any warnings]
+
 ## Acceptance Criteria Mapping
-| AC | Test Scenario | Status |
-|----|--------------|--------|
-| AC1 | Scenario 1, 3 | Implemented |
-| AC2 | Scenario 2 | Implemented |
+| AC | Test Scenario | Click-Through | Status |
+|----|--------------|---------------|--------|
+| AC1 | Scenario 1, 3 | Click-Through 1 | Implemented |
+| AC2 | Scenario 2 | Click-Through 2 | Implemented |
 \`\`\`
 
 ## Guidelines
@@ -143,4 +171,5 @@ Write to \`{ARTIFACTS_DIR}/qa-spec.md\`:
 - If you discover a design issue, document it in dev-notes.md but implement as designed
 - Write tests that are independent, deterministic, and fast
 - Use descriptive test names that explain the expected behavior
+- For UI work, the click-through script is non-negotiable — QA will not be able to validate without it
 `;

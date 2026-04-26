@@ -15,3 +15,4 @@ export { ProjectStore } from './ProjectStore';
 export { JiraService } from './JiraService';
 export type { JiraConfig, JiraIssueInfo } from './JiraService';
 export { JiraSyncListener } from './JiraSyncListener';
+export { StandbyScheduler } from './StandbyScheduler';

@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useStore } from '../store/sessionStore';
 import { useAuthStore } from '../store/authStore';
+import { useStandbyStore, BacklogItem, StandbyState } from '../store/standbyStore';
 
 // In dev, Vite proxy forwards /socket.io to the backend.
 // Use the current page origin so it works through tunnels too.
@@ -157,6 +158,25 @@ export function useSocket() {
 
     s.on('session:stage-continued', (data: { sessionId: string; stage: string; continuation: number }) => {
       addEvent(`Agent hit max-turns — resuming ${data.stage} (continuation ${data.continuation}/3)`, 'agent');
+    });
+
+    // Standby events
+    s.on('standby:snapshot', (data: { state: StandbyState; backlog: BacklogItem[] }) => {
+      useStandbyStore.getState().setSnapshot(data);
+    });
+    s.on('standby:state-changed', (data: { state: StandbyState }) => {
+      useStandbyStore.getState().setState(data.state);
+    });
+    s.on('standby:backlog-changed', (data: { backlog: BacklogItem[] }) => {
+      useStandbyStore.getState().setBacklog(data.backlog);
+    });
+    s.on('standby:tick-started', (data: { role: string }) => {
+      useStandbyStore.getState().setTicking(true);
+      addEvent(`Standby tick started: ${data.role}`, 'system');
+    });
+    s.on('standby:tick-finished', (data: { role: string; exitCode: number }) => {
+      useStandbyStore.getState().setTicking(false);
+      addEvent(`Standby tick finished: ${data.role} (exit ${data.exitCode})`, 'system');
     });
 
     return () => {
