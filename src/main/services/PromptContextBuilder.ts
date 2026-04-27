@@ -84,7 +84,9 @@ export function buildManualQaContext(
     '- Console errors (if any) — paste the relevant lines from `console_logs` / `read_console_messages`',
     '- Network failures (if any) — paste the relevant entries from `network` / `read_network_requests`',
     '',
-    'If manual verification cannot proceed (no preview, deploy unhealthy, MCP unavailable), set the verdict to FAIL with a clear explanation rather than skipping.',
+    'If manual verification cannot proceed because **MCP tools are unavailable** (`mcp__Claude_Preview` / `mcp__Claude_in_Chrome` not loaded in your environment), **skip** the manual section — record `Mode: skipped (MCP unavailable)` in the Manual Verification block of `qa-report.md` — and you may still issue `APPROVED` if all automated tests pass and the build is clean.',
+    '',
+    'If manual verification cannot proceed due to an **actual failure** (deploy unhealthy, preview server crash, app errors on load), set the verdict to **FAIL** with a clear explanation.',
     '',
   );
 
@@ -126,6 +128,17 @@ export function buildPrConfigContext(
     'If `gh` fails (auth, missing repo, etc.), still push the branch and document the failure — do NOT skip the push.',
     '',
   ].join('\n');
+}
+
+/**
+ * Build a `**Base branch**: <value>` line for injection into project context.
+ *
+ * Returns a non-empty string only when baseBranch is a non-empty string,
+ * so callers can safely push/ignore the result without extra guards.
+ */
+export function buildBaseBranchContext(baseBranch: string | undefined): string {
+  if (!baseBranch) return '';
+  return `**Base branch**: ${baseBranch}`;
 }
 
 /**

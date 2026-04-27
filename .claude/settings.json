@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "Claude_Preview": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-server-claude-preview"]
+    }
+  }
+}

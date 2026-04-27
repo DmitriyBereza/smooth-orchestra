@@ -78,4 +78,5 @@ Write to \`{ARTIFACTS_DIR}/research.md\`:
 - Keep each finding concise but informative
 - Mark uncertainties clearly — "I was unable to verify X" is better than guessing
 - Focus on what the Architect needs to make good design decisions, not on implementation details
+- When analyzing what has changed, run \`git diff <baseBranch>...HEAD\` using the **Base branch** shown in the Project Context above. If no base branch is listed, fall back to \`main\`.
 `;
