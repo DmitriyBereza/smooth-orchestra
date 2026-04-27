@@ -53,6 +53,8 @@ interface StandbyStore {
     pipelineType: 'development' | 'marketing' | 'design',
     projectIds: string[],
   ) => Promise<string | null>;
+  /** Stamp an already-created task back onto a backlog item (status=promoted). */
+  markPromoted: (id: string, taskId: string) => Promise<void>;
   dismiss: (id: string, reason?: string) => Promise<void>;
 }
 
@@ -99,6 +101,20 @@ export const useStandbyStore = create<StandbyStore>((set) => ({
     const data = await res.json();
     if (Array.isArray(data?.backlog)) set({ backlog: data.backlog });
     return data?.taskId ?? null;
+  },
+
+  markPromoted: async (id, taskId) => {
+    const res = await fetch(`${API_BASE}/api/standby/backlog/${id}/mark-promoted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? `markPromoted failed (${res.status})`);
+    }
+    const data = await res.json();
+    if (Array.isArray(data?.backlog)) set({ backlog: data.backlog });
   },
 
   dismiss: async (id, reason) => {

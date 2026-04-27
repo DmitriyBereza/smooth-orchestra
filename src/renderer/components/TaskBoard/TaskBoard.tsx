@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useStore, SessionState, STAGE_DISPLAY } from '../../store/sessionStore';
+import React, { useEffect, useRef, useState } from 'react';
+import { useStore } from '../../store/sessionStore';
 import { useProjectStore } from '../../store/projectStore';
+import { useStandbyStore, BacklogItem } from '../../store/standbyStore';
 import { NewTaskForm } from './NewTaskForm';
 import { TaskCard } from './TaskCard';
 import { TaskHistoryCard } from './TaskHistoryCard';
@@ -8,6 +9,7 @@ import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { StandbyPanel } from '../Standby/StandbyPanel';
 import { useSocketCommands } from '../../hooks/useSocket';
 import { JiraImportPanel, JiraIssue } from './JiraImportPanel';
+import { PipelineType } from '../../store/sessionStore';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -33,22 +35,101 @@ const TaskHistory: React.FC = () => {
   );
 };
 
+interface PendingPromote {
+  backlogId: string;
+  title: string;
+  body: string;
+  pipelineType: PipelineType;
+  projectId: string;
+  projectName?: string;
+  /**
+   * Set after the user clicks submit. Used to identify the resulting session
+   * so we can call markPromoted exactly once with the new task ID.
+   */
+  awaitingSinceMs: number | null;
+}
+
 export const TaskBoard: React.FC = () => {
   const session = useStore((s) => s.session);
   const connected = useStore((s) => s.connected);
-  const selectedProjectId = useProjectStore((s) => s.selectedProjectId);
   const selectedProjectIds = useProjectStore((s) => s.selectedProjectIds);
+  const setSelectedProject = useProjectStore((s) => s.toggleProject);
+  const projects = useProjectStore((s) => s.projects);
+  const markPromoted = useStandbyStore((s) => s.markPromoted);
   const commands = useSocketCommands();
   const isMobile = useIsMobile();
 
   const [jiraImport, setJiraImport] = useState<{ title: string; description: string; key: string } | null>(null);
+  const [pendingPromote, setPendingPromote] = useState<PendingPromote | null>(null);
+  const [focusModelsToken, setFocusModelsToken] = useState(0);
+  const lastSeenSessionId = useRef<string | null>(session?.id ?? null);
+
+  /**
+   * Start the promote-to-pipeline flow: pre-fill the New Task form with the
+   * proposal, switch the project selection to the source project, and bump
+   * focusModelsToken so the form auto-expands and scrolls to the model picker.
+   */
+  const startPromote = (item: BacklogItem, pipelineType: PipelineType) => {
+    if (!item.projectId) {
+      console.warn('[TaskBoard] cannot promote: backlog item has no projectId', item);
+      return;
+    }
+    // Replace project selection with just the source project so the form fires against the right one.
+    if (!selectedProjectIds.includes(item.projectId) || selectedProjectIds.length !== 1) {
+      // Clear current selection and add only this project
+      for (const id of selectedProjectIds) {
+        if (id !== item.projectId) setSelectedProject(id); // toggle off
+      }
+      if (!selectedProjectIds.includes(item.projectId)) {
+        setSelectedProject(item.projectId); // toggle on
+      }
+    }
+    setJiraImport(null);
+    setPendingPromote({
+      backlogId: item.id,
+      title: item.title,
+      body: item.body,
+      pipelineType,
+      projectId: item.projectId,
+      projectName: item.projectName ?? projects.find((p) => p.id === item.projectId)?.name,
+      awaitingSinceMs: null,
+    });
+    setFocusModelsToken((t) => t + 1);
+  };
+
+  // After a task is successfully created from a pendingPromote submission,
+  // stamp the backlog item as promoted with the new task ID.
+  useEffect(() => {
+    if (!pendingPromote?.awaitingSinceMs) return;
+    if (!session?.task?.id || !session?.startedAt) return;
+    const startedAtMs = new Date(session.startedAt).getTime();
+    if (Number.isNaN(startedAtMs)) return;
+    if (startedAtMs < pendingPromote.awaitingSinceMs) return;
+    if (session.id === lastSeenSessionId.current) return;
+    lastSeenSessionId.current = session.id;
+    const taskId = session.task.id;
+    const backlogId = pendingPromote.backlogId;
+    setPendingPromote(null);
+    markPromoted(backlogId, taskId).catch((err) =>
+      console.warn('[TaskBoard] markPromoted failed:', err.message),
+    );
+  }, [session, pendingPromote, markPromoted]);
 
   const handleJiraImport = (issue: JiraIssue) => {
     setJiraImport({ title: issue.summary, description: issue.description, key: issue.key });
+    setPendingPromote(null); // jira import overrides any pending promote
   };
 
   const isTaskInProgress = session && !['done', 'failed', 'idle'].includes(session.currentStage);
   const formDisabled = !connected || !!isTaskInProgress || selectedProjectIds.length === 0;
+
+  // Banner shown above the form when promoting from a backlog item.
+  const promoteBanner = pendingPromote
+    ? {
+        text: `Promoting "${pendingPromote.title}"${pendingPromote.projectName ? ` for ${pendingPromote.projectName}` : ''} — confirm models below, then ./run pipeline.`,
+        tone: 'info' as const,
+      }
+    : null;
 
   return (
     <div style={styles.container} className="task-board-container">
@@ -91,11 +172,20 @@ export const TaskBoard: React.FC = () => {
           onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType) => {
             commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType);
             setJiraImport(null);
+            // If this submission came from a promote-to-pipeline flow, mark the
+            // pending entry as awaiting the resulting session so we can stamp
+            // the backlog item once the new task lands.
+            if (pendingPromote) {
+              setPendingPromote((p) => (p ? { ...p, awaitingSinceMs: Date.now() } : null));
+            }
           }}
           disabled={formDisabled}
-          initialTitle={jiraImport?.title}
-          initialDescription={jiraImport?.description}
+          initialTitle={pendingPromote?.title ?? jiraImport?.title}
+          initialDescription={pendingPromote?.body ?? jiraImport?.description}
           initialJiraKey={jiraImport?.key}
+          initialPipelineType={pendingPromote?.pipelineType}
+          focusModelsToken={focusModelsToken}
+          banner={promoteBanner}
         />
 
         {session && (
@@ -115,7 +205,7 @@ export const TaskBoard: React.FC = () => {
         )}
 
         <div style={styles.divider} />
-        <StandbyPanel />
+        <StandbyPanel onStartPromote={startPromote} />
 
         <TaskHistory />
       </div>

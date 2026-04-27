@@ -357,6 +357,24 @@ export class SocketServer {
         }
       });
 
+      // POST /api/standby/backlog/:id/mark-promoted — { taskId }
+      // Used by the UI flow where the user confirms models in the form and
+      // creates the task via command:create-task; this endpoint just stamps
+      // the backlog status afterwards.
+      app.post('/api/standby/backlog/:id/mark-promoted', (req: Request, res: Response) => {
+        const { taskId } = req.body as { taskId?: string };
+        if (!taskId) {
+          res.status(400).json({ error: 'taskId is required' });
+          return;
+        }
+        try {
+          const backlog = sb.markPromoted(req.params.id, taskId);
+          res.json({ backlog });
+        } catch (err: any) {
+          res.status(400).json({ error: err.message });
+        }
+      });
+
       // POST /api/standby/backlog/:id/dismiss — { reason? }
       app.post('/api/standby/backlog/:id/dismiss', (req: Request, res: Response) => {
         const { reason } = req.body as { reason?: string };

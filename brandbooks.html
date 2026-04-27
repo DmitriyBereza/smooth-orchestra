@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smooth Orchestra — Brand Books</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0c0c0f;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  /* ─── TOP NAV ─────────────────────────────────── */
+  .top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(12,12,15,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 0;
+  }
+
+  .nav-logo {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    margin-right: 40px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .nav-logo span { color: #e2e8f0; }
+
+  .brand-tabs {
+    display: flex;
+    gap: 0;
+    flex: 1;
+  }
+
+  .brand-tab {
+    padding: 16px 28px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: #64748b;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    transition: all 160ms ease;
+    white-space: nowrap;
+  }
+  .brand-tab:hover { color: #94a3b8; }
+  .brand-tab.active-precision { color: #6366f1; border-bottom-color: #6366f1; }
+  .brand-tab.active-signal    { color: #00d4ff; border-bottom-color: #00d4ff; }
+  .brand-tab.active-atelier   { color: #c2410c; border-bottom-color: #c2410c; }
+
+  /* ─── PANELS ─────────────────────────────────── */
+  .brand-panel { display: none; }
+  .brand-panel.active { display: block; }
+
+  /* ─── SECTION LAYOUT ─────────────────────────── */
+  .section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0.45;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .four-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  /* ─── COLOR SWATCH ───────────────────────────── */
+  .swatch-group { display: flex; flex-direction: column; gap: 8px; }
+  .swatch-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    margin-bottom: 4px;
+  }
+
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+  }
+  .swatch-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .swatch-info { flex: 1; min-width: 0; }
+  .swatch-name { font-size: 12px; font-weight: 500; color: #e2e8f0; }
+  .swatch-hex { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #64748b; }
+  .swatch-desc { font-size: 11px; color: #475569; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ─── TYPOGRAPHY SPECIMEN ────────────────────── */
+  .type-specimen {
+    padding: 24px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* ─── RADIUS PREVIEW ─────────────────────────── */
+  .radius-preview {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .radius-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .radius-square {
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .radius-label { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #64748b; }
+
+  /* ─── SHADOW PREVIEW ─────────────────────────── */
+  .shadow-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+  .shadow-box {
+    width: 80px;
+    height: 60px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #64748b;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ─── COMPONENT PREVIEWS ─────────────────────── */
+  .component-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+  /* ─── HERO SECTION ───────────────────────────── */
+  .hero {
+    padding: 72px 32px 56px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  .hero-name {
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 16px;
+  }
+  .hero-tagline {
+    font-size: 18px;
+    font-weight: 400;
+    opacity: 0.55;
+    margin-bottom: 24px;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+  .hero-desc {
+    font-size: 14px;
+    line-height: 1.7;
+    opacity: 0.45;
+    max-width: 640px;
+  }
+
+  /* ─── MOODBOARD PILLS ────────────────────────── */
+  .moodboard { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .mood-pill {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #94a3b8;
+  }
+
+  /* ─── CONTRAST TABLE ─────────────────────────── */
+  .contrast-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .contrast-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #475569;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .contrast-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: 'JetBrains Mono', monospace;
+    color: #94a3b8;
+  }
+  .contrast-table td:last-child { color: #10b981; font-weight: 600; }
+  .contrast-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ─── BADGE ──────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ─── VOICE & TONE ───────────────────────────── */
+  .voice-rule {
+    padding: 14px 18px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid rgba(255,255,255,0.1);
+    margin-bottom: 10px;
+  }
+  .voice-rule-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .voice-rule-desc { font-size: 12px; opacity: 0.55; line-height: 1.5; }
+
+
+  /* ═══════════════════════════════════════════════
+     PRECISION BRAND
+  ═══════════════════════════════════════════════ */
+  #panel-precision {
+    background: #111318;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+  }
+
+  #panel-precision .hero { }
+  #panel-precision .hero-tag { background: rgba(99,102,241,0.15); color: #6366f1; border: 1px solid rgba(99,102,241,0.3); }
+  #panel-precision .hero-name { color: #e2e8f0; }
+  #panel-precision .hero-tagline { color: #94a3b8; font-style: italic; }
+  #panel-precision .hero-desc { color: #768aaa; }
+  #panel-precision .section-label { color: #94a3b8; }
+  #panel-precision .section { border-bottom-color: #1e2130; }
+
+  .p-card {
+    background: #1c1e26;
+    border: 1px solid #2e3445;
+    border-radius: 7px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+
+  /* Precision TaskCard */
+  .p-taskcard {
+    background: #1c1e26;
+    border: 1px solid #2e3445;
+    border-left: 4px solid #60a5fa;
+    border-radius: 0 7px 7px 0;
+    padding: 14px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .p-taskcard.warning { border-left-color: #f59e0b; }
+  .p-task-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #768aaa; }
+  .p-task-title { font-size: 14px; font-weight: 600; color: #e2e8f0; margin: 6px 0 4px; }
+  .p-task-meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #768aaa; }
+  .p-divider { border: none; border-top: 1px solid #1e2130; margin: 12px 0; }
+  .p-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+  }
+  .p-badge.running { background: rgba(99,102,241,0.15); color: #6366f1; }
+  .p-badge.warning { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .p-badge.success { background: rgba(16,185,129,0.15); color: #10b981; }
+  .p-btn { padding: 7px 14px; border-radius: 5px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; }
+  .p-btn.primary { background: #6366f1; color: #fff; }
+  .p-btn.ghost { background: transparent; color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+  .p-btn.outline { background: transparent; color: #818cf8; border: 1px solid rgba(129,140,248,0.3); }
+
+  /* Precision PipelineView */
+  .p-pipeline {
+    background: #1c1e26;
+    border: 1px solid #2e3445;
+    border-radius: 7px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .p-pipeline-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .p-pipeline-step.inactive { background: #272a35; color: #768aaa; }
+  .p-pipeline-step.active { background: rgba(99,102,241,0.15); color: #e2e8f0; border: 1px solid #6366f1; }
+  .p-pipeline-step.done { background: rgba(16,185,129,0.08); color: #94a3b8; }
+  .p-pipeline-step .step-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .p-step-connector { width: 20px; height: 1px; background: #1e2130; flex-shrink: 0; }
+  .p-step-connector.done { background: #10b981; }
+
+  /* Precision AgentPanel */
+  .p-agent-panel {
+    background: #1c1e26;
+    border: 1px solid #2e3445;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .p-agent-tabs {
+    display: flex;
+    border-bottom: 1px solid #2e3445;
+    background: #1c1e26;
+  }
+  .p-agent-tab {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .p-agent-tab.active { color: #e2e8f0; font-weight: 600; border-bottom-color: #34d399; }
+  .p-agent-tab .tab-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .p-agent-logs {
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .p-log-line { display: flex; gap: 12px; }
+  .p-log-time { color: #768aaa; font-size: 10px; white-space: nowrap; }
+  .p-log-chip {
+    font-size: 10px; font-weight: 600; padding: 1px 6px;
+    border-radius: 3px; white-space: nowrap; height: fit-content;
+  }
+
+
+  /* ═══════════════════════════════════════════════
+     SIGNAL BRAND
+  ═══════════════════════════════════════════════ */
+  #panel-signal {
+    background: #08090e;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, sans-serif;
+  }
+  #panel-signal .hero-tag { background: rgba(0,212,255,0.08); color: #00d4ff; border: 1px solid rgba(0,212,255,0.25); font-family: 'JetBrains Mono', monospace; }
+  #panel-signal .hero-name { color: #e8f4fd; font-family: 'JetBrains Mono', monospace; font-size: 44px; }
+  #panel-signal .hero-tagline { color: #7ba7c4; font-family: 'JetBrains Mono', monospace; font-size: 15px; }
+  #panel-signal .hero-desc { color: #4d7a99; }
+  #panel-signal .section-label { color: #7ba7c4; font-family: 'JetBrains Mono', monospace; }
+  #panel-signal .section { border-bottom-color: rgba(0,212,255,0.06); }
+  #panel-signal .mood-pill { background: rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.12); color: #7ba7c4; }
+  #panel-signal .swatch { background: rgba(0,212,255,0.03); }
+
+  .s-card {
+    background: #0d1017;
+    border: 1px solid rgba(0,212,255,0.12);
+    border-radius: 6px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.7), inset 0 1px 0 rgba(0,212,255,0.04);
+  }
+
+  /* Signal TaskCard */
+  .s-taskcard {
+    background: #0d1017;
+    border: 1px solid rgba(0,212,255,0.12);
+    border-left: 3px solid #2196f3;
+    border-radius: 0 6px 6px 0;
+    padding: 14px 16px;
+  }
+  .s-taskcard.warning {
+    border-left: 4px solid #ffb300;
+    box-shadow: -4px 0 12px rgba(255,179,0,0.4), -1px 0 4px rgba(255,179,0,0.3);
+    animation: signal-attention 2s ease-in-out infinite;
+  }
+  @keyframes signal-attention {
+    0%, 100% { box-shadow: -4px 0 12px rgba(255,179,0,0.6), -1px 0 4px rgba(255,179,0,0.4); }
+    50% { box-shadow: -2px 0 6px rgba(255,179,0,0.2); }
+  }
+  .s-task-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #00d4ff; }
+  .s-task-title { font-size: 14px; font-weight: 600; color: #e8f4fd; margin: 6px 0 4px; }
+  .s-task-meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #4d7a99; }
+  .s-divider { border: none; border-top: 1px solid rgba(0,212,255,0.06); margin: 10px 0; }
+  .s-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 2px;
+  }
+  .s-badge.running { background: rgba(0,212,255,0.1); color: #00d4ff; }
+  .s-badge.warning { background: rgba(255,179,0,0.1); color: #ffb300; }
+  .s-badge.success { background: rgba(0,230,118,0.1); color: #00e676; }
+  .s-btn { padding: 7px 14px; border-radius: 4px; font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; }
+  .s-btn.primary { background: #00d4ff; color: #08090e; border-color: #00d4ff; }
+  .s-btn.ghost { background: transparent; color: #ff5252; border-color: rgba(255,82,82,0.3); }
+  .s-btn.cmd { background: rgba(0,212,255,0.08); color: #00d4ff; border-color: rgba(0,212,255,0.3); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* Signal Pipeline */
+  .s-pipeline {
+    background: #0d1017;
+    border-bottom: 1px solid rgba(0,212,255,0.06);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .s-pipeline-step {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; white-space: nowrap;
+  }
+  .s-pipeline-step.inactive { color: #4d7a99; }
+  .s-pipeline-step.active { background: rgba(0,212,255,0.08); color: #e8f4fd; }
+  .s-pipeline-step.done { color: #4d7a99; }
+  .s-step-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .s-step-dot.active-dot {
+    background: #2196f3;
+    box-shadow: 0 0 6px rgba(33,150,243,0.8), 0 0 16px rgba(33,150,243,0.3);
+    animation: signal-glow-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes signal-glow-pulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(0,212,255,0.8), 0 0 16px rgba(0,212,255,0.3); }
+    50% { box-shadow: 0 0 3px rgba(0,212,255,0.3); }
+  }
+  .s-step-sep { color: rgba(0,212,255,0.2); font-size: 10px; padding: 0 4px; }
+
+  /* Signal Agent Panel */
+  .s-agent-panel { background: #0d1017; border: 1px solid rgba(0,212,255,0.12); border-radius: 6px; overflow: hidden; }
+  .s-agent-tabs { display: flex; border-bottom: 1px solid rgba(0,212,255,0.06); }
+  .s-agent-tab {
+    padding: 9px 14px; font-size: 12px; font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    color: #4d7a99; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .s-agent-tab.active { color: #e8f4fd; font-weight: 700; border-bottom-color: #00e676; box-shadow: 0 2px 0 rgba(0,230,118,0.3); }
+  .s-log-area { padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.4; }
+  .s-log-line { display: flex; gap: 12px; margin-bottom: 4px; }
+  .s-log-time { color: #4d7a99; font-size: 10px; white-space: nowrap; padding-top: 2px; }
+  .s-log-tag { font-size: 10px; font-weight: 700; padding: 1px 0; white-space: nowrap; }
+  .s-log-msg { color: #7ba7c4; font-size: 12px; }
+  .s-terminal-prompt { color: #4d7a99; padding: 24px 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .s-cursor { display: inline-block; width: 8px; height: 13px; background: #4d7a99; animation: cursor-blink 1s step-end infinite; vertical-align: middle; margin-left: 2px; }
+  @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+
+  /* ═══════════════════════════════════════════════
+     ATELIER BRAND
+  ═══════════════════════════════════════════════ */
+  #panel-atelier {
+    background: #fbf8f4;
+    min-height: 100vh;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #1a1412;
+  }
+  #panel-atelier .section-label { color: #6b5e58; letter-spacing: 0.06em; }
+  #panel-atelier .section { border-bottom-color: #ddd5cc; }
+  #panel-atelier .hero-tag { background: rgba(194,65,12,0.08); color: #c2410c; border: 1px solid rgba(194,65,12,0.2); font-family: 'Plus Jakarta Sans', sans-serif; }
+  #panel-atelier .hero-name { color: #1a1412; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; }
+  #panel-atelier .hero-tagline { color: #6b5e58; }
+  #panel-atelier .hero-desc { color: #7a6d68; }
+  #panel-atelier .mood-pill { background: #f4f0eb; border-color: #ddd5cc; color: #6b5e58; }
+  #panel-atelier .swatch { background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.04); }
+  #panel-atelier .swatch-name { color: #1a1412; }
+  #panel-atelier .swatch-hex { color: #9e8e87; }
+  #panel-atelier .swatch-desc { color: #b0a09a; }
+  #panel-atelier .type-specimen { background: #f4f0eb; border-color: #ddd5cc; }
+  #panel-atelier .contrast-table th { color: #9e8e87; border-bottom-color: #ddd5cc; }
+  #panel-atelier .contrast-table td { color: #6b5e58; border-bottom-color: #eae5df; }
+  #panel-atelier .contrast-table td:last-child { color: #16a34a; }
+  #panel-atelier .contrast-table tr:hover td { background: rgba(0,0,0,0.02); }
+  #panel-atelier .radius-square { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); }
+  #panel-atelier .radius-label { color: #9e8e87; }
+  #panel-atelier .voice-rule { background: #f4f0eb; border-color: #ddd5cc; border-left-color: #c2410c; }
+  #panel-atelier .voice-rule-title { color: #1a1412; }
+  #panel-atelier .voice-rule-desc { color: #6b5e58; }
+
+  .a-card {
+    background: #ffffff;
+    border: 1px solid #ddd5cc;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(30,20,10,0.08), 0 2px 4px rgba(30,20,10,0.06);
+  }
+
+  /* Atelier TaskCard */
+  .a-taskcard {
+    background: #ffffff;
+    border: 1px solid #ddd5cc;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 12px 12px 0;
+    padding: 16px 18px;
+    box-shadow: 0 4px 12px rgba(30,20,10,0.08), 0 2px 4px rgba(30,20,10,0.06);
+  }
+  .a-taskcard.warning { border-left-color: #d97706; background: #fffef9; }
+  .a-task-id { font-family: 'Fira Code', monospace; font-size: 10px; color: #7a6d68; }
+  .a-task-title { font-size: 17px; font-weight: 600; color: #1a1412; margin: 8px 0 6px; }
+  .a-task-meta { font-family: 'Fira Code', monospace; font-size: 12px; color: #7a6d68; }
+  .a-divider { border: none; border-top: 1px solid #eae5df; margin: 14px 0; }
+  .a-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .a-badge.running { background: rgba(37,99,235,0.08); color: #2563eb; }
+  .a-badge.warning { background: rgba(217,119,6,0.1); color: #b45309; }
+  .a-badge.success { background: rgba(22,163,74,0.08); color: #16a34a; }
+  .a-btn { padding: 9px 18px; border-radius: 8px; font-size: 15px; font-weight: 600; border: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; }
+  .a-btn.primary { background: #c2410c; color: #fff; }
+  .a-btn.secondary { background: #f4f0eb; color: #6b5e58; border: 1px solid #ddd5cc; }
+  .a-btn.ghost { background: transparent; color: #dc2626; border: 1px solid rgba(220,38,38,0.25); }
+
+  /* Atelier Pipeline */
+  .a-pipeline {
+    background: #f4f0eb;
+    border: 1px solid #ddd5cc;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .a-pipeline-step {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 8px;
+    font-size: 12px; font-weight: 500;
+    white-space: nowrap;
+    transition: all 160ms ease;
+  }
+  .a-pipeline-step.inactive { color: #9e8e87; }
+  .a-pipeline-step.active { background: rgba(194,65,12,0.08); color: #1a1412; border: 1px solid rgba(194,65,12,0.25); }
+  .a-pipeline-step.done { color: #7a6d68; }
+  .a-step-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .a-step-connector { width: 20px; height: 1px; background: #ddd5cc; flex-shrink: 0; }
+  .a-step-connector.done { background: #16a34a; }
+
+  /* Atelier Agent Panel */
+  .a-agent-panel { background: #fff; border: 1px solid #ddd5cc; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(30,20,10,0.06); }
+  .a-agent-tabs { display: flex; border-bottom: 1px solid #eae5df; background: #faf7f3; }
+  .a-agent-tab {
+    padding: 12px 18px; font-size: 13px; font-weight: 500;
+    color: #7a6d68; cursor: pointer; display: flex; align-items: center; gap: 7px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .a-agent-tab.active { color: #1a1412; font-weight: 600; border-bottom-color: #16a34a; }
+  .a-tab-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .a-log-area { padding: 16px 18px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; }
+  .a-log-line { display: flex; gap: 12px; margin-bottom: 6px; }
+  .a-log-time { color: #7a6d68; font-size: 11px; white-space: nowrap; padding-top: 2px; }
+  .a-log-chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; height: fit-content; }
+  .a-log-msg { color: #6b5e58; font-size: 13px; }
+
+  /* Shared utils for panels */
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .pipeline-info { font-size: 12px; color: #768aaa; font-style: italic; margin-top: 8px; }
+  .s-pipeline-info { font-size: 11px; color: #4d7a99; font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
+  .a-pipeline-info { font-size: 12px; color: #7a6d68; margin-top: 8px; }
+
+  /* scroll to top */
+  .back-to-top { display: none; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .two-col, .three-col, .four-col, .component-grid { grid-template-columns: 1fr; }
+    .hero-name { font-size: 36px; }
+    .top-nav { padding: 0 16px; }
+    .brand-tab { padding: 14px 16px; font-size: 11px; }
+    .section { padding: 32px 16px; }
+    .hero { padding: 48px 16px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="nav-logo">smooth <span>orchestra</span></div>
+  <div class="brand-tabs">
+    <button class="brand-tab active-precision" onclick="showBrand('precision')">01 — Precision</button>
+    <button class="brand-tab" onclick="showBrand('signal')">02 — Signal</button>
+    <button class="brand-tab" onclick="showBrand('atelier')">03 — Atelier</button>
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PANEL 1: PRECISION
+════════════════════════════════════════════════════════════ -->
+<div id="panel-precision" class="brand-panel active">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">Brand Book 01</div>
+    <div class="hero-name">Precision</div>
+    <div class="hero-tagline">"Clarity at scale."</div>
+    <div class="hero-desc">Built for engineers who believe that good tools are invisible. Every pixel serves a function. Nothing decorates. The interface recedes so the work can come forward.</div>
+    <div class="moodboard">
+      <span class="mood-pill">Linear</span>
+      <span class="mood-pill">Arc Browser</span>
+      <span class="mood-pill">Vercel Dashboard</span>
+      <span class="mood-pill">Superhuman</span>
+      <span class="mood-pill">Raycast</span>
+    </div>
+  </div>
+
+  <!-- COLOR PALETTE -->
+  <div class="section">
+    <div class="section-label">Color Palette</div>
+    <div class="three-col">
+      <!-- Brand -->
+      <div class="swatch-group">
+        <div class="swatch-group-label">Brand</div>
+        <div class="swatch"><div class="swatch-dot" style="background:#6366f1"></div><div class="swatch-info"><div class="swatch-name">brand-primary</div><div class="swatch-hex">#6366F1</div><div class="swatch-desc">CTAs, active states, focus rings</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#4f46e5"></div><div class="swatch-info"><div class="swatch-name">brand-hover</div><div class="swatch-hex">#4F46E5</div><div class="swatch-desc">Hover on primary actions</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#312e81;opacity:0.8"></div><div class="swatch-info"><div class="swatch-name">brand-muted</div><div class="swatch-hex">rgba(99,102,241,0.15)</div><div class="swatch-desc">Subtle active state fills</div></div></div>
+      </div>
+      <!-- Backgrounds -->
+      <div class="swatch-group">
+        <div class="swatch-group-label">Backgrounds</div>
+        <div class="swatch"><div class="swatch-dot" style="background:#111318; border-color:#2e3445"></div><div class="swatch-info"><div class="swatch-name">bg-primary</div><div class="swatch-hex">#111318</div><div class="swatch-desc">Main app background</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#1c1e26; border-color:#2e3445"></div><div class="swatch-info"><div class="swatch-name">bg-secondary</div><div class="swatch-hex">#1C1E26</div><div class="swatch-desc">Panels, cards</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#272a35; border-color:#2e3445"></div><div class="swatch-info"><div class="swatch-name">bg-tertiary</div><div class="swatch-hex">#272A35</div><div class="swatch-desc">Inputs, hover fills</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#2e3445"></div><div class="swatch-info"><div class="swatch-name">border-color</div><div class="swatch-hex">#2E3445</div><div class="swatch-desc">Panel borders, dividers</div></div></div>
+      </div>
+      <!-- Semantic & Text -->
+      <div class="swatch-group">
+        <div class="swatch-group-label">Semantic States</div>
+        <div class="swatch"><div class="swatch-dot" style="background:#10b981"></div><div class="swatch-info"><div class="swatch-name">state-success</div><div class="swatch-hex">#10B981</div><div class="swatch-desc">Task done, stage complete</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#f59e0b"></div><div class="swatch-info"><div class="swatch-name">state-warning</div><div class="swatch-hex">#F59E0B</div><div class="swatch-desc">Review needed</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#f87171"></div><div class="swatch-info"><div class="swatch-name">state-error</div><div class="swatch-hex">#F87171</div><div class="swatch-desc">Task failed, QA rejection</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#818cf8"></div><div class="swatch-info"><div class="swatch-name">state-info</div><div class="swatch-hex">#818CF8</div><div class="swatch-desc">Info banners (non-action)</div></div></div>
+      </div>
+    </div>
+
+    <!-- Role Colors -->
+    <div style="margin-top:24px">
+      <div class="swatch-group-label" style="color:#94a3b8;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4;margin-bottom:12px;">Pipeline Role Colors</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:5px;background:#60a5fa;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#111318;">PO</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;">#60A5FA</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:5px;background:#a78bfa;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#111318;">ARCH</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;">#A78BFA</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:5px;background:#34d399;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#111318;">DEV</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;">#34D399</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:5px;background:#fb923c;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#111318;">TL</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;">#FB923C</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:5px;background:#f87171;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#111318;">QA</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748b;">#F87171</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="section">
+    <div class="section-label">Typography</div>
+    <div class="two-col">
+      <div class="type-specimen" style="background:#1c1e26;border-color:#2e3445;">
+        <div style="font-size:10px;color:#6366f1;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px;">Inter — UI Font</div>
+        <div style="font-size:24px;font-weight:700;color:#e2e8f0;line-height:1.2;margin-bottom:8px;">Build auth system</div>
+        <div style="font-size:16px;font-weight:600;color:#e2e8f0;margin-bottom:8px;">Task Board</div>
+        <div style="font-size:14px;font-weight:600;color:#e2e8f0;margin-bottom:8px;">Sign In</div>
+        <div style="font-size:13px;font-weight:400;color:#94a3b8;line-height:1.5;margin-bottom:8px;">Primary body text for descriptions, log messages, and form labels. Designed for screen readability at small sizes.</div>
+        <div style="font-size:12px;font-weight:500;color:#94a3b8;margin-bottom:4px;">Secondary label · Tab text</div>
+        <div style="font-size:10px;font-weight:600;color:#768aaa;letter-spacing:0.08em;text-transform:uppercase;">SECTION HEADING</div>
+      </div>
+      <div class="type-specimen" style="background:#1c1e26;border-color:#2e3445;">
+        <div style="font-size:10px;color:#6366f1;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px;">JetBrains Mono — Code Font</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#768aaa;margin-bottom:8px;">TASK-3A8F2B1C</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;margin-bottom:4px;">14:23:01  Architect initializing...</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;margin-bottom:4px;">14:23:04  Generating architecture spec</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#10b981;margin-bottom:4px;">14:23:18  ✓ Spec artifact saved</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#768aaa;margin-bottom:12px;">Elapsed: 4m 32s</div>
+        <div style="font-size:10px;color:#768aaa;margin-bottom:4px;">Type scale: 10 / 12 / 13 / 14 / 16 / 20 / 24px</div>
+        <div style="font-size:10px;color:#768aaa;">Weights: 400 · 500 · 600 · 700</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHAPE & SPACE -->
+  <div class="section">
+    <div class="section-label">Shape & Elevation</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:16px;font-weight:500;">Border Radius — engineered precision</div>
+        <div class="radius-preview">
+          <div class="radius-box"><div class="radius-square" style="border-radius:3px;background:#1c1e26;border-color:#2e3445;"></div><div class="radius-label">3px · sm</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:5px;background:#1c1e26;border-color:#2e3445;"></div><div class="radius-label">5px · md</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:7px;background:#1c1e26;border-color:#2e3445;"></div><div class="radius-label">7px · lg</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:10px;background:#1c1e26;border-color:#2e3445;"></div><div class="radius-label">10px · xl</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:999px;background:#1c1e26;border-color:#2e3445;width:56px;"></div><div class="radius-label">pill</div></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:16px;font-weight:500;">Shadows — depth without color</div>
+        <div class="shadow-row">
+          <div class="shadow-box" style="background:#1c1e26;box-shadow:0 1px 2px rgba(0,0,0,0.4);">sm</div>
+          <div class="shadow-box" style="background:#1c1e26;box-shadow:0 2px 6px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04);">md</div>
+          <div class="shadow-box" style="background:#1c1e26;box-shadow:0 8px 24px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.06);">lg</div>
+          <div class="shadow-box" style="background:#1c1e26;box-shadow:0 0 0 1px #6366f1;">glow</div>
+        </div>
+        <div style="margin-top:20px;font-size:11px;color:#94a3b8;font-weight:500;margin-bottom:12px;">Transitions</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#768aaa;line-height:1.8;">
+          fast: 120ms ease-out<br>
+          med:  200ms ease-out<br>
+          slow: 320ms ease-in-out
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENTS -->
+  <div class="section">
+    <div class="section-label">Components</div>
+    <div class="component-grid">
+
+      <!-- TaskCard running -->
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;font-weight:500;">TaskCard — Running</div>
+        <div class="p-taskcard">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="p-task-id">TASK-3A8F2B1C</div>
+            <div class="p-badge running"><div class="badge-dot" style="background:#6366f1;animation:precision-pulse 2s infinite;"></div>Running</div>
+          </div>
+          <div class="p-task-title">Build authentication system</div>
+          <div class="p-task-meta">Elapsed: 4m 32s</div>
+          <hr class="p-divider">
+          <div class="btn-row">
+            <button class="p-btn ghost">Abort Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TaskCard attention -->
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;font-weight:500;">TaskCard — Awaiting Review</div>
+        <div class="p-taskcard warning">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="p-task-id">TASK-3A8F2B1C</div>
+            <div class="p-badge warning"><div class="badge-dot" style="background:#f59e0b;"></div>Review Needed</div>
+          </div>
+          <div class="p-task-title">Build authentication system</div>
+          <div style="background:#272a35;border:1px solid #2e3445;border-radius:5px;padding:10px;margin:10px 0;font-size:12px;color:#94a3b8;font-family:'JetBrains Mono',monospace;">▼ Spec (Story · Acceptance Criteria)</div>
+          <hr class="p-divider">
+          <div class="btn-row">
+            <button class="p-btn primary">Approve Spec</button>
+            <button class="p-btn outline">Request Changes</button>
+          </div>
+          <div style="margin-top:8px;"><button style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;">Abort Task</button></div>
+        </div>
+      </div>
+
+      <!-- PipelineView -->
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;font-weight:500;">PipelineView</div>
+        <div class="p-pipeline" style="flex-wrap:wrap;gap:4px;">
+          <div class="p-pipeline-step done"><div class="step-dot" style="background:#10b981;"></div>PO</div>
+          <div class="p-step-connector done"></div>
+          <div class="p-pipeline-step done"><div class="step-dot" style="background:#10b981;"></div>Architect</div>
+          <div class="p-step-connector done"></div>
+          <div class="p-pipeline-step active"><div class="step-dot" style="background:#6366f1;"></div>Developer</div>
+          <div class="p-step-connector"></div>
+          <div class="p-pipeline-step inactive"><div class="step-dot" style="background:#272a35;border:1px solid #2e3445;"></div>Tech Lead</div>
+          <div class="p-step-connector"></div>
+          <div class="p-pipeline-step inactive"><div class="step-dot" style="background:#272a35;border:1px solid #2e3445;"></div>QA</div>
+        </div>
+        <div class="pipeline-info">Developer in progress · 4m 12s</div>
+      </div>
+
+      <!-- AgentPanel -->
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;font-weight:500;">AgentPanel</div>
+        <div class="p-agent-panel">
+          <div class="p-agent-tabs">
+            <div class="p-agent-tab">PO</div>
+            <div class="p-agent-tab">Arch</div>
+            <div class="p-agent-tab active"><div class="tab-dot" style="background:#34d399;"></div>Dev</div>
+            <div class="p-agent-tab">TL</div>
+            <div class="p-agent-tab">QA</div>
+          </div>
+          <div class="p-agent-logs">
+            <div class="p-log-line">
+              <div class="p-log-time">14:23:01</div>
+              <div class="p-log-chip" style="background:rgba(99,102,241,0.12);color:#818cf8;">[system]</div>
+              <div style="color:#94a3b8;font-size:12px;">Pipeline started</div>
+            </div>
+            <div class="p-log-line">
+              <div class="p-log-time">14:23:04</div>
+              <div class="p-log-chip" style="background:rgba(52,211,153,0.12);color:#34d399;">[agent]</div>
+              <div style="color:#94a3b8;font-size:12px;">Analyzing spec requirements</div>
+            </div>
+            <div class="p-log-line">
+              <div class="p-log-time">14:23:18</div>
+              <div class="p-log-chip" style="background:rgba(16,185,129,0.12);color:#10b981;">[artifact]</div>
+              <div style="color:#94a3b8;font-size:12px;">implementation.md saved</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOICE & TONE -->
+  <div class="section">
+    <div class="section-label">Voice & Tone</div>
+    <div class="two-col">
+      <div>
+        <div class="voice-rule" style="border-left-color:#6366f1;">
+          <div class="voice-rule-title" style="color:#e2e8f0;">Direct over descriptive</div>
+          <div class="voice-rule-desc">"Running" · "Review needed" · "Done" — never "Your task is being processed."</div>
+        </div>
+        <div class="voice-rule" style="border-left-color:#6366f1;">
+          <div class="voice-rule-title" style="color:#e2e8f0;">Confident, not arrogant</div>
+          <div class="voice-rule-desc">Errors describe the state, never blame. "Task requires a title" not "Invalid input."</div>
+        </div>
+        <div class="voice-rule" style="border-left-color:#6366f1;">
+          <div class="voice-rule-title" style="color:#e2e8f0;">Sparse</div>
+          <div class="voice-rule-desc">Empty states have one sentence. Tooltips are triggered. Status bar has the minimum necessary.</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;font-weight:500;">Terminology</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2;color:#94a3b8;">
+          <span style="color:#10b981;">✓</span> task &nbsp; <span style="color:#f87171;">✗</span> job / request / ticket<br>
+          <span style="color:#10b981;">✓</span> pipeline &nbsp; <span style="color:#f87171;">✗</span> workflow / process<br>
+          <span style="color:#10b981;">✓</span> stage &nbsp; <span style="color:#f87171;">✗</span> phase (in UI)<br>
+        </div>
+        <div style="margin-top:20px;font-size:11px;color:#94a3b8;font-weight:500;margin-bottom:8px;">Empty State</div>
+        <div class="p-agent-panel" style="padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+          <div style="font-size:24px;font-weight:700;color:#2e3445;letter-spacing:-0.02em;">SO</div>
+          <div style="font-size:12px;color:#768aaa;">No active task</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-precision -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PANEL 2: SIGNAL
+════════════════════════════════════════════════════════════ -->
+<div id="panel-signal" class="brand-panel">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">Brand Book 02</div>
+    <div class="hero-name">//&gt; SIGNAL</div>
+    <div class="hero-tagline">$ "Raw intelligence, made visible."</div>
+    <div class="hero-desc">Not a sanitized dashboard — a mission control interface. You're watching intelligence at work. Terminal culture, electric cyan accents, monospace everywhere it counts, and status signals that cut through peripheral vision like a debugger breakpoint.</div>
+    <div class="moodboard">
+      <span class="mood-pill">Warp Terminal</span>
+      <span class="mood-pill">Raycast</span>
+      <span class="mood-pill">Clerk Dashboard</span>
+      <span class="mood-pill">GitLens Pro</span>
+      <span class="mood-pill">Ghost CMS Dark</span>
+    </div>
+  </div>
+
+  <!-- COLOR PALETTE -->
+  <div class="section">
+    <div class="section-label">Color Palette</div>
+    <div class="three-col">
+      <div class="swatch-group">
+        <div class="swatch-group-label" style="color:#7ba7c4;">Brand</div>
+        <div class="swatch" style="background:rgba(0,212,255,0.05);"><div class="swatch-dot" style="background:#00d4ff;box-shadow:0 0 8px rgba(0,212,255,0.6);"></div><div class="swatch-info"><div class="swatch-name">brand-primary</div><div class="swatch-hex" style="color:#4d7a99;">#00D4FF</div><div class="swatch-desc" style="color:#4d7a99;">Electric cyan — active states, brand</div></div></div>
+        <div class="swatch" style="background:rgba(0,212,255,0.05);"><div class="swatch-dot" style="background:#00b8db;"></div><div class="swatch-info"><div class="swatch-name">brand-hover</div><div class="swatch-hex" style="color:#4d7a99;">#00B8DB</div><div class="swatch-desc" style="color:#4d7a99;">Deeper cyan hover</div></div></div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#ffb300;box-shadow:0 0 8px rgba(255,179,0,0.5);"></div><div class="swatch-info"><div class="swatch-name">state-warning</div><div class="swatch-hex" style="color:#4d7a99;">#FFB300</div><div class="swatch-desc" style="color:#4d7a99;">Amber signal flare — human action</div></div></div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch-group-label" style="color:#7ba7c4;">Backgrounds</div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#08090e;border-color:rgba(0,212,255,0.2)"></div><div class="swatch-info"><div class="swatch-name">bg-primary</div><div class="swatch-hex" style="color:#4d7a99;">#08090E</div><div class="swatch-desc" style="color:#4d7a99;">The void — main background</div></div></div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#0d1017;border-color:rgba(0,212,255,0.2)"></div><div class="swatch-info"><div class="swatch-name">bg-secondary</div><div class="swatch-hex" style="color:#4d7a99;">#0D1017</div><div class="swatch-desc" style="color:#4d7a99;">Panels, sidebars</div></div></div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#141824;border-color:rgba(0,212,255,0.2)"></div><div class="swatch-info"><div class="swatch-name">bg-tertiary</div><div class="swatch-hex" style="color:#4d7a99;">#141824</div><div class="swatch-desc" style="color:#4d7a99;">Inputs, hover fills</div></div></div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch-group-label" style="color:#7ba7c4;">Semantic States</div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#00e676;box-shadow:0 0 6px rgba(0,230,118,0.4)"></div><div class="swatch-info"><div class="swatch-name">state-success</div><div class="swatch-hex" style="color:#4d7a99;">#00E676</div><div class="swatch-desc" style="color:#4d7a99;">Electric green — done</div></div></div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#ff5252;box-shadow:0 0 6px rgba(255,82,82,0.4)"></div><div class="swatch-info"><div class="swatch-name">state-error</div><div class="swatch-hex" style="color:#4d7a99;">#FF5252</div><div class="swatch-desc" style="color:#4d7a99;">Neon red — failed</div></div></div>
+        <div class="swatch" style="background:rgba(0,212,255,0.03);"><div class="swatch-dot" style="background:#67e8f9;"></div><div class="swatch-info"><div class="swatch-name">state-info</div><div class="swatch-hex" style="color:#4d7a99;">#67E8F9</div><div class="swatch-desc" style="color:#4d7a99;">Sky-300 — informational</div></div></div>
+      </div>
+    </div>
+
+    <!-- Role colors -->
+    <div style="margin-top:24px">
+      <div class="swatch-group-label" style="color:#7ba7c4;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;opacity:0.5;margin-bottom:12px;">Pipeline Role Colors — Electric Neon</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:4px;background:#2196f3;box-shadow:0 0 8px rgba(33,150,243,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08090e;font-family:'JetBrains Mono',monospace;">PO</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;">#2196F3</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:4px;background:#ce93d8;box-shadow:0 0 8px rgba(206,147,216,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08090e;font-family:'JetBrains Mono',monospace;">ARCH</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;">#CE93D8</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:4px;background:#00e676;box-shadow:0 0 8px rgba(0,230,118,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08090e;font-family:'JetBrains Mono',monospace;">DEV</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;">#00E676</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:4px;background:#ff9800;box-shadow:0 0 8px rgba(255,152,0,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08090e;font-family:'JetBrains Mono',monospace;">TL</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;">#FF9800</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:4px;background:#ff5252;box-shadow:0 0 8px rgba(255,82,82,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#08090e;font-family:'JetBrains Mono',monospace;">QA</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;">#FF5252</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="section">
+    <div class="section-label">Typography</div>
+    <div class="two-col">
+      <div class="type-specimen" style="background:#0d1017;border-color:rgba(0,212,255,0.12);">
+        <div style="font-size:10px;color:#00d4ff;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">Geist / Inter — UI Font</div>
+        <div style="font-size:22px;font-weight:700;color:#e8f4fd;line-height:1.2;margin-bottom:8px;">smooth orchestra</div>
+        <div style="font-size:16px;font-weight:600;color:#e8f4fd;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">TASK BOARD</div>
+        <div style="font-size:14px;font-weight:600;color:#e8f4fd;margin-bottom:8px;">./run --auth</div>
+        <div style="font-size:13px;font-weight:400;color:#7ba7c4;line-height:1.5;margin-bottom:8px;">Primary body text for the interface. Same font family used throughout — the entire interface IS a terminal.</div>
+        <div style="font-size:12px;color:#4d7a99;">Secondary label</div>
+      </div>
+      <div class="type-specimen" style="background:#0d1017;border-color:rgba(0,212,255,0.12);">
+        <div style="font-size:10px;color:#00d4ff;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:16px;">Geist Mono — Everything Code</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#00d4ff;margin-bottom:8px;">&gt; TASK-3A8F2B1C</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#7ba7c4;margin-bottom:3px;">[system]  pipeline started</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#7ba7c4;margin-bottom:3px;">[agent]   analyzing spec...</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#00e676;margin-bottom:3px;">[artifact] implementation.md</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;margin-bottom:12px;">elapsed: 04m 32s</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#4d7a99;">Scale: 10/12/13/14/16/20/24px</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHAPE -->
+  <div class="section">
+    <div class="section-label">Shape & Glow</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:16px;font-weight:500;font-family:'JetBrains Mono',monospace;">Border Radius — terminal sharp</div>
+        <div class="radius-preview">
+          <div class="radius-box"><div class="radius-square" style="border-radius:2px;background:#0d1017;border-color:rgba(0,212,255,0.15);"></div><div class="radius-label" style="color:#4d7a99;">2px · sm</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:4px;background:#0d1017;border-color:rgba(0,212,255,0.15);"></div><div class="radius-label" style="color:#4d7a99;">4px · md</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:6px;background:#0d1017;border-color:rgba(0,212,255,0.15);"></div><div class="radius-label" style="color:#4d7a99;">6px · lg</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:8px;background:#0d1017;border-color:rgba(0,212,255,0.15);"></div><div class="radius-label" style="color:#4d7a99;">8px · xl</div></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:16px;font-weight:500;font-family:'JetBrains Mono',monospace;">Shadows — glow is the signature</div>
+        <div class="shadow-row">
+          <div class="shadow-box" style="background:#0d1017;border:1px solid rgba(0,212,255,0.12);box-shadow:0 2px 8px rgba(0,0,0,0.7);">sm</div>
+          <div class="shadow-box" style="background:#0d1017;border:1px solid rgba(0,212,255,0.3);box-shadow:0 0 8px rgba(0,212,255,0.5),0 0 24px rgba(0,212,255,0.2);color:#00d4ff;">cyan</div>
+          <div class="shadow-box" style="background:#0d1017;border:1px solid rgba(255,179,0,0.4);box-shadow:0 0 8px rgba(255,179,0,0.5),0 0 24px rgba(255,179,0,0.2);color:#ffb300;">amber</div>
+        </div>
+        <div style="margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#4d7a99;line-height:1.8;">
+          fast: 100ms ease-out<br>
+          med:  180ms ease-out<br>
+          slow: 280ms ease-in-out
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENTS -->
+  <div class="section">
+    <div class="section-label">Components</div>
+    <div class="component-grid">
+
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:10px;font-weight:500;font-family:'JetBrains Mono',monospace;">TaskCard — Running</div>
+        <div class="s-taskcard">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="s-task-id">&gt; TASK-3A8F2B1C</div>
+            <div class="s-badge running"><div class="badge-dot" style="background:#00d4ff;box-shadow:0 0 4px rgba(0,212,255,0.8);"></div>RUNNING</div>
+          </div>
+          <div class="s-task-title">Build authentication system</div>
+          <div class="s-task-meta">elapsed: 04m 32s</div>
+          <div class="s-divider"></div>
+          <div class="btn-row">
+            <button class="s-btn ghost">abort</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:10px;font-weight:500;font-family:'JetBrains Mono',monospace;">TaskCard — Review Required</div>
+        <div class="s-taskcard warning">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="s-task-id">&gt; TASK-3A8F2B1C</div>
+            <div class="s-badge warning"><div class="badge-dot" style="background:#ffb300;box-shadow:0 0 4px rgba(255,179,0,0.8);"></div>REVIEW REQ</div>
+          </div>
+          <div class="s-task-title">Build authentication system</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#4d7a99;padding:8px 0;">▼ spec.md</div>
+          <div class="s-divider"></div>
+          <div class="btn-row">
+            <button class="s-btn cmd">./approve</button>
+            <button class="s-btn cmd">./reject</button>
+          </div>
+          <div style="margin-top:8px;"><button style="background:none;border:none;color:#ff5252;font-size:12px;cursor:pointer;font-family:'JetBrains Mono',monospace;">abort</button></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:10px;font-weight:500;font-family:'JetBrains Mono',monospace;">PipelineView</div>
+        <div class="s-pipeline" style="border:1px solid rgba(0,212,255,0.1);border-radius:6px;flex-wrap:wrap;">
+          <div class="s-pipeline-step done"><div class="s-step-dot" style="background:#00e676;"></div>PO</div>
+          <div class="s-step-sep">›</div>
+          <div class="s-pipeline-step done"><div class="s-step-dot" style="background:#00e676;"></div>arch</div>
+          <div class="s-step-sep">›</div>
+          <div class="s-pipeline-step active"><div class="s-step-dot active-dot" style="background:#00e676;"></div>dev</div>
+          <div class="s-step-sep" style="color:rgba(0,212,255,0.1);">›</div>
+          <div class="s-pipeline-step inactive"><div class="s-step-dot" style="background:#141824;border:1px solid rgba(0,212,255,0.15);"></div>tl</div>
+          <div class="s-step-sep" style="color:rgba(0,212,255,0.1);">›</div>
+          <div class="s-pipeline-step inactive"><div class="s-step-dot" style="background:#141824;border:1px solid rgba(0,212,255,0.15);"></div>qa</div>
+        </div>
+        <div class="s-pipeline-info">dev in progress · 04m12s</div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:10px;font-weight:500;font-family:'JetBrains Mono',monospace;">AgentPanel</div>
+        <div class="s-agent-panel">
+          <div class="s-agent-tabs">
+            <div class="s-agent-tab">po</div>
+            <div class="s-agent-tab">arch</div>
+            <div class="s-agent-tab active"><div style="width:8px;height:8px;border-radius:50%;background:#00e676;box-shadow:0 0 4px rgba(0,230,118,0.8);"></div>dev</div>
+            <div class="s-agent-tab">tl</div>
+            <div class="s-agent-tab">qa</div>
+          </div>
+          <div class="s-log-area">
+            <div class="s-log-line">
+              <div class="s-log-time">14:23:01</div>
+              <div class="s-log-tag" style="color:#00d4ff;">[system]</div>
+              <div class="s-log-msg">pipeline.start()</div>
+            </div>
+            <div class="s-log-line">
+              <div class="s-log-time">14:23:04</div>
+              <div class="s-log-tag" style="color:#00e676;">[agent]</div>
+              <div class="s-log-msg">analyzing spec...</div>
+            </div>
+            <div class="s-log-line">
+              <div class="s-log-time">14:23:18</div>
+              <div class="s-log-tag" style="color:#ce93d8;">[artifact]</div>
+              <div class="s-log-msg">write(implementation.md)</div>
+            </div>
+          </div>
+          <div class="s-terminal-prompt">&gt; awaiting task<span class="s-cursor"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOICE -->
+  <div class="section">
+    <div class="section-label">Voice & Tone</div>
+    <div class="two-col">
+      <div>
+        <div class="voice-rule" style="background:rgba(0,212,255,0.03);border-color:rgba(0,212,255,0.08);border-left-color:#00d4ff;">
+          <div class="voice-rule-title" style="color:#e8f4fd;font-family:'JetBrains Mono',monospace;">Terminal-native</div>
+          <div class="voice-rule-desc" style="color:#4d7a99;">"Task created" not "Your task has been successfully created." "Pipeline running" not explanations.</div>
+        </div>
+        <div class="voice-rule" style="background:rgba(0,212,255,0.03);border-color:rgba(0,212,255,0.08);border-left-color:#00d4ff;">
+          <div class="voice-rule-title" style="color:#e8f4fd;font-family:'JetBrains Mono',monospace;">Status over explanation</div>
+          <div class="voice-rule-desc" style="color:#4d7a99;">"Architect failed: timeout after 120s." Don't soften errors. Engineers read errors to fix them.</div>
+        </div>
+        <div class="voice-rule" style="background:rgba(0,212,255,0.03);border-color:rgba(0,212,255,0.08);border-left-color:#00d4ff;">
+          <div class="voice-rule-title" style="color:#e8f4fd;font-family:'JetBrains Mono',monospace;">No marketing</div>
+          <div class="voice-rule-desc" style="color:#4d7a99;">Signal speaks like a tool used by its builder, not a product selling itself. Zero promotional tone in-app.</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#7ba7c4;margin-bottom:12px;font-weight:500;font-family:'JetBrains Mono',monospace;">Empty State</div>
+        <div class="s-agent-panel" style="padding:40px 24px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#4d7a99;">&gt; awaiting task<span class="s-cursor"></span></div>
+        </div>
+        <div style="margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#4d7a99;line-height:2;">
+          Logomark: &nbsp;<span style="color:#00d4ff;font-weight:700;">//&gt;</span><br>
+          Status bar: &nbsp;<span style="color:#00d4ff;font-weight:700;">&gt;_</span><br>
+          Button: &nbsp;<span style="color:#e8f4fd;">./run --auth</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-signal -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     PANEL 3: ATELIER
+════════════════════════════════════════════════════════════ -->
+<div id="panel-atelier" class="brand-panel">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">Brand Book 03</div>
+    <div class="hero-name" style="color:#1a1412;">Atelier</div>
+    <div class="hero-tagline" style="color:#6b5e58;font-style:normal;">"Craft your workflow."</div>
+    <div class="hero-desc" style="color:#7a6d68;">For teams where not everyone wears a hoodie. Editorial and warm: off-white backgrounds, generous whitespace, humanist typography, terracotta accent. Light mode is the primary experience.</div>
+    <div class="moodboard">
+      <span class="mood-pill">Notion</span>
+      <span class="mood-pill">Craft.do</span>
+      <span class="mood-pill">Loom</span>
+      <span class="mood-pill">Linear Light</span>
+      <span class="mood-pill">Readwise Reader</span>
+    </div>
+  </div>
+
+  <!-- COLOR PALETTE -->
+  <div class="section">
+    <div class="section-label">Color Palette</div>
+    <div class="three-col">
+      <div class="swatch-group">
+        <div class="swatch-group-label" style="color:#6b5e58;opacity:1;">Brand</div>
+        <div class="swatch"><div class="swatch-dot" style="background:#c2410c;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">brand-primary</div><div class="swatch-hex">#C2410C</div><div class="swatch-desc">Terracotta — CTAs, active states</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#9a3412;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">brand-hover</div><div class="swatch-hex">#9A3412</div><div class="swatch-desc">Deeper terracotta hover</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#fef3ee;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">brand-light</div><div class="swatch-hex">#FEF3EE</div><div class="swatch-desc">Attention card backgrounds</div></div></div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch-group-label" style="color:#6b5e58;opacity:1;">Backgrounds (Light)</div>
+        <div class="swatch"><div class="swatch-dot" style="background:#fbf8f4;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">bg-primary</div><div class="swatch-hex">#FBF8F4</div><div class="swatch-desc">Warm cream canvas</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#f4f0eb;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">bg-secondary</div><div class="swatch-hex">#F4F0EB</div><div class="swatch-desc">TaskBoard panel</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#ffffff;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">bg-card</div><div class="swatch-hex">#FFFFFF</div><div class="swatch-desc">TaskCard — lifted surface</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#ddd5cc;border-color:#c4b8b0;"></div><div class="swatch-info"><div class="swatch-name">border-color</div><div class="swatch-hex">#DDD5CC</div><div class="swatch-desc">Warm light grey borders</div></div></div>
+      </div>
+      <div class="swatch-group">
+        <div class="swatch-group-label" style="color:#6b5e58;opacity:1;">Semantic States</div>
+        <div class="swatch"><div class="swatch-dot" style="background:#16a34a;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">state-success</div><div class="swatch-hex">#16A34A</div><div class="swatch-desc">Green-600 for light bg</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#b45309;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">state-warning</div><div class="swatch-hex">#B45309</div><div class="swatch-desc">Amber-700 (text) on light</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#dc2626;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">state-error</div><div class="swatch-hex">#DC2626</div><div class="swatch-desc">Red-600 — standard red</div></div></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#2563eb;border-color:#ddd5cc;"></div><div class="swatch-info"><div class="swatch-name">state-info</div><div class="swatch-hex">#2563EB</div><div class="swatch-desc">Blue-600 — professional</div></div></div>
+      </div>
+    </div>
+
+    <!-- Role colors -->
+    <div style="margin-top:24px">
+      <div class="swatch-group-label" style="color:#6b5e58;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Pipeline Role Colors — Warmed for Light BG</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:8px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;">PO</div>
+          <div style="font-size:10px;color:#7a6d68;">#2563EB</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:8px;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;">ARCH</div>
+          <div style="font-size:10px;color:#7a6d68;">#7C3AED</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;">DEV</div>
+          <div style="font-size:10px;color:#7a6d68;">#16A34A</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:8px;background:#ea580c;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;">TL</div>
+          <div style="font-size:10px;color:#7a6d68;">#EA580C</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:48px;height:48px;border-radius:8px;background:#dc2626;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;">QA</div>
+          <div style="font-size:10px;color:#7a6d68;">#DC2626</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="section">
+    <div class="section-label">Typography</div>
+    <div class="two-col">
+      <div class="type-specimen" style="background:#f4f0eb;border-color:#ddd5cc;">
+        <div style="font-size:10px;color:#c2410c;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px;">Plus Jakarta Sans — UI Font</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;font-weight:800;color:#1a1412;line-height:1.2;margin-bottom:8px;">smooth orchestra</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:600;color:#1a1412;margin-bottom:8px;">Task Board</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;color:#1a1412;margin-bottom:8px;">Sign In</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:400;color:#6b5e58;line-height:1.6;margin-bottom:8px;">Primary body text optimized for longer artifact reading. 14px base (vs 13px in other brands) with 1.6 line-height for comfortable reading by PMs.</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#7a6d68;">Secondary · no uppercase (Atelier avoids ALL-CAPS)</div>
+      </div>
+      <div class="type-specimen" style="background:#f4f0eb;border-color:#ddd5cc;">
+        <div style="font-size:10px;color:#c2410c;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:16px;">Fira Code — Mono</div>
+        <div style="font-family:'Fira Code',monospace;font-size:10px;color:#7a6d68;margin-bottom:8px;">TASK-3A8F2B1C</div>
+        <div style="font-family:'Fira Code',monospace;font-size:13px;color:#6b5e58;margin-bottom:4px;line-height:1.6;">14:23:01 — Architect started</div>
+        <div style="font-family:'Fira Code',monospace;font-size:13px;color:#6b5e58;margin-bottom:4px;line-height:1.6;">14:23:04 — Generating spec</div>
+        <div style="font-family:'Fira Code',monospace;font-size:13px;color:#16a34a;margin-bottom:12px;line-height:1.6;">14:23:18 — Spec saved ✓</div>
+        <div style="font-size:10px;color:#7a6d68;">Fira Code has softer strokes — warmer than JetBrains Mono. Matches Atelier's ethos.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHAPE -->
+  <div class="section">
+    <div class="section-label">Shape & Shadow</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:16px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;">Border Radius — warm & approachable</div>
+        <div class="radius-preview">
+          <div class="radius-box"><div class="radius-square" style="border-radius:4px;background:#fff;border-color:#ddd5cc;box-shadow:0 1px 3px rgba(30,20,10,0.08);"></div><div class="radius-label" style="color:#9e8e87;">4px · sm</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:8px;background:#fff;border-color:#ddd5cc;box-shadow:0 1px 3px rgba(30,20,10,0.08);"></div><div class="radius-label" style="color:#9e8e87;">8px · md</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:12px;background:#fff;border-color:#ddd5cc;box-shadow:0 4px 12px rgba(30,20,10,0.08);"></div><div class="radius-label" style="color:#9e8e87;">12px · lg</div></div>
+          <div class="radius-box"><div class="radius-square" style="border-radius:16px;background:#fff;border-color:#ddd5cc;box-shadow:0 4px 12px rgba(30,20,10,0.08);"></div><div class="radius-label" style="color:#9e8e87;">16px · xl</div></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:16px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;">Shadows — warm-tinted (brown-black, not blue-grey)</div>
+        <div class="shadow-row">
+          <div class="shadow-box" style="background:#fff;border:1px solid #ddd5cc;box-shadow:0 1px 3px rgba(30,20,10,0.08),0 1px 2px rgba(30,20,10,0.04);color:#7a6d68;">sm</div>
+          <div class="shadow-box" style="background:#fff;border:1px solid #ddd5cc;box-shadow:0 4px 12px rgba(30,20,10,0.08),0 2px 4px rgba(30,20,10,0.06);color:#7a6d68;">md</div>
+          <div class="shadow-box" style="background:#fff;border:1px solid #ddd5cc;box-shadow:0 16px 40px rgba(30,20,10,0.12),0 4px 8px rgba(30,20,10,0.06);color:#7a6d68;">lg</div>
+        </div>
+        <div style="margin-top:20px;font-size:11px;color:#6b5e58;font-weight:500;margin-bottom:8px;">Transitions</div>
+        <div style="font-size:11px;color:#7a6d68;line-height:1.8;font-family:'Fira Code',monospace;">
+          fast: 150ms ease-out<br>
+          med:  220ms ease-out<br>
+          slow: 360ms ease-in-out
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENTS -->
+  <div class="section">
+    <div class="section-label">Components</div>
+    <div class="component-grid">
+
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:10px;font-weight:600;">TaskCard — Running</div>
+        <div class="a-taskcard">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="a-task-id">TASK-3A8F2B1C</div>
+            <div class="a-badge running"><div class="badge-dot" style="background:#2563eb;"></div>Running</div>
+          </div>
+          <div class="a-task-title">Build authentication system</div>
+          <div class="a-task-meta">Elapsed: 4m 32s</div>
+          <div class="a-divider"></div>
+          <div class="btn-row">
+            <button class="a-btn ghost" style="font-size:14px;padding:7px 14px;">Abort Task</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:10px;font-weight:600;">TaskCard — Awaiting Review</div>
+        <div class="a-taskcard warning">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="a-task-id">TASK-3A8F2B1C</div>
+            <div class="a-badge warning"><div class="badge-dot" style="background:#b45309;"></div>Review needed</div>
+          </div>
+          <div class="a-task-title">Build authentication system</div>
+          <div style="background:#fef3ee;border:1px solid rgba(194,65,12,0.2);border-radius:8px;padding:12px;margin:12px 0;font-size:13px;color:#92320a;font-family:'Plus Jakarta Sans',sans-serif;">▼ Spec (Story · Acceptance Criteria)</div>
+          <div class="a-divider"></div>
+          <div class="btn-row">
+            <button class="a-btn primary">Approve Spec</button>
+            <button class="a-btn secondary">Request Changes</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:10px;font-weight:600;">PipelineView</div>
+        <div class="a-pipeline">
+          <div class="a-pipeline-step done"><div class="a-step-dot" style="background:#16a34a;"></div>PO</div>
+          <div class="a-step-connector done"></div>
+          <div class="a-pipeline-step done"><div class="a-step-dot" style="background:#16a34a;"></div>Architect</div>
+          <div class="a-step-connector done"></div>
+          <div class="a-pipeline-step active"><div class="a-step-dot" style="background:#c2410c;"></div>Developer</div>
+          <div class="a-step-connector"></div>
+          <div class="a-pipeline-step inactive"><div class="a-step-dot" style="background:#eae5df;border:1px solid #ddd5cc;"></div>Tech Lead</div>
+          <div class="a-step-connector"></div>
+          <div class="a-pipeline-step inactive"><div class="a-step-dot" style="background:#eae5df;border:1px solid #ddd5cc;"></div>QA</div>
+        </div>
+        <div class="a-pipeline-info" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:#7a6d68;margin-top:8px;">Developer in progress · 4m 12s</div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:10px;font-weight:600;">AgentPanel</div>
+        <div class="a-agent-panel">
+          <div class="a-agent-tabs">
+            <div class="a-agent-tab" style="font-family:'Plus Jakarta Sans',sans-serif;">PO</div>
+            <div class="a-agent-tab" style="font-family:'Plus Jakarta Sans',sans-serif;">Arch</div>
+            <div class="a-agent-tab active" style="font-family:'Plus Jakarta Sans',sans-serif;"><div class="a-tab-dot" style="background:#16a34a;"></div>Dev</div>
+            <div class="a-agent-tab" style="font-family:'Plus Jakarta Sans',sans-serif;">TL</div>
+            <div class="a-agent-tab" style="font-family:'Plus Jakarta Sans',sans-serif;">QA</div>
+          </div>
+          <div class="a-log-area">
+            <div class="a-log-line">
+              <div class="a-log-time">14:23:01</div>
+              <div class="a-log-chip" style="background:rgba(37,99,235,0.08);color:#2563eb;">system</div>
+              <div class="a-log-msg">Pipeline started</div>
+            </div>
+            <div class="a-log-line">
+              <div class="a-log-time">14:23:04</div>
+              <div class="a-log-chip" style="background:rgba(22,163,74,0.08);color:#16a34a;">agent</div>
+              <div class="a-log-msg">Analyzing requirements</div>
+            </div>
+            <div class="a-log-line">
+              <div class="a-log-time">14:23:18</div>
+              <div class="a-log-chip" style="background:rgba(124,58,237,0.08);color:#7c3aed;">artifact</div>
+              <div class="a-log-msg">implementation.md saved</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOICE & TONE -->
+  <div class="section">
+    <div class="section-label">Voice & Tone</div>
+    <div class="two-col">
+      <div>
+        <div class="voice-rule">
+          <div class="voice-rule-title">Accessible to non-technical users</div>
+          <div class="voice-rule-desc">Technical PMs and stakeholders should understand every status and label. No terminal jargon, no acronyms without context.</div>
+        </div>
+        <div class="voice-rule">
+          <div class="voice-rule-title">No uppercase aggression</div>
+          <div class="voice-rule-desc">Badges are soft-capitalized, not ALL-CAPS. Section headings are not uppercase. Atelier avoids the "developer tool" aggression.</div>
+        </div>
+        <div class="voice-rule">
+          <div class="voice-rule-title">Generous & clear</div>
+          <div class="voice-rule-desc">More whitespace, larger body text (14px), 1.6 line-height. Artifact content has a 680px max-width for optimal reading line length.</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#6b5e58;margin-bottom:12px;font-weight:600;">Empty State</div>
+        <div class="a-agent-panel" style="padding:40px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;font-weight:800;color:#ddd5cc;">SO</div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#9e8e87;font-weight:400;">No active task</div>
+        </div>
+        <div style="margin-top:20px;font-size:12px;color:#7a6d68;line-height:1.8;font-family:'Plus Jakarta Sans',sans-serif;">
+          <strong style="color:#1a1412;">Layout deviations:</strong><br>
+          TaskBoard: 380px (vs 360px)<br>
+          Pipeline: 60px tall (vs 56px)<br>
+          Body text: 14px (vs 13px)
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panel-atelier -->
+
+
+<script>
+function showBrand(brand) {
+  // Hide all panels
+  document.querySelectorAll('.brand-panel').forEach(p => p.classList.remove('active'));
+  // Show target
+  document.getElementById('panel-' + brand).classList.add('active');
+
+  // Update tabs
+  const tabs = document.querySelectorAll('.brand-tab');
+  tabs.forEach(t => { t.className = 'brand-tab'; });
+
+  const idx = { precision: 0, signal: 1, atelier: 2 };
+  if (tabs[idx[brand]]) {
+    tabs[idx[brand]].classList.add('active-' + brand);
+  }
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
