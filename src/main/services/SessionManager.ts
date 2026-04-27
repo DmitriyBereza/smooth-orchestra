@@ -17,7 +17,7 @@ import { GitManager } from './GitManager';
 import { ProjectStore } from './ProjectStore';
 import { buildSystemPrompt, buildTaskPrompt, PromptExtras } from '../prompts';
 import { getPipelineConfig, PipelineTypeConfig } from '../pipelines/registry';
-import { buildProjectPromptContexts } from './PromptContextBuilder';
+import { buildProjectPromptContexts, buildBaseBranchContext } from './PromptContextBuilder';
 // Ensure all pipelines are registered
 import '../pipelines';
 
@@ -264,6 +264,11 @@ export class SessionManager {
       contextParts.push(`**Path**: ${p.path}`);
       if (p.labels.length > 0) {
         contextParts.push(`**Labels**: ${p.labels.join(', ')}`);
+      }
+
+      // AC3: inject base branch when configured
+      if (isPrimary && p.pr?.baseBranch) {
+        contextParts.push(buildBaseBranchContext(p.pr.baseBranch));
       }
 
       // Load project.md from the project if it exists

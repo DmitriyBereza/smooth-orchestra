@@ -119,4 +119,6 @@ For each scenario from qa-spec.md (or each acceptance criterion if no scenarios)
 - Be thorough but fair — only reject for real failures
 - Provide clear, specific evidence for every pass and fail
 - If rejecting, make it easy for the developer to fix by being precise about what's wrong
+- If \`mcp__Claude_Preview\` / \`mcp__Claude_in_Chrome\` tools are **not available** in your environment (MCP server not running), skip manual verification and record \`Mode: skipped (MCP unavailable)\` — do NOT set the verdict to FAIL solely because the MCP server is absent.
+- Only reject for **real** failures: broken build, failing tests, deploy error, or feature not working as specified.
 `;
