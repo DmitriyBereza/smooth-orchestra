@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PipelineType } from '../../store/sessionStore';
 import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
 import { Code, Megaphone, Palette } from '@phosphor-icons/react';
@@ -22,11 +22,18 @@ interface NewTaskFormProps {
   initialDescription?: string;
   initialJiraKey?: string;
   jiraConfigured?: boolean;
+  /** When provided, sets the pipeline type on the form (e.g. when the form is pre-filled from a backlog promote). */
+  initialPipelineType?: PipelineType;
+  /** When true, auto-expands the model picker and scrolls it into view. Bumps via the changing key prompt the user to confirm models. */
+  focusModelsToken?: number;
+  /** Banner to show above the form when a flow is in progress (e.g. promoting a backlog item). Set null to hide. */
+  banner?: { text: string; tone?: 'info' | 'warn' } | null;
 }
 
 const MODEL_OPTIONS = [
   { value: '', label: 'Default' },
-  { value: 'claude-opus-4-6', label: 'Opus' },
+  { value: 'claude-opus-4-7', label: 'Opus 4.7' },
+  { value: 'claude-opus-4-6', label: 'Opus 4.6' },
   { value: 'claude-sonnet-4-6', label: 'Sonnet' },
   { value: 'claude-haiku-4-5-20251001', label: 'Haiku' },
 ];
@@ -51,7 +58,7 @@ function toLocalDatetimeValue(date: Date): string {
   return local.toISOString().slice(0, 16);
 }
 
-export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, jiraConfigured }) => {
+export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, jiraConfigured, initialPipelineType, focusModelsToken, banner }) => {
   const isMobile = useIsMobile();
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
@@ -62,13 +69,29 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   const [scheduleMode, setScheduleMode] = useState<'now' | 'delay' | 'custom'>('now');
   const [delayMinutes, setDelayMinutes] = useState<number | null>(null);
   const [customDatetime, setCustomDatetime] = useState('');
-  const [pipelineType, setPipelineType] = useState<PipelineType>('development');
+  const [pipelineType, setPipelineType] = useState<PipelineType>(initialPipelineType ?? 'development');
+  const modelsSectionRef = useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (initialTitle) setTitle(initialTitle);
     if (initialDescription) setDescription(initialDescription);
     if (initialJiraKey !== undefined) setJiraIssueKey(initialJiraKey ?? '');
   }, [initialTitle, initialDescription, initialJiraKey]);
+
+  React.useEffect(() => {
+    if (initialPipelineType) setPipelineType(initialPipelineType);
+  }, [initialPipelineType]);
+
+  // When the parent bumps focusModelsToken (e.g. user clicked "Promote to pipeline"
+  // on a backlog card), expand the model panel and scroll it into view so the user
+  // confirms model picks before submitting.
+  React.useEffect(() => {
+    if (focusModelsToken == null) return;
+    setShowModels(true);
+    requestAnimationFrame(() => {
+      modelsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [focusModelsToken]);
 
   const pipelineConfig = SHARED_PIPELINE_CONFIGS[pipelineType];
   const agentRolesForPipeline = pipelineConfig.modelSelectorRoles;
@@ -166,6 +189,19 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     <form onSubmit={handleSubmit} style={styles.form}>
       <h3 style={styles.heading}>new task</h3>
 
+      {banner && (
+        <div
+          style={{
+            ...styles.banner,
+            ...(banner.tone === 'warn'
+              ? { borderColor: 'var(--state-warning, var(--state-error))', color: 'var(--state-warning, var(--state-error))' }
+              : {}),
+          }}
+        >
+          {banner.text}
+        </div>
+      )}
+
       {/* Pipeline type selector */}
       <div style={styles.pipelineSection}>
         <span style={styles.sectionLabel}>select pipeline</span>
@@ -215,7 +251,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
       />
 
       {/* Model selector — collapsible */}
-      <div style={styles.modelSection}>
+      <div style={styles.modelSection} ref={modelsSectionRef}>
         <button
           type="button"
           style={styles.modelToggle}
@@ -391,6 +427,14 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     marginBottom: '4px',
+  },
+  banner: {
+    padding: '6px 8px',
+    border: '1px dashed var(--brand-primary)',
+    color: 'var(--brand-primary)',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
   },
   pipelineSection: {
     display: 'flex',

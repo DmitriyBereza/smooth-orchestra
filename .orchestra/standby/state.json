@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "rotationIndex": 2,
+  "projectRotationIndex": 0,
+  "lastTickAt": "2026-04-27T16:38:50.894Z",
+  "nextTickAt": "2026-04-27T18:07:09.401Z",
+  "autoExecutes": [
+    "2026-04-26T22:24:34.746Z",
+    "2026-04-27T07:17:47.544Z",
+    "2026-04-27T16:43:20.313Z"
+  ]
+}

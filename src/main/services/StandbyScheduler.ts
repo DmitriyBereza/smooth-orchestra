@@ -136,6 +136,32 @@ export class StandbyScheduler {
     return session.task.id;
   }
 
+  /**
+   * Mark an item promoted *without* creating a task. Used by the UI flow where
+   * the user confirms models in the New Task form and submits through the
+   * normal task-create path; this method just stamps the backlog status with
+   * the resulting task ID after the task has been created.
+   */
+  markPromoted(itemId: string, taskId: string): BacklogItem[] {
+    const backlog = this.loadBacklog();
+    const item = backlog.find((b) => b.id === itemId);
+    if (!item) throw new Error(`Backlog item not found: ${itemId}`);
+    if (item.status !== 'draft') {
+      // Idempotent — already-promoted items stay as they are
+      return backlog;
+    }
+    item.status = 'promoted';
+    item.promotedTaskId = taskId;
+    this.saveBacklog(backlog);
+    this.appendToMemory(
+      item.source,
+      item.projectId ?? null,
+      `promoted (via form): ${item.id} ${item.title} → ${taskId}`,
+    );
+    eventBus.emit('standby:backlog-changed', { backlog: this.loadBacklog() });
+    return this.loadBacklog();
+  }
+
   dismissItem(itemId: string, reason?: string): BacklogItem[] {
     const backlog = this.loadBacklog();
     const item = backlog.find((b) => b.id === itemId);

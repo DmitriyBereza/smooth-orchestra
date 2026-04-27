@@ -15,7 +15,16 @@ const STATUS_COLOR: Record<BacklogItem['status'], string> = {
   dismissed: 'var(--text-muted)',
 };
 
-export const StandbyPanel: React.FC = () => {
+export interface StandbyPanelProps {
+  /**
+   * Optional callback for the new "promote → confirm models in form" flow.
+   * When provided, the BacklogCard's "Promote to pipeline" button will hand
+   * off to this callback instead of calling the immediate promote API.
+   */
+  onStartPromote?: (item: BacklogItem, pipelineType: 'development' | 'marketing' | 'design') => void;
+}
+
+export const StandbyPanel: React.FC<StandbyPanelProps> = ({ onStartPromote }) => {
   const standbyState = useStandbyStore((s) => s.state);
   const backlog = useStandbyStore((s) => s.backlog);
   const ticking = useStandbyStore((s) => s.ticking);
@@ -81,7 +90,7 @@ export const StandbyPanel: React.FC = () => {
           </div>
           <div style={styles.list}>
             {(collapsed ? drafts.slice(0, 3) : drafts).map((item) => (
-              <BacklogCard key={item.id} item={item} />
+              <BacklogCard key={item.id} item={item} onStartPromote={onStartPromote} />
             ))}
           </div>
           {(!collapsed || drafts.length === 0) && recent.length > 0 && (
@@ -91,7 +100,7 @@ export const StandbyPanel: React.FC = () => {
               </div>
               <div style={styles.list}>
                 {recent.map((item) => (
-                  <BacklogCard key={item.id} item={item} compact />
+                  <BacklogCard key={item.id} item={item} compact onStartPromote={onStartPromote} />
                 ))}
               </div>
             </>
@@ -105,9 +114,10 @@ export const StandbyPanel: React.FC = () => {
 interface BacklogCardProps {
   item: BacklogItem;
   compact?: boolean;
+  onStartPromote?: (item: BacklogItem, pipelineType: 'development' | 'marketing' | 'design') => void;
 }
 
-const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact }) => {
+const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact, onStartPromote }) => {
   const promote = useStandbyStore((s) => s.promote);
   const dismiss = useStandbyStore((s) => s.dismiss);
   const selectedProjectIds = useProjectStore((s) => s.selectedProjectIds);
@@ -123,7 +133,18 @@ const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact }) => {
     : undefined;
 
   const handlePromote = async () => {
-    // Prefer the item's source project; fall back to whatever the user has selected in the project list.
+    // Preferred path: hand off to parent so the user confirms models in the New Task form.
+    if (onStartPromote) {
+      if (!item.projectId) {
+        setError('No source project on this item — re-run standby with a project opted in.');
+        return;
+      }
+      onStartPromote(item, pipelineType);
+      return;
+    }
+
+    // Fallback path (kept for parents that don't supply the callback): immediately
+    // create the task with default models via the original promote API.
     const projectIds =
       item.projectId && projects.some((p) => p.id === item.projectId)
         ? [item.projectId]
@@ -206,7 +227,7 @@ const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact }) => {
               <option value="design">design</option>
             </select>
             <button onClick={handlePromote} disabled={busy} style={styles.promoteButton}>
-              {busy ? '…' : 'promote to pipeline'}
+              {busy ? '…' : onStartPromote ? 'promote → confirm models' : 'promote to pipeline'}
             </button>
             <button onClick={handleCopy} disabled={busy} style={styles.copyButton}>
               copy
