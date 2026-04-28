@@ -20,6 +20,7 @@ import {
   JiraService,
   JiraSyncListener,
   StandbyScheduler,
+  PoChatService,
 } from './services';
 
 const projectPath = process.cwd();
@@ -102,8 +103,12 @@ async function main(): Promise<void> {
   const standbyScheduler = new StandbyScheduler(orchestraDir, projectPath, sessionManager, projectStore);
   console.log(`[Smooth Orchestra] Standby scheduler ready (enabled: ${standbyScheduler.getState().enabled})`);
 
-  // Start socket server (with auth, event logger, project store, Jira, and standby)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler);
+  // Initialize PO Chat service (project-scoped conversational agent)
+  const poChatService = new PoChatService(projectStore, orchestraDir);
+  console.log('[Smooth Orchestra] PO Chat service ready');
+
+  // Start socket server (with auth, event logger, project store, Jira, standby, and PO chat)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler, poChatService);
   await socketServer.start();
 
   console.log('[Smooth Orchestra] Server ready. Open http://localhost:5173 in your browser.');
@@ -114,12 +119,14 @@ async function main(): Promise<void> {
   // Graceful shutdown
   process.on('SIGINT', async () => {
     console.log('\n[Smooth Orchestra] Shutting down...');
+    poChatService.dispose();
     agentPool.killAll();
     await socketServer.stop();
     process.exit(0);
   });
 
   process.on('SIGTERM', async () => {
+    poChatService.dispose();
     agentPool.killAll();
     await socketServer.stop();
     process.exit(0);
