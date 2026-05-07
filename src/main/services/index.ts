@@ -16,3 +16,6 @@ export { JiraService } from './JiraService';
 export type { JiraConfig, JiraIssueInfo } from './JiraService';
 export { JiraSyncListener } from './JiraSyncListener';
 export { StandbyScheduler } from './StandbyScheduler';
+export { PoChatService } from './PoChatService';
+export { ChatAgentProcess } from './ChatAgentProcess';
+export type { ChunkCallback, ErrorCallback } from './ChatAgentProcess';

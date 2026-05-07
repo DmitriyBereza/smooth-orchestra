@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useStore } from '../store/sessionStore';
 import { useAuthStore } from '../store/authStore';
 import { useStandbyStore, BacklogItem, StandbyState } from '../store/standbyStore';
+import { usePoChatStore, PoChatMessage } from '../store/poChatStore';
 
 // In dev, Vite proxy forwards /socket.io to the backend.
 // Use the current page origin so it works through tunnels too.
@@ -179,6 +180,39 @@ export function useSocket() {
       addEvent(`Standby tick finished: ${data.role} (exit ${data.exitCode})`, 'system');
     });
 
+    // PO Chat events — filter by active project to avoid cross-project updates
+    s.on('po-chat:response', (data: { projectId: string; content: string; messageId: string; done: boolean }) => {
+      const activeId = usePoChatStore.getState().activeProjectId;
+      if (activeId && activeId !== data.projectId) return;
+      if (data.done) {
+        usePoChatStore.getState().finalizeStream(data.messageId);
+      } else {
+        usePoChatStore.getState().appendStreamChunk(data.content, data.messageId);
+      }
+    });
+
+    s.on('po-chat:busy', (data: { projectId: string }) => {
+      const activeId = usePoChatStore.getState().activeProjectId;
+      if (activeId && activeId !== data.projectId) return;
+      usePoChatStore.getState().setBusy();
+    });
+
+    s.on('po-chat:error', (data: { projectId: string; error: string }) => {
+      const activeId = usePoChatStore.getState().activeProjectId;
+      if (activeId && activeId !== data.projectId) return;
+      usePoChatStore.getState().setError(data.error);
+    });
+
+    s.on('po-chat:history', (data: { projectId: string; messages: PoChatMessage[] }) => {
+      usePoChatStore.getState().setHistory(data.projectId, data.messages);
+    });
+
+    s.on('po-chat:cleared', (data: { projectId: string }) => {
+      const activeId = usePoChatStore.getState().activeProjectId;
+      if (activeId && activeId !== data.projectId) return;
+      usePoChatStore.getState().reset();
+    });
+
     return () => {
       s.removeAllListeners();
       s.disconnect();
@@ -228,4 +262,24 @@ export function useSocketCommands() {
 
   return { createTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge };
 
+}
+
+/**
+ * Returns stable command functions for PO Chat.
+ * Accesses the module-level `socket` variable (same pattern as useSocketCommands).
+ */
+export function usePoChatCommands() {
+  const sendMessage = useCallback((projectId: string, message: string) => {
+    socket?.emit('command:po-chat-message', { projectId, message });
+  }, []);
+
+  const loadHistory = useCallback((projectId: string) => {
+    socket?.emit('command:po-chat-history', { projectId });
+  }, []);
+
+  const clearChat = useCallback((projectId: string) => {
+    socket?.emit('command:po-chat-clear', { projectId });
+  }, []);
+
+  return { sendMessage, loadHistory, clearChat };
 }

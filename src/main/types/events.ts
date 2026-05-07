@@ -1,6 +1,7 @@
 import { AgentMessage, AgentRole, AgentStatus } from './agent';
 import { PipelineStage, SessionState } from './session';
 import { BacklogItem, StandbyRole, StandbyState } from './standby';
+import { PoChatMessage } from './po-chat';
 
 export interface OrchestraEventMap {
   // Agent events
@@ -51,6 +52,12 @@ export interface OrchestraEventMap {
   'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;
   'command:approve-merge': (data: { sessionId: string }) => void;
   'command:reject-merge': (data: { sessionId: string; feedback: string }) => void;
+
+  // PO Chat events
+  'po-chat:response': (data: { projectId: string; content: string; messageId: string; done: boolean }) => void;
+  'po-chat:busy': (data: { projectId: string }) => void;
+  'po-chat:error': (data: { projectId: string; error: string }) => void;
+  'po-chat:cleared': (data: { projectId: string }) => void;
 
   // Standby (idle improvement loop) events
   'standby:state-changed': (data: { state: StandbyState }) => void;

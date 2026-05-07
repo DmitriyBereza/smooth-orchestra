@@ -15,6 +15,7 @@ import { ArtifactType, ARTIFACT_FILENAMES } from '../types/artifacts';
 import { PipelineStage } from '../types/session';
 import { JiraService, JiraConfig } from './JiraService';
 import { StandbyScheduler } from './StandbyScheduler';
+import { PoChatService } from './PoChatService';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -191,6 +192,7 @@ export class SocketServer {
     private artifactManager?: ArtifactManager,
     private jiraService?: JiraService,
     private standbyScheduler?: StandbyScheduler,
+    private poChatService?: PoChatService,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
@@ -521,6 +523,20 @@ export class SocketServer {
       this.io.emit('session:stage-continued', data);
     });
 
+    // PO Chat events (broadcast; po-chat:history is handled via direct socket.emit, not EventBus)
+    eventBus.on('po-chat:response', (data) => {
+      this.io.emit('po-chat:response', data);
+    });
+    eventBus.on('po-chat:busy', (data) => {
+      this.io.emit('po-chat:busy', data);
+    });
+    eventBus.on('po-chat:error', (data) => {
+      this.io.emit('po-chat:error', data);
+    });
+    eventBus.on('po-chat:cleared', (data) => {
+      this.io.emit('po-chat:cleared', data);
+    });
+
     // Standby events
     eventBus.on('standby:state-changed', (data) => {
       this.io.emit('standby:state-changed', data);
@@ -617,6 +633,24 @@ export class SocketServer {
 
       socket.on('command:reject-merge', (data: { sessionId: string; feedback: string }) => {
         eventBus.emit('command:reject-merge', data);
+      });
+
+      // PO Chat commands
+      socket.on('command:po-chat-message', (data: { projectId: string; message: string }) => {
+        this.poChatService?.handleMessage(data.projectId, data.message).catch((err) => {
+          console.error('[SocketServer] po-chat-message error:', err);
+        });
+      });
+
+      socket.on('command:po-chat-history', async (data: { projectId: string }) => {
+        const messages = await (this.poChatService?.getHistory(data.projectId) ?? Promise.resolve([]));
+        socket.emit('po-chat:history', { projectId: data.projectId, messages });
+      });
+
+      socket.on('command:po-chat-clear', (data: { projectId: string }) => {
+        this.poChatService?.clearChat(data.projectId).catch((err) => {
+          console.error('[SocketServer] po-chat-clear error:', err);
+        });
       });
 
       socket.on('disconnect', () => {
