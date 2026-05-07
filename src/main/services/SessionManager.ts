@@ -634,10 +634,14 @@ export class SessionManager {
       ? this.projectStore.findById(projectId)
       : undefined;
     const branch = this.currentSession.gitBranch ?? `orchestra/${this.currentSession.task.id}`;
+    const qaBaselineRegistryPath = projectId
+      ? path.join(this.orchestraDir, 'qa-baseline', `${projectId}.json`)
+      : undefined;
     const values = {
       branch,
       taskId: this.currentSession.task.id,
       title: this.currentSession.task.title,
+      qaBaselineRegistryPath,
     };
     const { manualQaContext, prContext, qaBaselineContext } = buildProjectPromptContexts(project, values);
     return {

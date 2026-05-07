@@ -252,8 +252,18 @@ export class StandbyScheduler {
       return;
     }
 
-    const role = STANDBY_ROLES[this.state.rotationIndex % STANDBY_ROLES.length];
+    let role = STANDBY_ROLES[this.state.rotationIndex % STANDBY_ROLES.length];
     const project = targets[this.state.projectRotationIndex % targets.length];
+
+    // baseline-fixer only makes sense when the project has a configured base branch
+    // (otherwise QA never records baseline failures and the registry is empty) — skip
+    // ahead to the next role to keep the rotation moving.
+    if (role === 'baseline-fixer' && !project.pr?.baseBranch) {
+      console.log(`[StandbyScheduler] baseline-fixer skipped for ${project.name} — no pr.baseBranch configured`);
+      this.state.rotationIndex = (this.state.rotationIndex + 1) % STANDBY_ROLES.length;
+      this.persistState();
+      role = STANDBY_ROLES[this.state.rotationIndex % STANDBY_ROLES.length];
+    }
 
     // Advance both rotations so over a few ticks every (role, project) combo gets coverage.
     this.state.rotationIndex = (this.state.rotationIndex + 1) % STANDBY_ROLES.length;
@@ -310,6 +320,10 @@ export class StandbyScheduler {
       taskId: lastTaskId,
     });
 
+    const baseBranch = project.pr?.baseBranch
+      ?? await new GitManager(project.path).getDefaultBranch().catch(() => 'main');
+    const qaBaselineRegistryPath = path.join(this.orchestraDir, 'qa-baseline', `${project.id}.json`);
+
     const promptTemplate = getStandbyPrompt(role);
     const systemPrompt = promptTemplate
       .replaceAll('{PROJECT_PATH}', project.path)
@@ -319,7 +333,9 @@ export class StandbyScheduler {
       .replaceAll('{OUTPUT_PATH}', outputPath)
       .replaceAll('{BACKLOG_PATH}', this.backlogPath)
       .replaceAll('{LAST_TASK_ID}', lastTaskId)
-      .replaceAll('{MANUAL_QA_CONTEXT}', manualQaContext);
+      .replaceAll('{MANUAL_QA_CONTEXT}', manualQaContext)
+      .replaceAll('{BASE_BRANCH}', baseBranch)
+      .replaceAll('{QA_BASELINE_REGISTRY_PATH}', qaBaselineRegistryPath);
 
     const taskPrompt = [
       `Standby tick — role: ${role}.`,
@@ -498,7 +514,8 @@ export class StandbyScheduler {
   // ─── Persistence helpers ──────────────────────────────────────────────────
 
   private ensureDirs(): void {
-    for (const dir of [this.standbyDir, this.memoryDir]) {
+    const qaBaselineDir = path.join(this.orchestraDir, 'qa-baseline');
+    for (const dir of [this.standbyDir, this.memoryDir, qaBaselineDir]) {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     }
   }

@@ -151,8 +151,40 @@ export function buildBaseBranchContext(baseBranch: string | undefined): string {
  * Returns an empty string when baseBranch is not configured (agent falls back
  * to the default behavior of rejecting any failure).
  */
-export function buildQaBaselineContext(baseBranch: string | undefined): string {
+export function buildQaBaselineContext(
+  baseBranch: string | undefined,
+  registryPath?: string,
+): string {
   if (!baseBranch) return '';
+
+  const registryLines = registryPath
+    ? [
+        '### Persistent baseline registry',
+        `Pre-existing failures are tracked at \`${registryPath}\` so the standby \`baseline-fixer\` role can pick them up later, decide if the test or the code is wrong, and auto-merge a fix.`,
+        '',
+        'When you confirm a failure is pre-existing on the base branch:',
+        '1. Read the registry file (it\'s a JSON array; create it as `[]` if missing).',
+        '2. Look for an entry with the same `testName` (or near-match `failureSignature`).',
+        '   - If found and `status` is `known` or `fixing`: update its `lastSeen` to now.',
+        '   - If found and `status` is `fixed` but it\'s failing again: set `status` back to `known`, update `lastSeen`, append a note that it regressed.',
+        '   - If not found: append a new entry with a UUID `id`, `status: "known"`, `firstSeen` and `lastSeen` set to now.',
+        '3. Write the file back as a pretty-printed JSON array. Each entry shape:',
+        '   ```json',
+        '   {',
+        '     "id": "<uuid>",',
+        '     "testName": "<file path::test name, or build step>",',
+        '     "failureSignature": "<short snippet from the assertion / error>",',
+        '     "location": "<best guess at the file at fault>",',
+        '     "status": "known",',
+        '     "firstSeen": "<ISO>",',
+        '     "lastSeen": "<ISO>",',
+        '     "note": "<optional free-form context>"',
+        '   }',
+        '   ```',
+        '4. Mention in `qa-report.md` which registry entries you touched (id + testName).',
+        '',
+      ]
+    : [];
 
   return [
     '## Pre-existing Failure Baseline',
@@ -170,6 +202,7 @@ export function buildQaBaselineContext(baseBranch: string | undefined): string {
     '- **Fails on feature branch only** → regression introduced by this PR. Set verdict to **FAIL / REJECTED**.',
     '- Apply the same check to build failures before rejecting.',
     '',
+    ...registryLines,
   ].join('\n');
 }
 
@@ -178,11 +211,11 @@ export function buildQaBaselineContext(baseBranch: string | undefined): string {
  */
 export function buildProjectPromptContexts(
   project: ProjectRecord | undefined,
-  values: { branch?: string; taskId?: string; title?: string },
+  values: { branch?: string; taskId?: string; title?: string; qaBaselineRegistryPath?: string },
 ): { manualQaContext: string; prContext: string; qaBaselineContext: string } {
   return {
     manualQaContext: buildManualQaContext(project?.manualQa, values),
     prContext: buildPrConfigContext(project?.pr, values),
-    qaBaselineContext: buildQaBaselineContext(project?.pr?.baseBranch),
+    qaBaselineContext: buildQaBaselineContext(project?.pr?.baseBranch, values.qaBaselineRegistryPath),
   };
 }
