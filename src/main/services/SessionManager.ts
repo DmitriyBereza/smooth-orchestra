@@ -441,7 +441,7 @@ export class SessionManager {
     }
 
     // Capture session details before transitioning (currentSession stays set but stage changes)
-    const featureBranch = this.currentSession.gitBranch;
+    const featureBranch = this.currentSession.gitBranch ?? `orchestra/${this.currentSession.task.id}`;
     const projectPath = this.currentSession.projectPath ?? this.projectPath;
     const project = this.currentSession.projectId && this.projectStore
       ? this.projectStore.findById(this.currentSession.projectId)
