@@ -1,18 +1,12 @@
 node_modules/
 dist/
 out/
-.orchestra/tasks/*/
-.orchestra/locks/*.json
-.orchestra/logs/*.log
-.orchestra/users.json
+.orchestra/
+!.orchestra/templates/
+!.orchestra/templates/**
 *.log
 .DS_Store
 .claude/worktrees/
-
-# Sensitive config — never commit these
-.orchestra/jira.json
-.orchestra/session.json
-.orchestra/projects.json
 
 # Environment files
 .env

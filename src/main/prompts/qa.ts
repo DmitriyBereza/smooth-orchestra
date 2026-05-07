@@ -32,6 +32,8 @@ The developer should have documented the exact command in the **"How to Run Test
 - Record the full build output and the failure reason in the "Build Check" section of \`qa-report.md\`
 - Skip manual verification — there's nothing valid to click through
 
+{QA_BASELINE_CONTEXT}
+
 {MANUAL_QA_CONTEXT}
 
 ## Output: qa-report.md

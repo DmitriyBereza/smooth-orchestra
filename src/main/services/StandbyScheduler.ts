@@ -12,6 +12,7 @@ import { ProjectRecord } from '../types/project';
 import { eventBus } from './EventBus';
 import { SessionManager } from './SessionManager';
 import { ProjectStore } from './ProjectStore';
+import { GitManager } from './GitManager';
 import { getStandbyPrompt } from '../prompts/standby';
 import { buildManualQaContext } from './PromptContextBuilder';
 
@@ -275,7 +276,24 @@ export class StandbyScheduler {
 
   // ─── Agent spawning ───────────────────────────────────────────────────────
 
+  /**
+   * Sync the project's target branch (pr.baseBranch or repo default) before analysis
+   * so the standby agent always scans the latest committed code.
+   */
+  private async syncTargetBranch(project: ProjectRecord): Promise<void> {
+    const git = new GitManager(project.path);
+    const targetBranch = project.pr?.baseBranch ?? await git.getDefaultBranch();
+    try {
+      await git.pullBranch(targetBranch);
+      console.log(`[StandbyScheduler] synced ${project.name} to ${targetBranch}`);
+    } catch (err: any) {
+      console.warn(`[StandbyScheduler] branch sync failed for ${project.name}/${targetBranch} — proceeding with current state: ${err.message}`);
+    }
+  }
+
   private async spawnStandbyAgent(role: StandbyRole, project: ProjectRecord): Promise<void> {
+    await this.syncTargetBranch(project);
+
     const today = new Date().toISOString().slice(0, 10);
     const dayDir = path.join(this.standbyDir, today);
     if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true });

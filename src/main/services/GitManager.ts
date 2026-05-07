@@ -159,6 +159,47 @@ export class GitManager {
   }
 
   /**
+   * Fetch origin, checkout the given branch, and fast-forward pull.
+   * Stashes local changes first if the working tree is dirty; re-applies after.
+   * Logs a warning and continues if the pull fails (e.g. no remote).
+   */
+  async pullBranch(branch: string): Promise<void> {
+    const dirty = !(await this.isClean());
+    if (dirty) await this.git('stash', 'push', '-m', 'orchestra-pre-sync-stash').catch(() => {});
+    try {
+      await this.git('fetch', 'origin');
+      await this.git('checkout', branch);
+      await this.git('pull', '--ff-only', 'origin', branch);
+    } finally {
+      if (dirty) await this.git('stash', 'pop').catch(() => {});
+    }
+  }
+
+  /**
+   * Merge a GitHub PR for featureBranch into baseBranch using the gh CLI.
+   * Uses squash-merge and deletes the remote branch after merge.
+   */
+  async mergeGithubPR(featureBranch: string): Promise<void> {
+    await execFileAsync(
+      'gh',
+      ['pr', 'merge', featureBranch, '--squash', '--delete-branch', '--yes'],
+      { cwd: this.projectPath, maxBuffer: 2 * 1024 * 1024 },
+    );
+  }
+
+  /**
+   * Merge featureBranch into targetBranch locally, push targetBranch to origin,
+   * and delete the local feature branch.
+   * Used when no GitHub PR exists (project has no pr.enabled config).
+   */
+  async mergeLocalAndPush(featureBranch: string, targetBranch: string): Promise<void> {
+    await this.switchBranch(targetBranch);
+    await this.git('merge', featureBranch, '--no-ff', '-m', `Merge ${featureBranch} into ${targetBranch}`);
+    await this.git('push', 'origin', targetBranch);
+    await this.git('branch', '-D', featureBranch).catch(() => {});
+  }
+
+  /**
    * Show diff summary against a branch (defaults to HEAD).
    */
   async getDiffStat(branch?: string): Promise<string> {

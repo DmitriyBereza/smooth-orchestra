@@ -429,12 +429,23 @@ export class SessionManager {
   }
 
   /**
-   * User approves the merge — finalize the task.
+   * User approves the merge — finalize the task and auto-merge the branch.
+   *
+   * If the project has pr.enabled, merges the open GitHub PR via `gh pr merge`.
+   * Otherwise merges the local feature branch into the target branch and pushes.
+   * Merge errors are non-fatal: the task is already marked done.
    */
   async approveMerge(): Promise<void> {
     if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_merge_approval') {
       throw new Error('No session awaiting merge approval');
     }
+
+    // Capture session details before transitioning (currentSession stays set but stage changes)
+    const featureBranch = this.currentSession.gitBranch;
+    const projectPath = this.currentSession.projectPath ?? this.projectPath;
+    const project = this.currentSession.projectId && this.projectStore
+      ? this.projectStore.findById(this.currentSession.projectId)
+      : undefined;
 
     this.currentSession.completedAt = new Date().toISOString();
     this.persistSession();
@@ -444,6 +455,34 @@ export class SessionManager {
       sessionId: this.currentSession.id,
       taskId: this.currentSession.task.id,
     });
+
+    if (featureBranch) {
+      this.performAutoMerge(featureBranch, projectPath, project).catch((err: any) => {
+        console.error('[SessionManager] auto-merge failed (task is done, branch may need manual merge):', err.message);
+      });
+    }
+  }
+
+  /**
+   * Merge the feature branch into the target branch after the user approves.
+   * Runs after the session is already marked done, so errors are non-blocking.
+   */
+  private async performAutoMerge(
+    featureBranch: string,
+    projectPath: string,
+    project: import('../types/project').ProjectRecord | undefined,
+  ): Promise<void> {
+    const git = new GitManager(projectPath);
+    const targetBranch = project?.pr?.baseBranch ?? await git.getDefaultBranch();
+
+    if (project?.pr?.enabled) {
+      console.log(`[SessionManager] merging PR for branch ${featureBranch} via gh CLI`);
+      await git.mergeGithubPR(featureBranch);
+    } else {
+      console.log(`[SessionManager] merging ${featureBranch} → ${targetBranch} locally`);
+      await git.mergeLocalAndPush(featureBranch, targetBranch);
+    }
+    console.log(`[SessionManager] auto-merge of ${featureBranch} completed`);
   }
 
   /**
@@ -600,10 +639,11 @@ export class SessionManager {
       taskId: this.currentSession.task.id,
       title: this.currentSession.task.title,
     };
-    const { manualQaContext, prContext } = buildProjectPromptContexts(project, values);
+    const { manualQaContext, prContext, qaBaselineContext } = buildProjectPromptContexts(project, values);
     return {
       manualQaContext: role === 'qa' ? manualQaContext : '',
       prContext: role === 'developer' ? prContext : '',
+      qaBaselineContext: role === 'qa' ? qaBaselineContext : '',
     };
   }
 
