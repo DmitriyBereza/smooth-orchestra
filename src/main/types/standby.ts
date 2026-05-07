@@ -10,7 +10,8 @@
 export type StandbyRole =
   | 'feature-researcher'
   | 'tech-debt-scout'
-  | 'regression-qa';
+  | 'regression-qa'
+  | 'baseline-fixer';
 
 export type BacklogStatus =
   | 'draft'        // sitting in the backlog awaiting user action
@@ -59,4 +60,5 @@ export const STANDBY_ROLES: StandbyRole[] = [
   'feature-researcher',
   'tech-debt-scout',
   'regression-qa',
+  'baseline-fixer',
 ];
