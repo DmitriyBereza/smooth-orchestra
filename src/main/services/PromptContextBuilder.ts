@@ -142,14 +142,47 @@ export function buildBaseBranchContext(baseBranch: string | undefined): string {
 }
 
 /**
- * Convenience: build both contexts from a project record.
+ * Build the markdown block injected at {QA_BASELINE_CONTEXT} in the QA prompt.
+ *
+ * Instructs the QA agent to baseline test/build failures against the configured
+ * target branch before deciding to reject. Without this, the agent rejects for
+ * pre-existing failures that were never introduced by the current PR.
+ *
+ * Returns an empty string when baseBranch is not configured (agent falls back
+ * to the default behavior of rejecting any failure).
+ */
+export function buildQaBaselineContext(baseBranch: string | undefined): string {
+  if (!baseBranch) return '';
+
+  return [
+    '## Pre-existing Failure Baseline',
+    '',
+    `This project's target branch is \`${baseBranch}\` — **not** \`main\`. Before rejecting for a test failure or build error, you must confirm it was introduced by this PR and does not already exist on \`${baseBranch}\`.`,
+    '',
+    '### How to baseline a failure',
+    '1. Note which test(s) / build step failed on the feature branch.',
+    `2. Run: \`git stash push -m "qa-baseline-stash" && git checkout ${baseBranch} && git pull --ff-only origin ${baseBranch}\``,
+    '3. Re-run the exact same failing command on the base branch.',
+    `4. Restore: \`git checkout - && git stash pop\``,
+    '',
+    '### Decision rule',
+    `- **Fails on BOTH branches** → pre-existing on \`${baseBranch}\`. Record it as *"pre-existing failure on base branch — not introduced by this PR"* and do **not** reject for it.`,
+    '- **Fails on feature branch only** → regression introduced by this PR. Set verdict to **FAIL / REJECTED**.',
+    '- Apply the same check to build failures before rejecting.',
+    '',
+  ].join('\n');
+}
+
+/**
+ * Convenience: build all per-project prompt contexts from a project record.
  */
 export function buildProjectPromptContexts(
   project: ProjectRecord | undefined,
   values: { branch?: string; taskId?: string; title?: string },
-): { manualQaContext: string; prContext: string } {
+): { manualQaContext: string; prContext: string; qaBaselineContext: string } {
   return {
     manualQaContext: buildManualQaContext(project?.manualQa, values),
     prContext: buildPrConfigContext(project?.pr, values),
+    qaBaselineContext: buildQaBaselineContext(project?.pr?.baseBranch),
   };
 }

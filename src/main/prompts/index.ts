@@ -29,6 +29,8 @@ export interface PromptExtras {
   manualQaContext?: string;
   /** Auto-PR block injected at {PR_CONFIG_CONTEXT}. Empty string when auto-PR is off. */
   prContext?: string;
+  /** Baseline-check instructions injected at {QA_BASELINE_CONTEXT}. Empty when no baseBranch. */
+  qaBaselineContext?: string;
 }
 
 /**
@@ -85,6 +87,7 @@ export function buildSystemPrompt(
   // Replace context placeholders (empty string when not provided — placeholders silently disappear)
   combined = combined.replaceAll('{MANUAL_QA_CONTEXT}', extras.manualQaContext ?? '');
   combined = combined.replaceAll('{PR_CONFIG_CONTEXT}', extras.prContext ?? '');
+  combined = combined.replaceAll('{QA_BASELINE_CONTEXT}', extras.qaBaselineContext ?? '');
 
   return combined;
 }
