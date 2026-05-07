@@ -340,15 +340,84 @@ export class SessionManager {
         if (this.currentSession?.currentStage === 'scheduled') {
           console.log(`[SessionManager] Scheduled time reached — starting pipeline`);
           this.currentSession.scheduledAt = null;
-          await this.transitionTo('po');
+          await this.syncToBaseBranchThenStartPO(primary.id);
         }
       }, delayMs);
     } else {
       // Start the pipeline immediately
-      await this.transitionTo('po');
+      await this.syncToBaseBranchThenStartPO(primary.id);
     }
 
     return this.currentSession;
+  }
+
+  /**
+   * Sync the primary project to its configured target branch before spawning the PO.
+   *
+   * Flow:
+   *  1. Look up pr.baseBranch for the given projectId — skip if absent.
+   *  2. Emit git:sync-started.
+   *  3. getCurrentBranch(). If already on target → skip switchBranch.
+   *  4. pullBranch(target) to fast-forward.
+   *  5. Update session.gitBranch to reflect actual branch.
+   *  6. Emit git:sync-completed.
+   *  7. On any error → log, mark session failed, emit session:failed — do NOT spawn PO.
+   */
+  private async syncToBaseBranchThenStartPO(projectId: string): Promise<void> {
+    if (!this.currentSession) return;
+
+    // Resolve pr.baseBranch from project config
+    const project = this.projectStore?.findById(projectId);
+    const baseBranch = project?.pr?.baseBranch;
+
+    // AC5: no baseBranch configured → skip sync
+    if (!baseBranch) {
+      await this.transitionTo('po');
+      return;
+    }
+
+    const taskId = this.currentSession.task.id;
+
+    eventBus.emit('git:sync-started', { taskId, targetBranch: baseBranch });
+    console.log(`[SessionManager] Syncing project to base branch: ${baseBranch}`);
+
+    try {
+      const currentBranch = await this.gitManager.getCurrentBranch();
+
+      // AC3: switch only when needed
+      if (currentBranch !== baseBranch) {
+        console.log(`[SessionManager] Switching branch: ${currentBranch} → ${baseBranch}`);
+        await this.gitManager.switchBranch(baseBranch);
+      }
+
+      // AC4: pull / fast-forward
+      await this.gitManager.pullBranch(baseBranch);
+
+      // AC8: reflect actual branch in session
+      this.currentSession.gitBranch = baseBranch;
+      this.persistSession();
+
+      eventBus.emit('git:sync-completed', { taskId, branch: baseBranch });
+      console.log(`[SessionManager] Branch sync complete — on ${baseBranch}`);
+
+      await this.transitionTo('po');
+    } catch (err: any) {
+      // AC6: surface error, do NOT spawn PO
+      const message = `Branch sync failed: ${err?.message ?? String(err)}`;
+      console.error(`[SessionManager] ${message}`);
+
+      this.currentSession.error = message;
+      this.currentSession.currentStage = 'failed';
+      this.currentSession.completedAt = new Date().toISOString();
+      this.persistSession();
+      this.archiveSession();
+
+      eventBus.emit('session:failed', {
+        sessionId: this.currentSession.id,
+        taskId,
+        error: message,
+      });
+    }
   }
 
   /**
