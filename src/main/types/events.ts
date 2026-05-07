@@ -33,6 +33,8 @@ export interface OrchestraEventMap {
   'git:merge-started': (data: { source: string; target: string; taskId: string }) => void;
   'git:merge-completed': (data: { source: string; target: string; taskId: string }) => void;
   'git:merge-conflict': (data: { source: string; target: string; taskId: string; conflicts: string[] }) => void;
+  'git:sync-started': (data: { taskId: string; targetBranch: string }) => void;
+  'git:sync-completed': (data: { taskId: string; branch: string }) => void;
 
   // Lock events
   'lock:acquired': (data: { filepath: string; holder: string; taskId: string }) => void;
