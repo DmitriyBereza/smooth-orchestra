@@ -509,8 +509,11 @@ export class SessionManager {
       throw new Error('No session awaiting merge approval');
     }
 
-    // Capture session details before transitioning (currentSession stays set but stage changes)
-    const featureBranch = this.currentSession.gitBranch ?? `orchestra/${this.currentSession.task.id}`;
+    // Capture session details before transitioning (currentSession stays set but stage changes).
+    // gitBranch tracks whatever branch git is currently on — after baseBranch sync it holds the
+    // base (e.g. `main`), not the feature branch. Agents always create `orchestra/{taskId}`
+    // (see prompts/index.ts), so derive the feature branch from the task id directly.
+    const featureBranch = `orchestra/${this.currentSession.task.id}`;
     const projectPath = this.currentSession.projectPath ?? this.projectPath;
     const project = this.currentSession.projectId && this.projectStore
       ? this.projectStore.findById(this.currentSession.projectId)
@@ -702,7 +705,7 @@ export class SessionManager {
     const project = projectId && this.projectStore
       ? this.projectStore.findById(projectId)
       : undefined;
-    const branch = this.currentSession.gitBranch ?? `orchestra/${this.currentSession.task.id}`;
+    const branch = `orchestra/${this.currentSession.task.id}`;
     const qaBaselineRegistryPath = projectId
       ? path.join(this.orchestraDir, 'qa-baseline', `${projectId}.json`)
       : undefined;
