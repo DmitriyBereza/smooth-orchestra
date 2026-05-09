@@ -649,6 +649,7 @@ export class SessionManager {
       const tmpPath = `${this.historyFilePath}.tmp`;
       fs.writeFileSync(tmpPath, JSON.stringify(trimmed, null, 2), 'utf-8');
       fs.renameSync(tmpPath, this.historyFilePath);
+      eventBus.emit('session:history-changed', { history: trimmed });
     } catch (err) {
       console.error('[SessionManager] Failed to archive session:', err);
     }
