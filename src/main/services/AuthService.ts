@@ -109,15 +109,7 @@ export class AuthService {
    * @throws {LoginError} code='INVALID_CREDENTIALS' — if credentials are wrong
    */
   async login(email: string, password: string): Promise<string> {
-    const user = this.store.findByEmail(email);
-
-    // Always run bcrypt.compare — even on a missing user — for timing safety.
-    const hashToCheck = user?.passwordHash ?? DUMMY_HASH;
-    const isValid = await bcrypt.compare(password, hashToCheck);
-
-    if (!user || !isValid) {
-      throw new LoginError('INVALID_CREDENTIALS', 'Invalid credentials');
-    }
+    const user = await this.verifyCredentials(email, password);
 
     const token = jwt.sign(
       { sub: user.id, email: user.email },
@@ -126,6 +118,36 @@ export class AuthService {
     );
 
     return token;
+  }
+
+  // ─── loginMobile() ─────────────────────────────────────────────────────────
+
+  /**
+   * Authenticates a user for mobile access and returns a long-lived JWT (30 days).
+   *
+   * Returns a richer response object than login() to give mobile clients the
+   * expiry timestamp and user ID they need to manage their Keychain token.
+   *
+   * Uses the same bcrypt verification path as login() for timing safety.
+   *
+   * @throws {LoginError} code='INVALID_CREDENTIALS' — if credentials are wrong
+   */
+  async loginMobile(email: string, password: string): Promise<{
+    token: string;
+    expiresAt: string;
+    userId: string;
+  }> {
+    const user = await this.verifyCredentials(email, password);
+
+    const token = jwt.sign(
+      { sub: user.id, email: user.email },
+      this.jwtSecret,
+      { expiresIn: '30d' },
+    );
+
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    return { token, expiresAt, userId: user.id };
   }
 
   // ─── verifyToken() ─────────────────────────────────────────────────────────
@@ -140,6 +162,28 @@ export class AuthService {
   }
 
   // ─── private helpers ───────────────────────────────────────────────────────
+
+  /**
+   * Verifies email + password credentials and returns the matching UserRecord.
+   *
+   * Always runs bcrypt.compare — even when the user is not found — to ensure
+   * constant response time and prevent email enumeration.
+   *
+   * @throws {LoginError} code='INVALID_CREDENTIALS' — if credentials are wrong
+   */
+  private async verifyCredentials(email: string, password: string) {
+    const user = this.store.findByEmail(email);
+
+    // Always run bcrypt.compare — even on a missing user — for timing safety.
+    const hashToCheck = user?.passwordHash ?? DUMMY_HASH;
+    const isValid = await bcrypt.compare(password, hashToCheck);
+
+    if (!user || !isValid) {
+      throw new LoginError('INVALID_CREDENTIALS', 'Invalid credentials');
+    }
+
+    return user;
+  }
 
   private validateSignupInput(email: string, password: string): void {
     if (!email || !EMAIL_RE.test(email)) {

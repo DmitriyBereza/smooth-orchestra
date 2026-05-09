@@ -117,6 +117,26 @@ Smooth Orchestra can sync task status and post comments to Jira issues automatic
 
 > **Security note:** `.orchestra/jira.json` is listed in `.gitignore` and will never be committed. Keep your API token out of any files that are tracked by git.
 
+## Mobile API
+
+A companion iOS app for Smooth Orchestra is in development. Phase 1 adds three backend endpoints that the mobile app will consume:
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `POST /api/mobile/auth/login` | None | Authenticate with `{username, password}`; returns a **30-day JWT** plus `{token, expiresAt, userId}`. |
+| `POST /api/mobile/devices/register` | Bearer token | Register a device for push notifications. Body: `{expoPushToken, deviceId, platform, appVersion}`. Re-registering with the same `deviceId` updates in place. |
+| `DELETE /api/mobile/devices/:deviceId` | Bearer token | Unregister a device. Only the owning user can delete their own device. |
+
+Device registrations are stored in `.orchestra/devices.json` (same atomic-write pattern as users and projects).
+
+### MOBILE_PUSH_ENABLED
+
+| Variable | Default | Description |
+|---|---|---|
+| `MOBILE_PUSH_ENABLED` | `false` | When `true`, enables push notification dispatch to registered mobile devices via the Expo Push API. Device registration works regardless of this flag — tokens are stored; the flag only controls whether push notifications are actually sent (Phase 4 feature). |
+
+> **Recommended**: Set a stable `JWT_SECRET` in your `.env` file if you use the mobile app. Without it, the server generates an ephemeral secret on each restart, which invalidates all 30-day mobile tokens immediately.
+
 ## Known Limitations
 
 - **Claude Code CLI required**: Smooth Orchestra is not provider-agnostic. It spawns `claude` CLI processes. Support for other AI providers is a future goal.

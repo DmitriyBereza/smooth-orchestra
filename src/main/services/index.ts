@@ -19,3 +19,4 @@ export { StandbyScheduler } from './StandbyScheduler';
 export { PoChatService } from './PoChatService';
 export { ChatAgentProcess } from './ChatAgentProcess';
 export type { ChunkCallback, ErrorCallback } from './ChatAgentProcess';
+export { DeviceStore } from './DeviceStore';

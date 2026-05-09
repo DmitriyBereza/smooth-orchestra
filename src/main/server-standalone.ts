@@ -21,6 +21,7 @@ import {
   JiraSyncListener,
   StandbyScheduler,
   PoChatService,
+  DeviceStore,
 } from './services';
 
 const projectPath = process.cwd();
@@ -72,6 +73,10 @@ async function main(): Promise<void> {
   const projectStorePath = path.join(orchestraDir, 'projects.json');
   const projectStore = new ProjectStore(projectStorePath);
 
+  // Initialize device store (for mobile push token registration)
+  const deviceStorePath = path.join(orchestraDir, 'devices.json');
+  const deviceStore = new DeviceStore(deviceStorePath);
+
   const sessionManager = new SessionManager(
     agentPool,
     artifactManager,
@@ -107,13 +112,14 @@ async function main(): Promise<void> {
   const poChatService = new PoChatService(projectStore, orchestraDir);
   console.log('[Smooth Orchestra] PO Chat service ready');
 
-  // Start socket server (with auth, event logger, project store, Jira, standby, and PO chat)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler, poChatService);
+  // Start socket server (with auth, event logger, project store, Jira, standby, PO chat, and device store)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler, poChatService, deviceStore);
   await socketServer.start();
 
   console.log('[Smooth Orchestra] Server ready. Open http://localhost:5173 in your browser.');
   console.log('[Smooth Orchestra] Socket.io listening on port 3333');
   console.log('[Smooth Orchestra] Auth endpoints available at /auth/signup and /auth/login');
+  console.log('[Smooth Orchestra] Mobile API endpoints available at /api/mobile');
   console.log(`[Smooth Orchestra] User store: ${userStorePath}`);
 
   // Graceful shutdown
