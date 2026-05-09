@@ -52,9 +52,8 @@ describe('PipelineRegistry', () => {
       expect(config.defaultPipeline).toContain('developer');
     });
 
-    it('should have tech-researcher as optional stage', () => {
-      expect(config.allStages).toContain('tech-researcher');
-      // Not in default (optional)
+    it('should not have tech-researcher as a stage (removed)', () => {
+      expect(config.allStages).not.toContain('tech-researcher');
       expect(config.defaultPipeline).not.toContain('tech-researcher');
     });
 
@@ -344,10 +343,9 @@ describe('PipelineRegistry', () => {
       expect(prompt).toContain('research.md');
     });
 
-    it('tech-researcher prompt should mention research.md output', () => {
+    it('development pipeline no longer has tech-researcher role prompt', () => {
       const config = getPipelineConfig('development');
-      const prompt = config.rolePrompts['tech-researcher'];
-      expect(prompt).toContain('research.md');
+      expect(config.rolePrompts['tech-researcher']).toBeUndefined();
     });
 
     it('researcher roles should write research artifact first in their pipeline', () => {
@@ -361,9 +359,9 @@ describe('PipelineRegistry', () => {
     });
 
     it('researcher prompts should mention standard research.md sections', () => {
-      const configs: PipelineType[] = ['development', 'marketing', 'design'];
-      const researcherRoles: Record<PipelineType, string> = {
-        development: 'tech-researcher',
+      // Only marketing and design pipelines have researcher roles now
+      const configs: PipelineType[] = ['marketing', 'design'];
+      const researcherRoles: Record<string, string> = {
         marketing: 'marketing-researcher',
         design: 'design-researcher',
       };

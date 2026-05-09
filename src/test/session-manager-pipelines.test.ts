@@ -77,10 +77,10 @@ describe('parsePipelineArtifact', () => {
       expect(result).toContain('developer');
     });
 
-    it('should include tech-researcher if specified', () => {
+    it('should ignore tech-researcher (removed from pipeline)', () => {
       const content = `# Pipeline\n## Stages\n- tech-researcher\n- architect\n- developer`;
       const result = parsePipelineArtifact(content, 'development');
-      expect(result).toContain('tech-researcher');
+      expect(result).not.toContain('tech-researcher');
       expect(result).toContain('architect');
       expect(result).toContain('developer');
     });

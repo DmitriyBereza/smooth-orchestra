@@ -182,7 +182,9 @@ export class GitManager {
   async mergeGithubPR(featureBranch: string): Promise<void> {
     await execFileAsync(
       'gh',
-      ['pr', 'merge', featureBranch, '--squash', '--delete-branch', '--yes'],
+      // `gh pr merge` does not have a `--yes` flag; passing one args-out the call.
+      // Specifying a merge method (`--squash`) is what suppresses the interactive prompt.
+      ['pr', 'merge', featureBranch, '--squash', '--delete-branch'],
       { cwd: this.projectPath, maxBuffer: 2 * 1024 * 1024 },
     );
   }

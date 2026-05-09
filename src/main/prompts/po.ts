@@ -88,9 +88,8 @@ const DEV_COMPLEXITY_GUIDE = `Choose stages from this list based on complexity:
 - **simple** (small isolated change, obvious fix): \`developer\`, \`qa\`
 - **moderate** (feature with some logic, multi-file change): \`developer\`, \`tl-code-review\`, \`qa\`
 - **complex** (new feature, architectural change, multi-component): \`architect\`, \`tech-lead\`, \`developer\`, \`tl-code-review\`, \`qa\`
-- **research-heavy** (high uncertainty, new technology, feasibility questions): \`tech-researcher\`, \`architect\`, \`tech-lead\`, \`developer\`, \`tl-code-review\`, \`qa\`
 
-Valid stages for the development pipeline: tech-researcher, architect, tech-lead, developer, tl-code-review, qa`;
+Valid stages for the development pipeline: architect, tech-lead, developer, tl-code-review, qa`;
 
 // Marketing pipeline additions
 const MARKETING_STORY_TEMPLATE = `## Output: story.md

@@ -16,7 +16,7 @@ function useIsMobile() {
 }
 
 interface NewTaskFormProps {
-  onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean, pipelineType?: PipelineType) => void;
+  onSubmit: (title: string, description: string, scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean, pipelineType?: PipelineType, autoApproveSpec?: boolean) => void;
   disabled?: boolean;
   initialTitle?: string;
   initialDescription?: string;
@@ -64,6 +64,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   const [description, setDescription] = useState(initialDescription);
   const [jiraIssueKey, setJiraIssueKey] = useState(initialJiraKey ?? '');
   const [createJiraIssue, setCreateJiraIssue] = useState(false);
+  const [autoApproveSpec, setAutoApproveSpec] = useState(false);
   const [models, setModels] = useState<Record<string, string>>({});
   const [showModels, setShowModels] = useState(false);
   const [scheduleMode, setScheduleMode] = useState<'now' | 'delay' | 'custom'>('now');
@@ -147,6 +148,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
       jiraIssueKey.trim() || undefined,
       createJiraIssue && !jiraIssueKey.trim(),
       pipelineType,
+      autoApproveSpec || undefined,
     );
     setTitle('');
     setDescription('');
@@ -156,6 +158,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     setCustomDatetime('');
     setJiraIssueKey('');
     setCreateJiraIssue(false);
+    setAutoApproveSpec(false);
   };
 
   const scheduleLabel = (() => {
@@ -397,6 +400,18 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
           )}
         </div>
       )}
+
+      {/* Auto-approve spec */}
+      <label style={styles.jiraCheckbox}>
+        <input
+          type="checkbox"
+          checked={autoApproveSpec}
+          onChange={(e) => setAutoApproveSpec(e.target.checked)}
+          disabled={disabled}
+          style={{ marginRight: 6 }}
+        />
+        <span style={styles.jiraCheckboxLabel}>auto-approve spec</span>
+      </label>
 
       <button
         type="submit"

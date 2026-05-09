@@ -79,6 +79,13 @@ export const TaskHistoryCard: React.FC<TaskHistoryCardProps> = ({ session }) => 
             </div>
           )}
 
+          {session.mergeSkipped && (
+            <div style={styles.detailRow}>
+              <span style={styles.detailLabel}>merge:</span>
+              <span style={{ ...styles.detailValue, color: 'var(--state-warning)' }}>skipped (PR open)</span>
+            </div>
+          )}
+
           {session.jiraIssueKey && (
             <div style={styles.detailRow}>
               <span style={styles.detailLabel}>jira:</span>

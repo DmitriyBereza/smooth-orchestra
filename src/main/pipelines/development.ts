@@ -4,16 +4,15 @@ import { ARCHITECT_PROMPT } from '../prompts/architect';
 import { TECH_LEAD_PROMPT, TECH_LEAD_CODE_REVIEW_PROMPT } from '../prompts/tech-lead';
 import { DEVELOPER_PROMPT } from '../prompts/developer';
 import { QA_PROMPT } from '../prompts/qa';
-import { TECH_RESEARCHER_PROMPT } from '../prompts/tech-researcher';
+
 
 const DEVELOPMENT_COMPLEXITY_GUIDE = `Choose stages from this list based on complexity:
 - **trivial** (text/copy change, config tweak, rename): \`developer\`
 - **simple** (small isolated change, obvious fix): \`developer\`, \`qa\`
 - **moderate** (feature with some logic, multi-file change): \`developer\`, \`tl-code-review\`, \`qa\`
 - **complex** (new feature, architectural change, multi-component): \`architect\`, \`tech-lead\`, \`developer\`, \`tl-code-review\`, \`qa\`
-- **research-heavy** (high uncertainty, new technology, feasibility questions): \`tech-researcher\`, \`architect\`, \`tech-lead\`, \`developer\`, \`tl-code-review\`, \`qa\`
 
-Valid stages for this pipeline: tech-researcher, architect, tech-lead, developer, tl-code-review, qa`;
+Valid stages for this pipeline: architect, tech-lead, developer, tl-code-review, qa`;
 
 const DEVELOPMENT_STORY_TEMPLATE = `## Output: story.md
 Write to the file \`{ARTIFACTS_DIR}/story.md\` with this structure:
@@ -48,12 +47,11 @@ export const DEVELOPMENT_PIPELINE_CONFIG: PipelineTypeConfig = {
   displayName: 'Development',
   description: 'Software engineering pipeline with architect, tech lead, developer, and QA roles',
 
-  allStages: ['tech-researcher', 'architect', 'tech-lead', 'developer', 'tl-code-review', 'qa'],
+  allStages: ['architect', 'tech-lead', 'developer', 'tl-code-review', 'qa'],
   defaultPipeline: ['architect', 'tech-lead', 'developer', 'tl-code-review', 'qa'],
   requiredStage: 'developer',
 
   stageToRole: {
-    'tech-researcher': 'tech-researcher',
     architect: 'architect',
     'tech-lead': 'tech-lead',
     developer: 'developer',
@@ -62,10 +60,6 @@ export const DEVELOPMENT_PIPELINE_CONFIG: PipelineTypeConfig = {
   },
 
   stageArtifacts: {
-    'tech-researcher': {
-      writes: ['research'],
-      reads: ['story'],
-    },
     architect: {
       writes: ['design', 'dev-tasks'],
       reads: ['story', 'research'],
@@ -104,7 +98,7 @@ export const DEVELOPMENT_PIPELINE_CONFIG: PipelineTypeConfig = {
 
   rolePrompts: {
     po: PO_PROMPT,
-    'tech-researcher': TECH_RESEARCHER_PROMPT,
+
     architect: ARCHITECT_PROMPT,
     'tech-lead': TECH_LEAD_PROMPT,
     developer: DEVELOPER_PROMPT,

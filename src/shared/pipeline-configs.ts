@@ -46,7 +46,6 @@ export const SHARED_PIPELINE_CONFIGS: Record<PipelineType, SharedPipelineConfig>
     displayName: 'Development',
     description: 'Software engineering pipeline with architect, tech lead, developer, and QA roles',
     allStages: [
-      { stage: 'tech-researcher', label: 'Tech Researcher', description: 'Technology research & feasibility', color: '#06B6D4' },
       { stage: 'architect', label: 'Architect', description: 'Design doc & task breakdown', color: '#8B5CF6' },
       { stage: 'tech-lead', label: 'Tech Lead', description: 'Design review & approval', color: '#F97316' },
       { stage: 'developer', label: 'Developer', description: 'Implementation (always required)', color: '#22C55E' },
@@ -58,7 +57,6 @@ export const SHARED_PIPELINE_CONFIGS: Record<PipelineType, SharedPipelineConfig>
     supportsParallelExecution: true,
     modelSelectorRoles: [
       { role: 'po', label: 'PO', color: '#3B82F6' },
-      { role: 'tech-researcher', label: 'Tech Researcher', color: '#06B6D4' },
       { role: 'architect', label: 'Architect', color: '#8B5CF6' },
       { role: 'tech-lead', label: 'Tech Lead', color: '#F97316' },
       { role: 'developer', label: 'Developer', color: '#22C55E' },

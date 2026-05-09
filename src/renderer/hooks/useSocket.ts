@@ -226,10 +226,10 @@ export function useSocket() {
  * Returns stable command functions that emit on the shared socket.
  */
 export function useSocketCommands() {
-  const createTask = useCallback((title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean, pipelineType?: string) => {
+  const createTask = useCallback((title: string, description: string, projectIds?: string[], scheduledAt?: string, models?: Record<string, string>, jiraIssueKey?: string, createJiraIssue?: boolean, pipelineType?: string, autoApproveSpec?: boolean) => {
     if (!socket) return;
-    console.log('[Smooth Orchestra] Emitting command:create-task', { title, projectIds, scheduledAt, jiraIssueKey, createJiraIssue, pipelineType });
-    socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType: pipelineType ?? 'development' });
+    console.log('[Smooth Orchestra] Emitting command:create-task', { title, projectIds, scheduledAt, jiraIssueKey, createJiraIssue, pipelineType, autoApproveSpec });
+    socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType: pipelineType ?? 'development', autoApproveSpec });
   }, []);
 
   const approveSpec = useCallback((sessionId: string, pipeline?: string[]) => {
@@ -252,8 +252,8 @@ export function useSocketCommands() {
     socket?.emit('command:route-rejection', { sessionId, routing });
   }, []);
 
-  const approveMerge = useCallback((sessionId: string) => {
-    socket?.emit('command:approve-merge', { sessionId });
+  const approveMerge = useCallback((sessionId: string, skipMerge?: boolean) => {
+    socket?.emit('command:approve-merge', { sessionId, skipMerge });
   }, []);
 
   const rejectMerge = useCallback((sessionId: string, feedback: string) => {
