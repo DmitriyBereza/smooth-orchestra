@@ -325,6 +325,15 @@ export class StandbyScheduler {
     const memoryPath = this.memoryPathFor(role, project.id);
     if (!fs.existsSync(memoryPath)) fs.writeFileSync(memoryPath, '', 'utf-8');
 
+    // Agents write new proposals to a staging file — the main process merges
+    // them into backlog.json after the agent exits (prevents race conditions
+    // where an agent overwrites dismiss/promote status changes).
+    const stagingPath = path.join(dayDir, `backlog-staging-${role}__${safeProjectSlug}-${ts}.json`);
+    fs.writeFileSync(stagingPath, '[]', 'utf-8');
+
+    // Build a list of dismissed/promoted titles so the agent avoids re-proposing them.
+    const dismissedTitles = this.getDismissedAndPromotedTitles(project.id);
+
     const lastTaskId = this.findLastCompletedTaskIdForProject(project.id) ?? '';
     const manualQaContext = buildManualQaContext(project.manualQa, {
       branch: 'main',
@@ -342,11 +351,12 @@ export class StandbyScheduler {
       .replaceAll('{PROJECT_NAME}', project.name)
       .replaceAll('{MEMORY_PATH}', memoryPath)
       .replaceAll('{OUTPUT_PATH}', outputPath)
-      .replaceAll('{BACKLOG_PATH}', this.backlogPath)
+      .replaceAll('{BACKLOG_PATH}', stagingPath)
       .replaceAll('{LAST_TASK_ID}', lastTaskId)
       .replaceAll('{MANUAL_QA_CONTEXT}', manualQaContext)
       .replaceAll('{BASE_BRANCH}', baseBranch)
-      .replaceAll('{QA_BASELINE_REGISTRY_PATH}', qaBaselineRegistryPath);
+      .replaceAll('{QA_BASELINE_REGISTRY_PATH}', qaBaselineRegistryPath)
+      .replaceAll('{DISMISSED_TITLES}', dismissedTitles);
 
     const taskPrompt = [
       `Standby tick — role: ${role}.`,
@@ -384,7 +394,7 @@ export class StandbyScheduler {
         this.currentRole = null;
         if (code === 0) {
           console.log(`[StandbyScheduler] ${role}/${project.name} finished — output: ${outputPath}`);
-          this.afterAgentExit(role, project).catch((err) =>
+          this.afterAgentExit(role, project, stagingPath).catch((err) =>
             console.error(`[StandbyScheduler] post-tick processing failed:`, err),
           );
           resolve();
@@ -414,11 +424,12 @@ export class StandbyScheduler {
   }
 
   /**
-   * After a standby agent exits, scan the backlog for draft items eligible for
-   * autonomous execution. No rate caps — tasks run 24/7 as long as the system
-   * is idle and standby is enabled.
+   * After a standby agent exits:
+   * 1. Merge new proposals from the staging file into the canonical backlog,
+   *    preserving all existing item statuses (dismiss/promote are never lost).
+   * 2. Scan for draft items eligible for autonomous execution.
    *
-   * Eligible criteria:
+   * Auto-execute criteria (no rate caps — runs 24/7):
    *   - status === 'draft'
    *   - complexity === 'small'
    *   - estimatedFiles ≤ 5
@@ -428,9 +439,12 @@ export class StandbyScheduler {
    * Auto-executed tasks use autoApproveSpec (skip PO review gate) and
    * autoSkipMerge (skip merge gate — PR stays open for manual review).
    */
-  private async afterAgentExit(role: StandbyRole, project: ProjectRecord): Promise<void> {
+  private async afterAgentExit(role: StandbyRole, project: ProjectRecord, stagingPath: string): Promise<void> {
+    // ── Step 1: merge staged proposals into canonical backlog ──
+    this.mergeFromStaging(stagingPath, role, project);
     eventBus.emit('standby:backlog-changed', { backlog: this.loadBacklog() });
 
+    // ── Step 2: auto-execute eligible items ──
     const candidates = this.loadBacklog().filter(
       (item) =>
         item.status === 'draft' &&
@@ -463,7 +477,9 @@ export class StandbyScheduler {
       target.note = 'Auto-executed by standby (small + ≤5 files + safe category)';
       target.projectId = project.id;
       target.projectName = project.name;
-      this.saveBacklog(this.loadBacklog().map((i) => (i.id === target.id ? target : i)));
+      // Re-read backlog (single writer now — no race) and update the item in place
+      const currentBacklog = this.loadBacklog();
+      this.saveBacklog(currentBacklog.map((i) => (i.id === target.id ? target : i)));
       this.recordAutoExecute();
       this.appendToMemory(role, project.id, `auto-executed: ${target.id} ${target.title} → ${session.task.id}`);
       console.log(`[StandbyScheduler] auto-executed ${target.id} → ${session.task.id} (project: ${project.name})`);
@@ -474,6 +490,64 @@ export class StandbyScheduler {
   }
 
   /**
+   * Merge new proposals from an agent's staging file into the canonical backlog.
+   * The canonical backlog is the single source of truth — existing items (with
+   * their dismiss/promote statuses) are never overwritten by agent output.
+   */
+  private mergeFromStaging(stagingPath: string, role: StandbyRole, project: ProjectRecord): void {
+    let staged: BacklogItem[] = [];
+    try {
+      if (!fs.existsSync(stagingPath)) return;
+      const raw = fs.readFileSync(stagingPath, 'utf-8').trim();
+      if (!raw || raw === '[]') return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      staged = parsed as BacklogItem[];
+    } catch (err) {
+      console.warn(`[StandbyScheduler] failed to parse staging file ${stagingPath}:`, err);
+      return;
+    }
+
+    if (staged.length === 0) return;
+
+    const backlog = this.loadBacklog();
+    const existingIds = new Set(backlog.map((b) => b.id));
+    // Also check by title+project to catch duplicates with new IDs
+    const existingTitles = new Set(
+      backlog
+        .filter((b) => b.projectId === project.id || !b.projectId)
+        .map((b) => b.title.toLowerCase().trim()),
+    );
+
+    let added = 0;
+    for (const item of staged) {
+      // Skip if ID already exists (exact duplicate)
+      if (existingIds.has(item.id)) continue;
+      // Skip if an item with the same title already exists for this project
+      // (prevents re-proposed items with new IDs from bypassing dismiss)
+      if (existingTitles.has(item.title.toLowerCase().trim())) {
+        console.log(`[StandbyScheduler] skipping duplicate proposal: "${item.title}" (already in backlog)`);
+        continue;
+      }
+      // Ensure projectId is set
+      item.projectId = item.projectId || project.id;
+      item.projectName = item.projectName || project.name;
+      backlog.push(item);
+      existingIds.add(item.id);
+      existingTitles.add(item.title.toLowerCase().trim());
+      added++;
+    }
+
+    if (added > 0) {
+      this.saveBacklog(backlog);
+      console.log(`[StandbyScheduler] merged ${added} new proposals from ${role}/${project.name} staging`);
+    }
+
+    // Clean up staging file
+    try { fs.unlinkSync(stagingPath); } catch { /* ignore */ }
+  }
+
+  /**
    * Check if a backlog item's title matches an exclusion pattern.
    * Items about removing, sunsetting, deprecating, or deleting things
    * are never auto-executed — they need human review.
@@ -481,6 +555,26 @@ export class StandbyScheduler {
   private isExcludedFromAutoExecute(item: BacklogItem): boolean {
     const text = `${item.title} ${item.body}`;
     return StandbyScheduler.EXCLUDED_TITLE_PATTERNS.some((re) => re.test(text));
+  }
+
+  /**
+   * Build a newline-separated list of titles for items that were dismissed,
+   * promoted, or auto-executed for a given project. Injected into the agent
+   * prompt so it doesn't re-propose things the user already acted on — even
+   * if those entries rotated out of the memory file.
+   */
+  private getDismissedAndPromotedTitles(projectId: string): string {
+    const backlog = this.loadBacklog();
+    const titles = backlog
+      .filter(
+        (b) =>
+          (b.projectId === projectId || !b.projectId) &&
+          b.status !== 'draft',
+      )
+      .map((b) => `- [${b.status}] ${b.title}`);
+    return titles.length > 0
+      ? titles.join('\n')
+      : '(none)';
   }
 
   private recordAutoExecute(): void {
