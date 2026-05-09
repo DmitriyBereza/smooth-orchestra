@@ -105,6 +105,10 @@ export function useSocket() {
       addEvent(`Task failed: ${data.error}`, 'error');
     });
 
+    s.on('session:history-changed', (data: { history: any[] }) => {
+      setSessionHistory(data.history);
+    });
+
     // Agent events
     s.on('agent:output', (message: any) => {
       addAgentOutput(message);

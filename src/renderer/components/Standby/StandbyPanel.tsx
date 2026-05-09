@@ -6,6 +6,7 @@ const SOURCE_LABEL: Record<BacklogItem['source'], string> = {
   'feature-researcher': 'feature',
   'tech-debt-scout': 'tech-debt',
   'regression-qa': 'regression',
+  'baseline-fixer': 'baseline',
 };
 
 const STATUS_COLOR: Record<BacklogItem['status'], string> = {
@@ -22,9 +23,11 @@ export interface StandbyPanelProps {
    * off to this callback instead of calling the immediate promote API.
    */
   onStartPromote?: (item: BacklogItem, pipelineType: 'development' | 'marketing' | 'design') => void;
+  /** When true, a task is already running — disable promote buttons. */
+  taskInProgress?: boolean;
 }
 
-export const StandbyPanel: React.FC<StandbyPanelProps> = ({ onStartPromote }) => {
+export const StandbyPanel: React.FC<StandbyPanelProps> = ({ onStartPromote, taskInProgress }) => {
   const standbyState = useStandbyStore((s) => s.state);
   const backlog = useStandbyStore((s) => s.backlog);
   const ticking = useStandbyStore((s) => s.ticking);
@@ -90,7 +93,7 @@ export const StandbyPanel: React.FC<StandbyPanelProps> = ({ onStartPromote }) =>
           </div>
           <div style={styles.list}>
             {(collapsed ? drafts.slice(0, 3) : drafts).map((item) => (
-              <BacklogCard key={item.id} item={item} onStartPromote={onStartPromote} />
+              <BacklogCard key={item.id} item={item} onStartPromote={onStartPromote} taskInProgress={taskInProgress} />
             ))}
           </div>
           {(!collapsed || drafts.length === 0) && recent.length > 0 && (
@@ -115,9 +118,10 @@ interface BacklogCardProps {
   item: BacklogItem;
   compact?: boolean;
   onStartPromote?: (item: BacklogItem, pipelineType: 'development' | 'marketing' | 'design') => void;
+  taskInProgress?: boolean;
 }
 
-const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact, onStartPromote }) => {
+const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact, onStartPromote, taskInProgress }) => {
   const promote = useStandbyStore((s) => s.promote);
   const dismiss = useStandbyStore((s) => s.dismiss);
   const selectedProjectIds = useProjectStore((s) => s.selectedProjectIds);
@@ -226,8 +230,11 @@ const BacklogCard: React.FC<BacklogCardProps> = ({ item, compact, onStartPromote
               <option value="marketing">marketing</option>
               <option value="design">design</option>
             </select>
-            <button onClick={handlePromote} disabled={busy} style={styles.promoteButton}>
-              {busy ? '…' : onStartPromote ? 'promote → confirm models' : 'promote to pipeline'}
+            <button onClick={handlePromote} disabled={busy || taskInProgress} style={{
+              ...styles.promoteButton,
+              ...(taskInProgress ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
+            }}>
+              {busy ? '…' : taskInProgress ? 'task in progress…' : onStartPromote ? 'promote → confirm models' : 'promote to pipeline'}
             </button>
             <button onClick={handleCopy} disabled={busy} style={styles.copyButton}>
               copy

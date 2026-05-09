@@ -205,7 +205,7 @@ export const TaskBoard: React.FC = () => {
         )}
 
         <div style={styles.divider} />
-        <StandbyPanel onStartPromote={startPromote} />
+        <StandbyPanel onStartPromote={startPromote} taskInProgress={!!isTaskInProgress} />
 
         <TaskHistory />
       </div>

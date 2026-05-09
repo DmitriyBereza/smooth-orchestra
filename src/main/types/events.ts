@@ -19,6 +19,7 @@ export interface OrchestraEventMap {
   'session:stage-continued': (data: { sessionId: string; stage: string; continuation: number }) => void;
   'session:rate-limited': (data: { sessionId: string; taskId: string; stage: string; retryAt: string; retryCount: number; message: string }) => void;
   'session:stage-resumed': (data: { sessionId: string; stage: string }) => void;
+  'session:history-changed': (data: { history: SessionState[] }) => void;
 
   // Subtask events (parallel dev)
   'session:subtask-started': (data: { taskId: string; subtaskId: string; agentId: string }) => void;

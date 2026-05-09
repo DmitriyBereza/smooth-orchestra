@@ -496,6 +496,10 @@ export class SocketServer {
       this.io.emit('session:failed', data);
     });
 
+    eventBus.on('session:history-changed', (data) => {
+      this.io.emit('session:history-changed', data);
+    });
+
     // Subtask events (parallel dev)
     eventBus.on('session:subtask-started', (data) => {
       this.io.emit('session:subtask-started', data);
