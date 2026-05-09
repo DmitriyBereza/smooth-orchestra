@@ -32,10 +32,29 @@ When done:
    \`\`\`bash
    git -C /absolute/path/to/target/project push -u origin {git-branch}
    \`\`\`
-6. Open a PR in each modified project (default behavior — see Auto-PR section below for project-specific overrides):
+6. Open a PR in each modified project (default behavior — see Auto-PR section below for project-specific overrides).
+
+   **PR description must be meaningful.** Generate the body from your work — summarize what changed and why, list key files, and include a test plan. Use this template:
+
    \`\`\`bash
-   gh pr create --repo {owner}/{repo} --title "{git-branch}: {task title}" --body "Smooth Orchestra task {task-id}"
+   gh pr create --repo {owner}/{repo} \\
+     --title "{task-id}: {task title}" \\
+     --body "$(cat <<'PREOF'
+   ## Summary
+   <!-- 2-4 bullet points: what changed and why -->
+
+   ## Changes
+   <!-- Key files/components modified -->
+
+   ## Test plan
+   <!-- How to verify this works -->
+
+   ---
+   Smooth Orchestra task {task-id}
+   PREOF
+   )"
    \`\`\`
+
    If \`gh\` is unavailable, just push — the terminal output will show the PR URL.
 
 {PR_CONFIG_CONTEXT}

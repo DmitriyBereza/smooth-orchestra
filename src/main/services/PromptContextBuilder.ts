@@ -109,18 +109,46 @@ export function buildPrConfigContext(
   const title = config.titleTemplate
     ? substitutePlaceholders(config.titleTemplate, values)
     : `${values.taskId ?? ''}: ${values.title ?? ''}`.trim().replace(/^:\s*/, '');
-  const body = config.bodyTemplate
-    ? substitutePlaceholders(config.bodyTemplate, values)
-    : `Smooth Orchestra task ${values.taskId ?? ''}`;
+
+  // If the user configured a custom body template, use it as-is.
+  // Otherwise, instruct the developer to generate a meaningful description.
+  const hasCustomBody = !!config.bodyTemplate;
+  const body = hasCustomBody
+    ? substitutePlaceholders(config.bodyTemplate!, values)
+    : null;
+
+  const prCommand = hasCustomBody
+    ? `\`gh pr create --base ${config.baseBranch} --title "${title.replace(/"/g, '\\"')}" --body "${body!.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\``
+    : [
+        `\`\`\`bash`,
+        `gh pr create --base ${config.baseBranch} --title "${title.replace(/"/g, '\\"')}" \\`,
+        `  --body "$(cat <<'PREOF'`,
+        `## Summary`,
+        `<!-- 2-4 bullet points: what changed and why -->`,
+        ``,
+        `## Changes`,
+        `<!-- Key files/components modified -->`,
+        ``,
+        `## Test plan`,
+        `<!-- How to verify this works -->`,
+        ``,
+        `---`,
+        `Smooth Orchestra task ${values.taskId ?? ''}`,
+        `PREOF`,
+        `)"`,
+        `\`\`\``,
+      ].join('\n');
 
   return [
     '## Auto-PR (REQUIRED for the primary project)',
     '',
     `After committing your work, push the branch and open a PR against \`${config.baseBranch}\` so the deploy pipeline (Vercel/Coolify/etc.) builds a preview that QA can click through.`,
     '',
+    '**PR description must be meaningful.** Summarize what changed and why, list key files, and include a test plan. Do NOT use a one-line placeholder.',
+    '',
     'Steps:',
     '1. `git push -u origin {branch}`  (replace `{branch}` with your actual branch name)',
-    `2. \`gh pr create --base ${config.baseBranch} --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\``,
+    `2. ${prCommand}`,
     '3. Capture the resulting PR URL from `gh pr create` output.',
     '',
     '**Stamp the PR URL into `dev-notes.md`** under a top-level `## PR` section (e.g. `https://github.com/owner/repo/pull/123`). QA reads this to find the deployed preview.',
