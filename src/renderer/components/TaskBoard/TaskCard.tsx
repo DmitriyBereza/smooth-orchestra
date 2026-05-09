@@ -12,7 +12,7 @@ interface TaskCardProps {
   onAnswerQuestions?: (answers: string) => void;
   onAbort?: () => void;
   onRouteRejection?: (routing: 'send_to_dev' | 'escalate_to_po') => void;
-  onApproveMerge?: () => void;
+  onApproveMerge?: (skipMerge?: boolean) => void;
   onRejectMerge?: (feedback: string) => void;
 }
 
@@ -28,6 +28,36 @@ function SubtaskIcon({ status, role }: { status: string; role: string }) {
     default:
       return <Circle weight="bold" size={12} style={{ color: 'var(--text-muted)' }} />;
   }
+}
+
+/** Extract PR URL from the dev-notes artifact (## PR section) */
+function PrLink({ taskId }: { taskId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch dev-notes artifact and parse the ## PR section for a GitHub URL
+    fetch(`/api/artifacts/${taskId}/dev-notes`)
+      .then((r) => (r.ok ? r.text() : ''))
+      .then((text) => {
+        const m = text.match(/https:\/\/github\.com\/[^\s)]+\/pull\/\d+/);
+        if (m) setUrl(m[0]);
+      })
+      .catch(() => {});
+  }, [taskId]);
+
+  if (!url) return null;
+  return (
+    <div style={{ padding: '4px 0', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: 'var(--brand-primary)', textDecoration: 'underline' }}
+      >
+        {url}
+      </a>
+    </div>
+  );
 }
 
 /** Get pipeline stage options and config for the session's pipeline type */
@@ -450,13 +480,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
         </div>
       )}
 
+      {/* PR link — shown at merge approval stage */}
+      {isAwaitingMergeApproval && session.task?.id && (
+        <PrLink taskId={session.task.id} />
+      )}
+
       {/* Merge approval gate */}
       {isAwaitingMergeApproval && (
         <div style={styles.actions}>
           {!showMergeReject ? (
             <>
-              <button style={styles.approveBtn} onClick={onApproveMerge}>
+              <button style={styles.approveBtn} onClick={() => onApproveMerge?.()}>
                 ./approve
+              </button>
+              <button style={{ ...styles.approveBtn, backgroundColor: 'var(--role-architect)' }} onClick={() => onApproveMerge?.(true)}>
+                ./approve (no merge)
               </button>
               <button style={styles.rejectBtn} onClick={() => setShowMergeReject(true)}>
                 ./reject

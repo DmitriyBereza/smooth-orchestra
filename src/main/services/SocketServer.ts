@@ -582,7 +582,7 @@ export class SocketServer {
       }
 
       // Route commands to EventBus
-      socket.on('command:create-task', async (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Record<string, string>; jiraIssueKey?: string; createJiraIssue?: boolean }) => {
+      socket.on('command:create-task', async (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Record<string, string>; jiraIssueKey?: string; createJiraIssue?: boolean; autoApproveSpec?: boolean }) => {
         console.log(`[SocketServer] Received command:create-task`, data);
 
         // If asked to create a new Jira issue (Orchestra → Jira direction)
@@ -627,7 +627,7 @@ export class SocketServer {
         eventBus.emit('command:route-rejection', data);
       });
 
-      socket.on('command:approve-merge', (data: { sessionId: string }) => {
+      socket.on('command:approve-merge', (data: { sessionId: string; skipMerge?: boolean }) => {
         eventBus.emit('command:approve-merge', data);
       });
 

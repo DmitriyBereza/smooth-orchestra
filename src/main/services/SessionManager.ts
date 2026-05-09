@@ -229,6 +229,8 @@ export class SessionManager {
     models?: Partial<Record<AgentRole, string>>,
     jiraIssueKey?: string,
     pipelineType: PipelineType = 'development',
+    autoApproveSpec?: boolean,
+    autoSkipMerge?: boolean,
   ): Promise<SessionState> {
     if (this.currentSession && !this.isTerminalStage(this.currentSession.currentStage)) {
       throw new Error('A task is already in progress. Complete or abort it first.');
@@ -327,6 +329,8 @@ export class SessionManager {
       projectPath: primary.path,
       jiraIssueKey: jiraIssueKey ?? null,
       pipelineType,
+      autoApproveSpec: autoApproveSpec ?? false,
+      autoSkipMerge: autoSkipMerge ?? false,
     };
 
     this.persistSession();
@@ -504,7 +508,7 @@ export class SessionManager {
    * Otherwise merges the local feature branch into the target branch and pushes.
    * Merge errors are non-fatal: the task is already marked done.
    */
-  async approveMerge(): Promise<void> {
+  async approveMerge(skipMerge = false): Promise<void> {
     if (!this.currentSession || this.currentSession.currentStage !== 'awaiting_merge_approval') {
       throw new Error('No session awaiting merge approval');
     }
@@ -519,6 +523,9 @@ export class SessionManager {
       ? this.projectStore.findById(this.currentSession.projectId)
       : undefined;
 
+    if (skipMerge) {
+      this.currentSession.mergeSkipped = true;
+    }
     this.currentSession.completedAt = new Date().toISOString();
     this.persistSession();
     await this.transitionTo('done');
@@ -528,10 +535,15 @@ export class SessionManager {
       taskId: this.currentSession.task.id,
     });
 
-    if (featureBranch) {
+    if (!skipMerge && featureBranch) {
       this.performAutoMerge(featureBranch, projectPath, project).catch((err: any) => {
-        console.error('[SessionManager] auto-merge failed (task is done, branch may need manual merge):', err.message);
+        // execFile errors carry the actual CLI stderr on `err.stderr` — `err.message` is just
+        // "Command failed: …", which hid a real `gh` flag bug for hours. Include both.
+        const detail = [err?.message, err?.stderr, err?.stdout].filter(Boolean).join(' | ');
+        console.error(`[SessionManager] auto-merge of ${featureBranch} failed (task is done, branch may need manual merge): ${detail}`);
       });
+    } else if (skipMerge) {
+      console.log(`[SessionManager] merge skipped for ${featureBranch} — PR left open for manual review`);
     }
   }
 
@@ -657,6 +669,23 @@ export class SessionManager {
    */
   private async transitionTo(stage: PipelineStage): Promise<void> {
     if (!this.currentSession) return;
+
+    // Auto-executed standby tasks skip the merge gate entirely — approve with
+    // skipMerge so the PR stays open for manual review.
+    if (stage === 'awaiting_merge_approval' && this.currentSession.autoSkipMerge) {
+      console.log(`[SessionManager] autoSkipMerge set — auto-approving merge for ${this.currentSession.task.id}`);
+      const prevStage = this.currentSession.currentStage;
+      // We need to briefly land on the stage so approveMerge's guard passes.
+      this.currentSession.currentStage = stage;
+      this.persistSession();
+      eventBus.emit('session:stage-changed', {
+        sessionId: this.currentSession.id,
+        from: prevStage,
+        to: stage,
+      });
+      await this.approveMerge(/* skipMerge */ true);
+      return;
+    }
 
     const from = this.currentSession.currentStage;
     this.currentSession.currentStage = stage;
@@ -930,6 +959,7 @@ export class SessionManager {
       models,
       jiraIssueKey,
       pipelineType,
+      autoApproveSpec,
     }: {
       title: string;
       description: string;
@@ -938,10 +968,11 @@ export class SessionManager {
       models?: Partial<Record<AgentRole, string>>;
       jiraIssueKey?: string;
       pipelineType?: PipelineType;
+      autoApproveSpec?: boolean;
     }) => {
-      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, pipeline: ${pipelineType ?? 'development'}, scheduled: ${scheduledAt ?? 'now'}, jira: ${jiraIssueKey ?? 'none'})`);
+      console.log(`[SessionManager] Received create-task: "${title}" (projects: ${projectIds?.join(', ') ?? 'none'}, pipeline: ${pipelineType ?? 'development'}, scheduled: ${scheduledAt ?? 'now'}, jira: ${jiraIssueKey ?? 'none'}, autoApprove: ${autoApproveSpec ?? false})`);
       try {
-        await this.createTask(title, description, projectIds, scheduledAt, models, jiraIssueKey, pipelineType ?? 'development');
+        await this.createTask(title, description, projectIds, scheduledAt, models, jiraIssueKey, pipelineType ?? 'development', autoApproveSpec);
       } catch (err: any) {
         console.error('[SessionManager] Failed to create task:', err.message, err.stack);
       }
@@ -1013,9 +1044,9 @@ export class SessionManager {
       }
     });
 
-    eventBus.on('command:approve-merge', async (_data) => {
+    eventBus.on('command:approve-merge', async ({ skipMerge }) => {
       try {
-        await this.approveMerge();
+        await this.approveMerge(skipMerge ?? false);
       } catch (err: any) {
         console.error('Failed to approve merge:', err.message);
       }
@@ -1039,13 +1070,31 @@ export class SessionManager {
     const taskId = this.currentSession.task.id;
     const config = this.getConfig();
 
-    // PO always transitions to awaiting_user_review (pipeline not set yet)
+    // PO always transitions to awaiting_user_review — unless auto-approve is set,
+    // in which case we accept the PO's proposed pipeline and advance immediately.
     if (completedStage === 'po') {
       const pipelineContent = this.artifactManager.readArtifact(taskId, 'pipeline');
       if (pipelineContent) {
         this.currentSession.proposedPipeline = this.parsePipelineArtifact(pipelineContent);
         this.persistSession();
       }
+
+      if (this.currentSession.autoApproveSpec) {
+        console.log(`[SessionManager] Auto-approving spec for ${taskId}`);
+        // Accept the proposed pipeline (same logic as manual approve)
+        const pipeline = this.currentSession.proposedPipeline ?? config.defaultPipeline;
+        this.currentSession.activePipeline = pipeline;
+        this.persistSession();
+        // Advance to the first pipeline stage
+        const firstStage = pipeline[0];
+        if (firstStage) {
+          await this.transitionTo(firstStage);
+        } else {
+          await this.transitionTo('awaiting_merge_approval');
+        }
+        return;
+      }
+
       await this.transitionTo('awaiting_user_review');
       return;
     }

@@ -81,6 +81,9 @@ export interface SessionState {
   jiraIssueKey?: string | null; // linked Jira issue (e.g. "TRA-42")
   pipelineType?: PipelineType; // which pipeline domain this session uses
   reviewLoopCount?: number; // how many times review has sent back to dev (caps at MAX_REVIEW_LOOPS)
+  autoApproveSpec?: boolean; // skip awaiting_user_review gate — PO spec auto-accepted
+  autoSkipMerge?: boolean; // auto-approve merge with skipMerge=true (for auto-executed standby tasks)
+  mergeSkipped?: boolean; // task completed without merging (PR left open for manual review)
 }
 
 // ---------------------------------------------------------------------------

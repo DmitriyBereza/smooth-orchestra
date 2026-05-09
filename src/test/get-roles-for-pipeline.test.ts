@@ -5,7 +5,7 @@ describe('getRolesForPipeline', () => {
   it('returns development roles when pipelineType is "development"', () => {
     const roles = getRolesForPipeline('development');
     expect(roles).toEqual([
-      'po', 'tech-researcher', 'architect', 'tech-lead', 'developer', 'qa',
+      'po', 'architect', 'tech-lead', 'developer', 'qa',
     ]);
   });
 
@@ -26,7 +26,7 @@ describe('getRolesForPipeline', () => {
   it('defaults to development roles when pipelineType is undefined', () => {
     const roles = getRolesForPipeline(undefined);
     expect(roles).toEqual([
-      'po', 'tech-researcher', 'architect', 'tech-lead', 'developer', 'qa',
+      'po', 'architect', 'tech-lead', 'developer', 'qa',
     ]);
   });
 
@@ -34,7 +34,7 @@ describe('getRolesForPipeline', () => {
     // This test verifies the roles come from the config, not a hardcoded list
     const devRoles = getRolesForPipeline('development');
     expect(devRoles[0]).toBe('po'); // PO is always first
-    expect(devRoles.length).toBe(6);
+    expect(devRoles.length).toBe(5);
 
     const marketingRoles = getRolesForPipeline('marketing');
     expect(marketingRoles[0]).toBe('po');

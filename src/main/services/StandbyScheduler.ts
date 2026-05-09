@@ -46,9 +46,20 @@ export class StandbyScheduler {
   private memoryDir: string;
 
   private static readonly TICK_INTERVAL_MS = 60_000;
-  private static readonly AUTO_EXECUTE_PER_HOUR = 1;
-  private static readonly AUTO_EXECUTE_PER_DAY = 3;
   private static readonly MAX_BACKLOG_ITEMS = 100;
+
+  /**
+   * Title patterns that indicate removal / sunsetting / dependency-removal tasks.
+   * These are never auto-executed — they require human review.
+   */
+  private static readonly EXCLUDED_TITLE_PATTERNS = [
+    /\bremov(e|al|ing)\b/i,
+    /\bsunsett?(ing)?\b/i,
+    /\bdeprecate\b/i,
+    /\bdelete\b/i,
+    /\bdrop\b/i,
+    /\buninstall\b/i,
+  ];
 
   constructor(
     private orchestraDir: string,
@@ -403,32 +414,35 @@ export class StandbyScheduler {
   }
 
   /**
-   * After a standby agent exits, scan the backlog for new draft items from the
-   * tech-debt scout that meet the auto-execute criteria. Promote them (subject
-   * to the rate cap) to a real dev pipeline targeted at the project the item
-   * came from.
+   * After a standby agent exits, scan the backlog for draft items eligible for
+   * autonomous execution. No rate caps — tasks run 24/7 as long as the system
+   * is idle and standby is enabled.
+   *
+   * Eligible criteria:
+   *   - status === 'draft'
+   *   - complexity === 'small'
+   *   - estimatedFiles ≤ 5
+   *   - scoped to the project we just scanned
+   *   - title does NOT match any exclusion pattern (removal / sunsetting / dep-drop)
+   *
+   * Auto-executed tasks use autoApproveSpec (skip PO review gate) and
+   * autoSkipMerge (skip merge gate — PR stays open for manual review).
    */
   private async afterAgentExit(role: StandbyRole, project: ProjectRecord): Promise<void> {
     eventBus.emit('standby:backlog-changed', { backlog: this.loadBacklog() });
 
-    if (role !== 'tech-debt-scout') return;
-
     const candidates = this.loadBacklog().filter(
       (item) =>
-        item.source === 'tech-debt-scout' &&
         item.status === 'draft' &&
         item.complexity === 'small' &&
-        (item.estimatedFiles ?? Infinity) <= 3 &&
-        // Only auto-execute for the project we just scanned (avoid cross-project surprises)
-        (item.projectId === project.id || !item.projectId),
+        (item.estimatedFiles ?? Infinity) <= 5 &&
+        // Only auto-execute for the project we just scanned
+        (item.projectId === project.id || !item.projectId) &&
+        // Exclude removal / sunsetting / dependency-removal tasks
+        !this.isExcludedFromAutoExecute(item),
     );
 
     if (candidates.length === 0) return;
-
-    if (!this.canAutoExecute()) {
-      console.log('[StandbyScheduler] auto-execute rate cap hit — leaving items as drafts');
-      return;
-    }
 
     const target = candidates[0];
 
@@ -437,14 +451,16 @@ export class StandbyScheduler {
         `[auto] ${target.title}`,
         target.body,
         [project.id],
-        undefined,
-        undefined,
-        undefined,
+        undefined,  // scheduledAt
+        undefined,  // models
+        undefined,  // jiraIssueKey
         'development',
+        true,       // autoApproveSpec — skip PO review gate
+        true,       // autoSkipMerge — skip merge gate, PR stays open
       );
       target.status = 'auto-executed';
       target.promotedTaskId = session.task.id;
-      target.note = 'Auto-executed by standby governor (small + ≤3 files + no public API impact)';
+      target.note = 'Auto-executed by standby (small + ≤5 files + safe category)';
       target.projectId = project.id;
       target.projectName = project.name;
       this.saveBacklog(this.loadBacklog().map((i) => (i.id === target.id ? target : i)));
@@ -457,21 +473,14 @@ export class StandbyScheduler {
     }
   }
 
-  private canAutoExecute(): boolean {
-    const now = Date.now();
-    const oneHour = 60 * 60_000;
-    const oneDay = 24 * 60 * 60_000;
-    const recent = this.state.autoExecutes
-      .map((iso) => new Date(iso).getTime())
-      .filter((t) => !Number.isNaN(t));
-
-    const inLastHour = recent.filter((t) => now - t < oneHour).length;
-    const inLastDay = recent.filter((t) => now - t < oneDay).length;
-
-    return (
-      inLastHour < StandbyScheduler.AUTO_EXECUTE_PER_HOUR &&
-      inLastDay < StandbyScheduler.AUTO_EXECUTE_PER_DAY
-    );
+  /**
+   * Check if a backlog item's title matches an exclusion pattern.
+   * Items about removing, sunsetting, deprecating, or deleting things
+   * are never auto-executed — they need human review.
+   */
+  private isExcludedFromAutoExecute(item: BacklogItem): boolean {
+    const text = `${item.title} ${item.body}`;
+    return StandbyScheduler.EXCLUDED_TITLE_PATTERNS.some((re) => re.test(text));
   }
 
   private recordAutoExecute(): void {

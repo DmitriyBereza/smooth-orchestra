@@ -169,8 +169,8 @@ export const TaskBoard: React.FC = () => {
         <JiraImportPanel onImport={handleJiraImport} disabled={!connected} />
 
         <NewTaskForm
-          onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType) => {
-            commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType);
+          onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType, autoApproveSpec) => {
+            commands.createTask(title, description, selectedProjectIds.length > 0 ? selectedProjectIds : undefined, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType, autoApproveSpec);
             setJiraImport(null);
             // If this submission came from a promote-to-pipeline flow, mark the
             // pending entry as awaiting the resulting session so we can stamp
@@ -198,7 +198,7 @@ export const TaskBoard: React.FC = () => {
               onAnswerQuestions={(answers) => commands.answerQuestions(session.id, answers)}
               onAbort={() => commands.abortTask(session.id)}
               onRouteRejection={(routing) => commands.routeRejection(session.id, routing)}
-              onApproveMerge={() => commands.approveMerge(session.id)}
+              onApproveMerge={(skipMerge) => commands.approveMerge(session.id, skipMerge)}
               onRejectMerge={(feedback) => commands.rejectMerge(session.id, feedback)}
             />
           </div>

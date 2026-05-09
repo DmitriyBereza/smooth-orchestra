@@ -100,11 +100,13 @@ export interface SessionState {
   activePipeline?: PipelineStage[];
   jiraIssueKey?: string | null;
   pipelineType?: PipelineType;
+  autoApproveSpec?: boolean;
+  autoSkipMerge?: boolean;
+  mergeSkipped?: boolean;
 }
 
 export const ROLE_DISPLAY_NAMES: Record<AgentRole, string> = {
   po: 'Product Owner',
-  'tech-researcher': 'Tech Researcher',
   architect: 'Architect',
   'tech-lead': 'Tech Lead',
   developer: 'Developer',

@@ -45,14 +45,14 @@ export interface OrchestraEventMap {
   'artifact:read': (data: { taskId: string; name: string; role: AgentRole }) => void;
 
   // User-initiated commands (from frontend)
-  'command:create-task': (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<string, string>> }) => void;
+  'command:create-task': (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Partial<Record<string, string>>; autoApproveSpec?: boolean }) => void;
   'command:approve-spec': (data: { sessionId: string; pipeline?: PipelineStage[] }) => void;
   'command:reject-spec': (data: { sessionId: string; feedback: string }) => void;
   'command:answer-questions': (data: { sessionId: string; answers: string }) => void;
   'command:abort-task': (data: { sessionId: string }) => void;
   'command:route-rejection': (data: { sessionId: string; routing: 'send_to_dev' | 'escalate_to_po' }) => void;
   'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;
-  'command:approve-merge': (data: { sessionId: string }) => void;
+  'command:approve-merge': (data: { sessionId: string; skipMerge?: boolean }) => void;
   'command:reject-merge': (data: { sessionId: string; feedback: string }) => void;
 
   // PO Chat events
