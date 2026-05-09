@@ -16,6 +16,8 @@ import { PipelineStage } from '../types/session';
 import { JiraService, JiraConfig } from './JiraService';
 import { StandbyScheduler } from './StandbyScheduler';
 import { PoChatService } from './PoChatService';
+import { DeviceStore } from './DeviceStore';
+import { buildMobileRouter } from '../routes/mobile';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
 
@@ -193,6 +195,7 @@ export class SocketServer {
     private jiraService?: JiraService,
     private standbyScheduler?: StandbyScheduler,
     private poChatService?: PoChatService,
+    private deviceStore?: DeviceStore,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
@@ -208,6 +211,11 @@ export class SocketServer {
     // Mount auth REST routes (only when AuthService is injected)
     if (this.authService) {
       app.use('/auth', buildAuthRouter(this.authService));
+    }
+
+    // Mount mobile API routes (only when both AuthService and DeviceStore are injected)
+    if (this.authService && this.deviceStore) {
+      app.use('/api/mobile', buildMobileRouter(this.authService, this.deviceStore));
     }
 
     // Mount project REST routes

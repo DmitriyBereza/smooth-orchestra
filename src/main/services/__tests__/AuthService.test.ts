@@ -234,6 +234,104 @@ describe('AuthService', () => {
     });
   });
 
+  // ─── loginMobile() ───────────────────────────────────────────────────────
+
+  describe('loginMobile()', () => {
+    it('happy path: returns {token, expiresAt, userId} for valid credentials', async () => {
+      const { service } = makeAuthService();
+      await service.signup('mobile@example.com', 'MobilePass1!');
+      const result = await service.loginMobile('mobile@example.com', 'MobilePass1!');
+
+      expect(typeof result.token).toBe('string');
+      expect(result.token.split('.')).toHaveLength(3);
+      expect(typeof result.expiresAt).toBe('string');
+      expect(typeof result.userId).toBe('string');
+    });
+
+    it('token decodes with correct sub and email fields', async () => {
+      const { service, store } = makeAuthService();
+      await service.signup('mobile2@example.com', 'MobilePass1!');
+      const { token } = await service.loginMobile('mobile2@example.com', 'MobilePass1!');
+
+      const decoded = jwt.verify(token, TEST_SECRET) as Record<string, unknown>;
+      expect(typeof decoded.sub).toBe('string');
+      expect(decoded.email).toBe('mobile2@example.com');
+
+      // userId should match sub
+      const user = store.findByEmail('mobile2@example.com');
+      expect(decoded.sub).toBe(user!.id);
+    });
+
+    it('token expiry is approximately 30 days', async () => {
+      const { service } = makeAuthService();
+      await service.signup('mobile3@example.com', 'MobilePass1!');
+      const { token } = await service.loginMobile('mobile3@example.com', 'MobilePass1!');
+
+      const decoded = jwt.decode(token) as { iat: number; exp: number };
+      const diffSeconds = decoded.exp - decoded.iat;
+      const thirtyDaysSeconds = 30 * 24 * 60 * 60;
+      // Should be 30d ± 5 seconds
+      expect(diffSeconds).toBeGreaterThanOrEqual(thirtyDaysSeconds - 5);
+      expect(diffSeconds).toBeLessThanOrEqual(thirtyDaysSeconds + 5);
+    });
+
+    it('expiresAt is a valid ISO-8601 string in the future', async () => {
+      const { service } = makeAuthService();
+      await service.signup('mobile4@example.com', 'MobilePass1!');
+      const { expiresAt } = await service.loginMobile('mobile4@example.com', 'MobilePass1!');
+
+      expect(() => new Date(expiresAt).toISOString()).not.toThrow();
+      expect(new Date(expiresAt).getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it('expiresAt is approximately 30 days from now', async () => {
+      const { service } = makeAuthService();
+      await service.signup('mobile5@example.com', 'MobilePass1!');
+      const before = Date.now();
+      const { expiresAt } = await service.loginMobile('mobile5@example.com', 'MobilePass1!');
+      const after = Date.now();
+
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      const expiresMs = new Date(expiresAt).getTime();
+      expect(expiresMs).toBeGreaterThanOrEqual(before + thirtyDaysMs - 5000);
+      expect(expiresMs).toBeLessThanOrEqual(after + thirtyDaysMs + 5000);
+    });
+
+    it('userId matches the stored user id', async () => {
+      const { service, store } = makeAuthService();
+      await service.signup('mobile6@example.com', 'MobilePass1!');
+      const { userId } = await service.loginMobile('mobile6@example.com', 'MobilePass1!');
+
+      const user = store.findByEmail('mobile6@example.com');
+      expect(userId).toBe(user!.id);
+    });
+
+    it('throws LoginError with code INVALID_CREDENTIALS for wrong password', async () => {
+      const { service } = makeAuthService();
+      await service.signup('mobile7@example.com', 'CorrectPass1!');
+
+      await expect(service.loginMobile('mobile7@example.com', 'WrongPass1!'))
+        .rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+    });
+
+    it('throws LoginError with code INVALID_CREDENTIALS for non-existent email (timing-safe)', async () => {
+      const { service } = makeAuthService();
+
+      await expect(service.loginMobile('nobody@example.com', 'SomePass1!'))
+        .rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' });
+    });
+
+    it('throws LoginError instances (same error class as login())', async () => {
+      const { service } = makeAuthService();
+      try {
+        await service.loginMobile('nobody@example.com', 'SomePass1!');
+        expect.fail('should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(LoginError);
+      }
+    });
+  });
+
   // ─── JWT_SECRET env var ───────────────────────────────────────────────────
 
   describe('JWT_SECRET environment variable', () => {
