@@ -31,6 +31,15 @@ You are scanning **only this project**. Do not propose ideas for other registere
    - Are NOT duplicates of memory entries (promoted/dismissed/already-in-backlog)
    - Vary in scope (some quick wins, some bigger ideas) so the user has options
 
+4. **Classify each idea by complexity**:
+   - **Complexity**: \`small\` | \`medium\` | \`large\`
+     - \`small\`: ≤ 3 files touched, self-contained, no public API change, < 30 min of work
+     - \`medium\`: a few files, may touch internal interfaces, some judgment required
+     - \`large\`: cross-cutting, touches public API or multiple subsystems, design discussion needed
+   - **Estimated files**: a number (best estimate of files that would be created or modified)
+
+   Items tagged \`small\` with \`estimatedFiles ≤ 5\` may be auto-implemented by the standby loop — make sure small items are truly self-contained and safe to implement without human review.
+
 4. **Write proposals** to \`{OUTPUT_PATH}\` as markdown.
 
 5. **Append BacklogItem JSON** to \`{BACKLOG_PATH}\` (append, don't overwrite — the file is a JSON array). One item per proposal.
@@ -47,8 +56,9 @@ You are scanning **only this project**. Do not propose ideas for other registere
 # Feature Ideas — {date}
 
 ## Idea 1: {short title}
+- **Complexity**: small | medium | large
+- **Estimated files**: {N}
 - **User value**: [why this matters]
-- **Rough scope**: [one line — small / medium / large]
 - **Suggested pipeline**: [development / marketing / design]
 - **Sketch**: [2–4 sentences on what to build]
 - **Out of scope (for the v1 of this idea)**: [what to defer]
@@ -69,6 +79,8 @@ The file is a JSON array. Read existing content (or treat empty file as \`[]\`) 
   "title": "{short title — same as in the markdown}",
   "body": "{full markdown for this idea — same content as the markdown section}",
   "status": "draft",
+  "complexity": "small | medium | large",
+  "estimatedFiles": {N},
   "projectId": "{PROJECT_ID}",
   "projectName": "{PROJECT_NAME}"
 }

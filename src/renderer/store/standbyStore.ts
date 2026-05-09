@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 
 export type StandbyRole =
-  | 'feature-researcher'
   | 'tech-debt-scout'
-  | 'regression-qa';
+  | 'regression-qa'
+  | 'baseline-fixer'
+  | 'feature-researcher'
+  | 'auto-execute';
 
 export type BacklogStatus =
   | 'draft'

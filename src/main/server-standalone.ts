@@ -22,6 +22,8 @@ import {
   StandbyScheduler,
   PoChatService,
   DeviceStore,
+  TelegramService,
+  TelegramNotifier,
 } from './services';
 
 const projectPath = process.cwd();
@@ -112,8 +114,17 @@ async function main(): Promise<void> {
   const poChatService = new PoChatService(projectStore, orchestraDir);
   console.log('[Smooth Orchestra] PO Chat service ready');
 
-  // Start socket server (with auth, event logger, project store, Jira, standby, PO chat, and device store)
-  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler, poChatService, deviceStore);
+  // Initialize Telegram integration (config lives in .orchestra/telegram.json)
+  const telegramService = new TelegramService(orchestraDir);
+  new TelegramNotifier(telegramService, () => sessionManager.getSession());
+  if (telegramService.isConfigured()) {
+    console.log('[Smooth Orchestra] Telegram integration active');
+  } else {
+    console.log('[Smooth Orchestra] Telegram not configured — set up via Settings in the UI');
+  }
+
+  // Start socket server (with auth, event logger, project store, Jira, standby, PO chat, device store, and telegram)
+  const socketServer = new SocketServer(sessionManager, agentPool, authService, undefined, eventLogger, projectStore, artifactManager, jiraService, standbyScheduler, poChatService, deviceStore, telegramService);
   await socketServer.start();
 
   console.log('[Smooth Orchestra] Server ready. Open http://localhost:5173 in your browser.');
