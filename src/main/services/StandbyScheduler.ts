@@ -47,6 +47,8 @@ export class StandbyScheduler {
 
   private static readonly TICK_INTERVAL_MS = 60_000;
   private static readonly MAX_BACKLOG_ITEMS = 100;
+  private static readonly SCANNER_MODEL = 'claude-opus-4-6';
+  private static readonly AUTO_EXECUTE_MODEL = 'claude-sonnet-4-6';
 
   /**
    * Title patterns that indicate removal / sunsetting / dependency-removal tasks.
@@ -285,9 +287,13 @@ export class StandbyScheduler {
     eventBus.emit('standby:tick-started', { role, startedAt: this.state.lastTickAt });
 
     try {
-      await this.spawnStandbyAgent(role, project);
+      if (role === 'auto-execute') {
+        await this.runAutoExecuteTick(project);
+      } else {
+        await this.spawnStandbyAgent(role, project);
+      }
     } catch (err) {
-      console.error(`[StandbyScheduler] failed to spawn ${role} for ${project.name}:`, err);
+      console.error(`[StandbyScheduler] failed to run ${role} for ${project.name}:`, err);
     } finally {
       if (this.state.enabled) {
         this.scheduleNextTick(StandbyScheduler.TICK_INTERVAL_MS);
@@ -336,6 +342,10 @@ export class StandbyScheduler {
     const qaBaselineRegistryPath = path.join(this.orchestraDir, 'qa-baseline', `${project.id}.json`);
 
     const promptTemplate = getStandbyPrompt(role);
+    if (!promptTemplate) {
+      console.warn(`[StandbyScheduler] no prompt template for role ${role} — skipping`);
+      return;
+    }
     const systemPrompt = promptTemplate
       .replaceAll('{PROJECT_PATH}', project.path)
       .replaceAll('{PROJECT_ID}', project.id)
@@ -359,6 +369,7 @@ export class StandbyScheduler {
     const args = [
       '-p', taskPrompt,
       '--system-prompt', systemPrompt,
+      '--model', StandbyScheduler.SCANNER_MODEL,
       '--output-format', 'stream-json',
       '--max-turns', '60',
       '--verbose',
@@ -414,63 +425,124 @@ export class StandbyScheduler {
   }
 
   /**
-   * After a standby agent exits, scan the backlog for draft items eligible for
-   * autonomous execution. No rate caps — tasks run 24/7 as long as the system
-   * is idle and standby is enabled.
+   * After a scanner agent exits, emit the backlog change (new items may have been added).
+   */
+  private async afterAgentExit(role: StandbyRole, _project: ProjectRecord): Promise<void> {
+    eventBus.emit('standby:backlog-changed', { backlog: this.loadBacklog() });
+  }
+
+  /**
+   * Dedicated auto-execute rotation tick. Picks the oldest eligible draft from
+   * the backlog for the given project and creates a real pipeline task.
+   *
+   * Uses Sonnet 4.6 for all pipeline roles. After the task completes (tracked
+   * via EventBus), updates all scanner memory files so they know what was fixed.
    *
    * Eligible criteria:
    *   - status === 'draft'
    *   - complexity === 'small'
    *   - estimatedFiles ≤ 5
-   *   - scoped to the project we just scanned
+   *   - scoped to the given project
    *   - title does NOT match any exclusion pattern (removal / sunsetting / dep-drop)
-   *
-   * Auto-executed tasks use autoApproveSpec (skip PO review gate) and
-   * autoSkipMerge (skip merge gate — PR stays open for manual review).
    */
-  private async afterAgentExit(role: StandbyRole, project: ProjectRecord): Promise<void> {
-    eventBus.emit('standby:backlog-changed', { backlog: this.loadBacklog() });
-
+  private async runAutoExecuteTick(project: ProjectRecord): Promise<void> {
     const candidates = this.loadBacklog().filter(
       (item) =>
         item.status === 'draft' &&
         item.complexity === 'small' &&
         (item.estimatedFiles ?? Infinity) <= 5 &&
-        // Only auto-execute for the project we just scanned
         (item.projectId === project.id || !item.projectId) &&
-        // Exclude removal / sunsetting / dependency-removal tasks
         !this.isExcludedFromAutoExecute(item),
     );
 
-    if (candidates.length === 0) return;
+    if (candidates.length === 0) {
+      console.log(`[StandbyScheduler] auto-execute: no eligible candidates for ${project.name}`);
+      eventBus.emit('standby:tick-finished', { role: 'auto-execute' as StandbyRole, exitCode: 0 });
+      return;
+    }
 
     const target = candidates[0];
+    const autoExecModel = StandbyScheduler.AUTO_EXECUTE_MODEL;
+    const models: Record<string, string> = {
+      po: autoExecModel,
+      architect: autoExecModel,
+      'tech-lead': autoExecModel,
+      developer: autoExecModel,
+      qa: autoExecModel,
+    };
 
     try {
       const session = await this.sessionManager.createTask(
         `[auto] ${target.title}`,
         target.body,
         [project.id],
-        undefined,  // scheduledAt
-        undefined,  // models
-        undefined,  // jiraIssueKey
+        undefined,
+        models,
+        undefined,
         'development',
-        true,       // autoApproveSpec — skip PO review gate
-        true,       // autoSkipMerge — skip merge gate, PR stays open
+        true,   // autoApproveSpec
+        true,   // autoSkipMerge
       );
       target.status = 'auto-executed';
       target.promotedTaskId = session.task.id;
-      target.note = 'Auto-executed by standby (small + ≤5 files + safe category)';
+      target.note = `Auto-executed by standby (${autoExecModel})`;
       target.projectId = project.id;
       target.projectName = project.name;
       this.saveBacklog(this.loadBacklog().map((i) => (i.id === target.id ? target : i)));
       this.recordAutoExecute();
-      this.appendToMemory(role, project.id, `auto-executed: ${target.id} ${target.title} → ${session.task.id}`);
-      console.log(`[StandbyScheduler] auto-executed ${target.id} → ${session.task.id} (project: ${project.name})`);
+
+      // Feed back into ALL scanner memory files for this project so next scans
+      // know this issue was addressed and don't re-report it.
+      const scannerRoles: StandbyRole[] = ['tech-debt-scout', 'regression-qa', 'baseline-fixer', 'feature-researcher'];
+      for (const scanRole of scannerRoles) {
+        this.appendToMemory(scanRole, project.id, `auto-executed: "${target.title}" → task ${session.task.id} — do not re-report this issue`);
+      }
+
+      console.log(`[StandbyScheduler] auto-executed ${target.id} → ${session.task.id} (project: ${project.name}, model: ${autoExecModel})`);
       eventBus.emit('standby:backlog-changed', { backlog: this.loadBacklog() });
+
+      // Listen for task completion to log the outcome in scanner memory
+      this.watchAutoExecuteCompletion(session.task.id, target.title, project);
     } catch (err) {
       console.error('[StandbyScheduler] auto-execute failed:', err);
+      eventBus.emit('standby:tick-finished', { role: 'auto-execute' as StandbyRole, exitCode: 1 });
     }
+  }
+
+  /**
+   * Watch for a specific auto-executed task to complete or fail, then update
+   * scanner memory with the outcome so scanners don't re-report fixed issues.
+   */
+  private watchAutoExecuteCompletion(
+    taskId: string,
+    title: string,
+    project: ProjectRecord,
+  ): void {
+    const onCompleted = ({ taskId: completedId }: { taskId: string }) => {
+      if (completedId !== taskId) return;
+      cleanup();
+      const scannerRoles: StandbyRole[] = ['tech-debt-scout', 'regression-qa', 'baseline-fixer', 'feature-researcher'];
+      for (const role of scannerRoles) {
+        this.appendToMemory(role, project.id, `auto-execute DONE: "${title}" (${taskId}) completed successfully — issue is fixed in codebase`);
+      }
+    };
+
+    const onFailed = ({ taskId: failedId, error }: { taskId: string; error: string }) => {
+      if (failedId !== taskId) return;
+      cleanup();
+      const scannerRoles: StandbyRole[] = ['tech-debt-scout', 'regression-qa', 'baseline-fixer', 'feature-researcher'];
+      for (const role of scannerRoles) {
+        this.appendToMemory(role, project.id, `auto-execute FAILED: "${title}" (${taskId}) — ${error}. Issue may still be present.`);
+      }
+    };
+
+    const cleanup = () => {
+      eventBus.off('session:completed', onCompleted);
+      eventBus.off('session:failed', onFailed);
+    };
+
+    eventBus.on('session:completed', onCompleted);
+    eventBus.on('session:failed', onFailed);
   }
 
   /**

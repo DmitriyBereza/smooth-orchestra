@@ -14,6 +14,7 @@ import { ProjectRecord } from '../types/project';
 import { ArtifactType, ARTIFACT_FILENAMES } from '../types/artifacts';
 import { PipelineStage } from '../types/session';
 import { JiraService, JiraConfig } from './JiraService';
+import { TelegramService, TelegramConfig } from './TelegramService';
 import { StandbyScheduler } from './StandbyScheduler';
 import { PoChatService } from './PoChatService';
 import { DeviceStore } from './DeviceStore';
@@ -196,6 +197,7 @@ export class SocketServer {
     private standbyScheduler?: StandbyScheduler,
     private poChatService?: PoChatService,
     private deviceStore?: DeviceStore,
+    private telegramService?: TelegramService,
   ) {
     // Create Express app and attach it as the HTTP request handler so that
     // REST endpoints and Socket.io share a single port.
@@ -393,6 +395,38 @@ export class SocketServer {
           res.json({ backlog });
         } catch (err: any) {
           res.status(400).json({ error: err.message });
+        }
+      });
+    }
+
+    // ── Telegram routes ─────────────────────────────────────────────────────
+    if (this.telegramService) {
+      const tg = this.telegramService;
+
+      app.get('/api/telegram/config', (_req: Request, res: Response) => {
+        res.json({ config: tg.getPublicConfig(), configured: tg.isConfigured() });
+      });
+
+      app.post('/api/telegram/config', (req: Request, res: Response) => {
+        const { botToken, chatId } = req.body as Partial<TelegramConfig>;
+        if (!botToken || !chatId) {
+          res.status(400).json({ error: 'botToken and chatId are required' });
+          return;
+        }
+        tg.saveConfig({ botToken: botToken.trim(), chatId: chatId.trim() });
+        res.json({ ok: true });
+      });
+
+      app.post('/api/telegram/test', async (_req: Request, res: Response) => {
+        if (!tg.isConfigured()) {
+          res.status(503).json({ error: 'Telegram not configured' });
+          return;
+        }
+        try {
+          await tg.testConnection();
+          res.json({ ok: true });
+        } catch (err: any) {
+          res.status(502).json({ error: err.message });
         }
       });
     }

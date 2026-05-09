@@ -4,7 +4,7 @@ import { TECH_DEBT_SCOUT_PROMPT } from './tech-debt-scout';
 import { REGRESSION_QA_PROMPT } from './regression-qa';
 import { BASELINE_FIXER_PROMPT } from './baseline-fixer';
 
-const STANDBY_PROMPTS: Record<StandbyRole, string> = {
+const STANDBY_PROMPTS: Partial<Record<StandbyRole, string>> = {
   'feature-researcher': FEATURE_RESEARCHER_PROMPT,
   'tech-debt-scout': TECH_DEBT_SCOUT_PROMPT,
   'regression-qa': REGRESSION_QA_PROMPT,
@@ -18,8 +18,8 @@ const STANDBY_PROMPTS: Record<StandbyRole, string> = {
  * `{LAST_TASK_ID}`, `{MANUAL_QA_CONTEXT}`, `{QA_BASELINE_REGISTRY_PATH}`,
  * `{BASE_BRANCH}`) before passing to the agent.
  */
-export function getStandbyPrompt(role: StandbyRole): string {
-  return STANDBY_PROMPTS[role];
+export function getStandbyPrompt(role: StandbyRole): string | null {
+  return STANDBY_PROMPTS[role] ?? null;
 }
 
 export {

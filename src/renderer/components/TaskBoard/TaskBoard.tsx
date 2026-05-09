@@ -9,6 +9,7 @@ import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { StandbyPanel } from '../Standby/StandbyPanel';
 import { useSocketCommands } from '../../hooks/useSocket';
 import { JiraImportPanel, JiraIssue } from './JiraImportPanel';
+import { TelegramSettingsPanel } from './TelegramSettingsPanel';
 import { PipelineType } from '../../store/sessionStore';
 
 function useIsMobile() {
@@ -167,6 +168,8 @@ export const TaskBoard: React.FC = () => {
         )}
 
         <JiraImportPanel onImport={handleJiraImport} disabled={!connected} />
+
+        <TelegramSettingsPanel />
 
         <NewTaskForm
           onSubmit={(title, description, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType, autoApproveSpec) => {

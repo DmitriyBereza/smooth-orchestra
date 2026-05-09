@@ -20,3 +20,6 @@ export { PoChatService } from './PoChatService';
 export { ChatAgentProcess } from './ChatAgentProcess';
 export type { ChunkCallback, ErrorCallback } from './ChatAgentProcess';
 export { DeviceStore } from './DeviceStore';
+export { TelegramService } from './TelegramService';
+export type { TelegramConfig } from './TelegramService';
+export { TelegramNotifier } from './TelegramNotifier';

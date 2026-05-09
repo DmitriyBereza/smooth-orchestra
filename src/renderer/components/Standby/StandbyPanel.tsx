@@ -3,10 +3,11 @@ import { useStandbyStore, BacklogItem } from '../../store/standbyStore';
 import { useProjectStore } from '../../store/projectStore';
 
 const SOURCE_LABEL: Record<BacklogItem['source'], string> = {
-  'feature-researcher': 'feature',
   'tech-debt-scout': 'tech-debt',
   'regression-qa': 'regression',
   'baseline-fixer': 'baseline',
+  'feature-researcher': 'feature',
+  'auto-execute': 'auto',
 };
 
 const STATUS_COLOR: Record<BacklogItem['status'], string> = {
