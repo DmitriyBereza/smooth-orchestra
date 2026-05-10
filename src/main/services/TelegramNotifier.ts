@@ -51,6 +51,33 @@ export class TelegramNotifier {
       }
     });
 
+    eventBus.on('session:rate-limited', async ({ sessionId, stage, retryAt }) => {
+      if (!this.telegram.isConfigured()) return;
+      const info = this.resolveInfo(sessionId);
+      const resumeTime = new Date(retryAt).toLocaleTimeString();
+      const taskLabel = info ? `Task *${info.title}* (${info.taskId})` : `Session ${sessionId}`;
+      try {
+        await this.telegram.sendMessage(
+          `⏸ *Usage Limit Hit*\n\n${taskLabel} — paused at stage \`${stage}\`.\nAuto-resumes at ${resumeTime}.`,
+        );
+      } catch (err) {
+        console.error('[TelegramNotifier] Failed to send rate-limit notification:', err);
+      }
+    });
+
+    eventBus.on('session:stage-resumed', async ({ sessionId, stage }) => {
+      if (!this.telegram.isConfigured()) return;
+      const info = this.resolveInfo(sessionId);
+      const taskLabel = info ? `Task *${info.title}* (${info.taskId})` : `Session ${sessionId}`;
+      try {
+        await this.telegram.sendMessage(
+          `▶️ *Resuming*\n\n${taskLabel} — usage limit cleared, restarting stage \`${stage}\`.`,
+        );
+      } catch (err) {
+        console.error('[TelegramNotifier] Failed to send resume notification:', err);
+      }
+    });
+
     eventBus.on('session:completed', ({ sessionId }) => {
       this.sessionCache.delete(sessionId);
     });

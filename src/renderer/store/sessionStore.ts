@@ -92,6 +92,8 @@ export interface SessionState {
   rejectionReason?: string | null;
   subtasks: SubtaskState[];
   scheduledAt?: string | null;
+  retryAt?: string | null;
+  rateLimitedStage?: PipelineStage | null;
   models?: Partial<Record<AgentRole, string>>;
   projectId?: string;
   projectName?: string;

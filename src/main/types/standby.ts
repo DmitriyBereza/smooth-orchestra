@@ -55,6 +55,8 @@ export interface StandbyState {
   nextTickAt: string | null;
   /** Auto-execute history for the rate-limit governor (timestamps, ISO). */
   autoExecutes: string[];
+  /** When set, standby is paused due to a rate/usage limit (ISO timestamp when limit clears). */
+  rateLimitedUntil?: string | null;
 }
 
 export const STANDBY_ROLES: StandbyRole[] = [

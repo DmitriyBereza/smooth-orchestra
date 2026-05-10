@@ -54,6 +54,9 @@ export const StandbyPanel: React.FC<StandbyPanelProps> = ({ onStartPromote, task
         <div style={styles.titleRow}>
           <span style={styles.title}>standby</span>
           {ticking && <span style={styles.ticker}>● tick in progress</span>}
+          {standbyState?.rateLimitedUntil && (
+            <span style={styles.rateLimitBadge}>⏸ usage limit — resumes {new Date(standbyState.rateLimitedUntil).toLocaleTimeString()}</span>
+          )}
         </div>
         <label style={styles.toggle}>
           <input
@@ -283,6 +286,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 'var(--text-xs)',
     fontFamily: 'var(--font-mono)',
     color: 'var(--brand-primary)',
+  },
+  rateLimitBadge: {
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--state-warning, #f59e0b)',
   },
   toggle: {
     display: 'flex',

@@ -45,10 +45,15 @@ export class StandbyScheduler {
   private standbyDir: string;
   private memoryDir: string;
 
+  private rateLimitedUntil: string | null = null;
+  private rateLimitResumeTimer: ReturnType<typeof setTimeout> | null = null;
+
   private static readonly TICK_INTERVAL_MS = 60_000;
   private static readonly MAX_BACKLOG_ITEMS = 100;
   private static readonly SCANNER_MODEL = 'claude-opus-4-6';
   private static readonly AUTO_EXECUTE_MODEL = 'claude-sonnet-4-6';
+  private static readonly RATE_LIMIT_PATTERN =
+    /you've hit your limit|usage limit|rate.?limit|resets \d+[ap]m|exceeded.*(?:limit|quota)|limit.*exceeded|quota.*exceeded|too many requests|account.*limit/i;
 
   /**
    * Title patterns that indicate removal / sunsetting / dependency-removal tasks.
@@ -86,7 +91,7 @@ export class StandbyScheduler {
   // ─── Public API ───────────────────────────────────────────────────────────
 
   getState(): StandbyState {
-    return { ...this.state };
+    return { ...this.state, rateLimitedUntil: this.rateLimitedUntil };
   }
 
   setEnabled(enabled: boolean): StandbyState {
@@ -199,9 +204,58 @@ export class StandbyScheduler {
     eventBus.on('session:stage-changed', ({ to }) => {
       const idleAfter: string[] = ['done', 'failed', 'idle'];
       if (idleAfter.includes(to as string) && this.state.enabled) {
-        this.scheduleNextTick(StandbyScheduler.TICK_INTERVAL_MS);
+        if (!this.isRateLimited()) {
+          this.scheduleNextTick(StandbyScheduler.TICK_INTERVAL_MS);
+        }
       }
     });
+
+    // Pause standby when pipeline hits a rate/usage limit
+    eventBus.on('session:rate-limited', ({ retryAt }) => {
+      this.onRateLimitHit(retryAt);
+    });
+
+    // Resume standby when pipeline rate limit clears
+    eventBus.on('session:stage-resumed', () => {
+      this.clearRateLimit();
+    });
+  }
+
+  private isRateLimited(): boolean {
+    if (!this.rateLimitedUntil) return false;
+    return new Date(this.rateLimitedUntil).getTime() > Date.now();
+  }
+
+  private onRateLimitHit(retryAt: string): void {
+    this.rateLimitedUntil = retryAt;
+    this.cancelTick();
+    this.killCurrentProcess();
+
+    if (this.rateLimitResumeTimer) clearTimeout(this.rateLimitResumeTimer);
+
+    const delayMs = new Date(retryAt).getTime() - Date.now();
+    if (delayMs > 0) {
+      console.log(`[StandbyScheduler] rate/usage limit — pausing until ${retryAt} (${Math.round(delayMs / 1000)}s)`);
+      this.rateLimitResumeTimer = setTimeout(() => {
+        this.rateLimitResumeTimer = null;
+        this.clearRateLimit();
+      }, delayMs);
+    }
+    eventBus.emit('standby:state-changed', { state: this.getState() });
+  }
+
+  private clearRateLimit(): void {
+    if (!this.rateLimitedUntil) return;
+    console.log('[StandbyScheduler] rate limit cleared — resuming');
+    this.rateLimitedUntil = null;
+    if (this.rateLimitResumeTimer) {
+      clearTimeout(this.rateLimitResumeTimer);
+      this.rateLimitResumeTimer = null;
+    }
+    if (this.state.enabled && this.isIdle()) {
+      this.scheduleNextTick(StandbyScheduler.TICK_INTERVAL_MS);
+    }
+    eventBus.emit('standby:state-changed', { state: this.getState() });
   }
 
   private scheduleNextTick(delayMs: number): void {
@@ -245,6 +299,11 @@ export class StandbyScheduler {
 
   private async runTick(): Promise<void> {
     if (!this.state.enabled) return;
+
+    if (this.isRateLimited()) {
+      console.log('[StandbyScheduler] rate/usage limited — skipping tick');
+      return;
+    }
 
     if (!this.isIdle()) {
       console.log('[StandbyScheduler] not idle — skipping tick, retrying in 60s');
@@ -384,15 +443,59 @@ export class StandbyScheduler {
       });
       this.currentProcess = child;
       this.currentRole = role;
+      let hitRateLimit = false;
+      let rateLimitMessage = '';
 
-      child.stdout?.on('data', () => { /* drain */ });
+      const checkForRateLimit = (text: string) => {
+        if (hitRateLimit) return;
+        if (StandbyScheduler.RATE_LIMIT_PATTERN.test(text)) {
+          hitRateLimit = true;
+          rateLimitMessage = text;
+        }
+        // Also check JSON content
+        try {
+          const data = JSON.parse(text);
+          if (data.error?.type === 'rate_limit_error' || data.error?.type === 'overloaded_error') {
+            hitRateLimit = true;
+            rateLimitMessage = data.error?.message ?? text;
+          }
+          const content = typeof data.content === 'string'
+            ? data.content
+            : Array.isArray(data.content) ? data.content.map((b: any) => b.text ?? '').join(' ') : '';
+          if (content && StandbyScheduler.RATE_LIMIT_PATTERN.test(content)) {
+            hitRateLimit = true;
+            rateLimitMessage = content;
+          }
+        } catch { /* not JSON */ }
+      };
+
+      child.stdout?.on('data', (chunk) => { checkForRateLimit(chunk.toString()); });
       child.stderr?.on('data', (chunk) => {
-        process.stderr.write(`[StandbyScheduler:${role}:${project.name}] ${chunk}`);
+        const text = chunk.toString();
+        process.stderr.write(`[StandbyScheduler:${role}:${project.name}] ${text}`);
+        checkForRateLimit(text);
       });
 
       child.on('exit', (code) => {
         this.currentProcess = null;
         this.currentRole = null;
+
+        if (hitRateLimit) {
+          console.log(`[StandbyScheduler] ${role}/${project.name} hit rate/usage limit — pausing standby`);
+          const retryAt = new Date(Date.now() + 5 * 60_000).toISOString();
+          this.onRateLimitHit(retryAt);
+          eventBus.emit('session:rate-limited', {
+            sessionId: '',
+            taskId: '',
+            stage: `standby:${role}`,
+            retryAt,
+            retryCount: 0,
+            message: rateLimitMessage,
+          });
+          resolve();
+          return;
+        }
+
         if (code === 0) {
           console.log(`[StandbyScheduler] ${role}/${project.name} finished — output: ${outputPath}`);
           this.afterAgentExit(role, project).catch((err) =>
