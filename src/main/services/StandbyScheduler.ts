@@ -446,34 +446,28 @@ export class StandbyScheduler {
       let hitRateLimit = false;
       let rateLimitMessage = '';
 
-      const checkForRateLimit = (text: string) => {
+      const checkForRateLimit = (text: string, isStderr: boolean) => {
         if (hitRateLimit) return;
-        if (StandbyScheduler.RATE_LIMIT_PATTERN.test(text)) {
+        // Only match plain-text rate-limit patterns on stderr (CLI errors),
+        // not stdout where agent conversational text could false-positive.
+        if (isStderr && StandbyScheduler.RATE_LIMIT_PATTERN.test(text)) {
           hitRateLimit = true;
           rateLimitMessage = text;
         }
-        // Also check JSON content
         try {
           const data = JSON.parse(text);
           if (data.error?.type === 'rate_limit_error' || data.error?.type === 'overloaded_error') {
             hitRateLimit = true;
             rateLimitMessage = data.error?.message ?? text;
           }
-          const content = typeof data.content === 'string'
-            ? data.content
-            : Array.isArray(data.content) ? data.content.map((b: any) => b.text ?? '').join(' ') : '';
-          if (content && StandbyScheduler.RATE_LIMIT_PATTERN.test(content)) {
-            hitRateLimit = true;
-            rateLimitMessage = content;
-          }
         } catch { /* not JSON */ }
       };
 
-      child.stdout?.on('data', (chunk) => { checkForRateLimit(chunk.toString()); });
+      child.stdout?.on('data', (chunk) => { checkForRateLimit(chunk.toString(), false); });
       child.stderr?.on('data', (chunk) => {
         const text = chunk.toString();
         process.stderr.write(`[StandbyScheduler:${role}:${project.name}] ${text}`);
-        checkForRateLimit(text);
+        checkForRateLimit(text, true);
       });
 
       child.on('exit', (code) => {
