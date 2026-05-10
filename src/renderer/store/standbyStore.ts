@@ -35,6 +35,7 @@ export interface StandbyState {
   lastTickAt: string | null;
   nextTickAt: string | null;
   autoExecutes: string[];
+  rateLimitedUntil?: string | null;
 }
 
 const API_BASE = '';

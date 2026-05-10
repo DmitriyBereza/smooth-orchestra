@@ -213,6 +213,11 @@ export const PipelineView: React.FC = () => {
           {currentStage === 'failed' && (
             <span style={{ color: 'var(--state-error)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>error: {session.error}</span>
           )}
+          {currentStage === 'rate-limited' && session.retryAt && (
+            <span style={{ color: 'var(--state-warning, #f59e0b)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+              ⏸ usage limit hit — resumes {new Date(session.retryAt).toLocaleTimeString()}
+            </span>
+          )}
           {stageInfo}
         </div>
       )}

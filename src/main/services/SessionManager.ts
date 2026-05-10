@@ -35,6 +35,7 @@ export class SessionManager {
   private orchestraDir: string;
   /** Tracks how many times each stage has been continued after max-turns. */
   private stageContinuations = new Map<string, number>();
+  private rateLimitTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly MAX_CONTINUATIONS = 3;
   private static readonly MAX_REVIEW_LOOPS = 3;
 
@@ -158,42 +159,49 @@ export class SessionManager {
       }
 
       // Resume rate-limited sessions — re-schedule the retry timer
-      if (session.retryAt && session.rateLimitedStage) {
+      if (session.currentStage === 'rate-limited' && session.retryAt && session.rateLimitedStage) {
         const delayMs = new Date(session.retryAt).getTime() - Date.now();
         const stage = session.rateLimitedStage;
-        const config = this.getConfig();
-        const role = config.stageToRole[stage] ?? (stage === 'po' ? 'po' : undefined);
 
-        if (role) {
-          if (delayMs > 0) {
-            console.log(`[SessionManager] Rate-limited session — retrying ${stage} in ${Math.round(delayMs / 1000)}s`);
-            setTimeout(async () => {
-              if (!this.currentSession || this.currentSession.currentStage === 'failed') return;
-              console.log(`[SessionManager] Rate limit cleared — re-spawning ${stage}`);
-              this.currentSession.retryAt = null;
-              this.currentSession.rateLimitedStage = null;
-              this.persistSession();
-              try {
-                await this.spawnAgentForStage(role as AgentRole, stage);
-              } catch (err) {
-                console.error(`[SessionManager] Failed to resume after rate limit:`, err);
-              }
-            }, delayMs);
-          } else {
-            // Retry time already passed — resume immediately
-            console.log(`[SessionManager] Rate limit already cleared — re-spawning ${stage} now`);
-            session.retryAt = null;
-            session.rateLimitedStage = null;
-            setTimeout(async () => {
-              try {
-                await this.spawnAgentForStage(role as AgentRole, stage);
-              } catch (err) {
-                console.error(`[SessionManager] Failed to resume after rate limit:`, err);
-              }
-            }, 1000);
-          }
-          return;
+        if (delayMs > 0) {
+          console.log(`[SessionManager] Rate-limited session — retrying ${stage} in ${Math.round(delayMs / 1000)}s`);
+          this.rateLimitTimer = setTimeout(async () => {
+            this.rateLimitTimer = null;
+            if (!this.currentSession || this.currentSession.currentStage === 'failed') return;
+            console.log(`[SessionManager] Rate limit cleared — restarting ${stage}`);
+            this.currentSession.retryAt = null;
+            this.currentSession.rateLimitedStage = null;
+            this.persistSession();
+
+            eventBus.emit('session:stage-resumed', {
+              sessionId: this.currentSession.id,
+              stage,
+            });
+
+            try {
+              await this.transitionTo(stage);
+            } catch (err) {
+              console.error(`[SessionManager] Failed to resume after rate limit:`, err);
+            }
+          }, delayMs);
+        } else {
+          console.log(`[SessionManager] Rate limit already cleared — restarting ${stage} now`);
+          session.retryAt = null;
+          session.rateLimitedStage = null;
+          this.rateLimitTimer = setTimeout(async () => {
+            this.rateLimitTimer = null;
+            eventBus.emit('session:stage-resumed', {
+              sessionId: session.id,
+              stage,
+            });
+            try {
+              await this.transitionTo(stage);
+            } catch (err) {
+              console.error(`[SessionManager] Failed to resume after rate limit:`, err);
+            }
+          }, 1000);
         }
+        return;
       }
 
       // For active agent stages, the agent process died on restart.
@@ -825,6 +833,45 @@ export class SessionManager {
             agentId: agentId || '',
           });
         } else {
+          // Check if a subtask hit a rate limit — halt the whole pipeline
+          const subtaskAgent = this.agentPool.getAgentById(agentId || '');
+          if (subtaskAgent?.rateLimited) {
+            const retryMs = subtaskAgent.rateLimitRetryMs ?? 5 * 60_000;
+            const retryAt = new Date(Date.now() + retryMs).toISOString();
+            const retryCount = (this.currentSession.rateLimitRetries ?? 0) + 1;
+
+            console.log(`[SessionManager] Rate/usage limit hit during parallel-dev — halting pipeline, retry at ${retryAt}`);
+            this.currentSession.retryAt = retryAt;
+            this.currentSession.rateLimitedStage = 'parallel-dev';
+            this.currentSession.rateLimitRetries = retryCount;
+            await this.transitionTo('rate-limited');
+
+            eventBus.emit('session:rate-limited', {
+              sessionId: this.currentSession.id,
+              taskId,
+              stage: 'parallel-dev',
+              retryAt,
+              retryCount,
+              message: subtaskAgent.rateLimitMessage,
+            });
+
+            this.rateLimitTimer = setTimeout(async () => {
+              this.rateLimitTimer = null;
+              if (!this.currentSession || this.currentSession.task.id !== taskId) return;
+              if (this.currentSession.currentStage === 'failed') return;
+              this.currentSession.retryAt = null;
+              this.currentSession.rateLimitedStage = null;
+              this.persistSession();
+              eventBus.emit('session:stage-resumed', { sessionId: this.currentSession.id, stage: 'parallel-dev' });
+              try {
+                await this.transitionTo('parallel-dev');
+              } catch (err) {
+                console.error(`[SessionManager] Failed to resume parallel-dev after rate limit:`, err);
+              }
+            }, retryMs);
+            return;
+          }
+
           subtask.status = 'failed';
           this.persistSession();
           eventBus.emit('session:subtask-failed', {
@@ -863,18 +910,19 @@ export class SessionManager {
       if (exitCode !== 0) {
         const agent = this.agentPool.getAgentById(agentId || '');
 
-        // Check if this was a rate-limit exit — schedule retry instead of failing
-        if (agent?.rateLimited && agent.lastSessionId) {
+        // Check if this was a rate-limit exit — halt gracefully instead of failing
+        if (agent?.rateLimited) {
           const retryMs = agent.rateLimitRetryMs ?? 5 * 60_000;
           const retryAt = new Date(Date.now() + retryMs).toISOString();
           const retryCount = (this.currentSession.rateLimitRetries ?? 0) + 1;
+          const canResume = !!agent.lastSessionId;
 
-          console.log(`[SessionManager] Rate limit hit for ${stage} — scheduling retry #${retryCount} at ${retryAt} (${Math.round(retryMs / 1000)}s)`);
+          console.log(`[SessionManager] Rate/usage limit hit for ${stage} — scheduling retry #${retryCount} at ${retryAt} (${Math.round(retryMs / 1000)}s, resume=${canResume})`);
 
           this.currentSession.retryAt = retryAt;
           this.currentSession.rateLimitedStage = stage;
           this.currentSession.rateLimitRetries = retryCount;
-          this.persistSession();
+          await this.transitionTo('rate-limited');
 
           eventBus.emit('session:rate-limited', {
             sessionId: this.currentSession.id,
@@ -885,13 +933,14 @@ export class SessionManager {
             message: agent.rateLimitMessage,
           });
 
-          // Schedule the retry
+          // Schedule the retry — resume session if we have an ID, otherwise restart stage fresh
           const sessionId = agent.lastSessionId;
-          setTimeout(async () => {
+          this.rateLimitTimer = setTimeout(async () => {
+            this.rateLimitTimer = null;
             if (!this.currentSession || this.currentSession.task.id !== taskId) return;
             if (this.currentSession.currentStage === 'failed') return; // user aborted
 
-            console.log(`[SessionManager] Rate limit retry — resuming ${stage} (session: ${sessionId})`);
+            console.log(`[SessionManager] Rate limit cleared — ${canResume ? 'resuming' : 'restarting'} ${stage}`);
             this.currentSession.retryAt = null;
             this.currentSession.rateLimitedStage = null;
             this.persistSession();
@@ -902,7 +951,11 @@ export class SessionManager {
             });
 
             try {
-              await this.resumeAgentForStage(role, stage, sessionId);
+              if (canResume) {
+                await this.resumeAgentForStage(role, stage, sessionId!);
+              } else {
+                await this.transitionTo(stage);
+              }
             } catch (err) {
               console.error(`[SessionManager] Failed to resume after rate limit:`, err);
             }

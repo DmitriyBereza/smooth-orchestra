@@ -201,6 +201,9 @@ export class AgentProcess {
     eventBus.emit('agent:output', message);
   }
 
+  private static readonly RATE_LIMIT_PATTERN =
+    /you've hit your limit|usage limit|rate.?limit|resets \d+[ap]m|exceeded.*(?:limit|quota)|limit.*exceeded|quota.*exceeded|too many requests|account.*limit/i;
+
   private tryParseTokenUsage(line: string): void {
     try {
       const data = JSON.parse(line);
@@ -214,33 +217,19 @@ export class AgentProcess {
         }
       }
 
+      // Detect rate-limit via API error type (e.g. {"error":{"type":"rate_limit_error"}})
+      if (data.error?.type === 'rate_limit_error' || data.error?.type === 'overloaded_error') {
+        this.markRateLimited(data.error?.message ?? `API error: ${data.error.type}`);
+      }
+
       // Detect rate-limit messages in any text content
       const textContent = typeof data.content === 'string'
         ? data.content
         : Array.isArray(data.content)
           ? data.content.map((b: any) => b.text ?? '').join(' ')
           : '';
-      if (textContent && /you've hit your limit|rate limit|resets \d+[ap]m/i.test(textContent)) {
-        this.rateLimited = true;
-        this.rateLimitMessage = textContent;
-        // Try to parse reset time from "resets 8pm (Europe/Stockholm)" pattern
-        const resetMatch = textContent.match(/resets\s+(\d{1,2})(am|pm)\s*\(([^)]+)\)/i);
-        if (resetMatch) {
-          const hour = parseInt(resetMatch[1], 10);
-          const isPm = resetMatch[2].toLowerCase() === 'pm';
-          const tz = resetMatch[3];
-          const resetHour24 = isPm && hour !== 12 ? hour + 12 : (!isPm && hour === 12 ? 0 : hour);
-          // Build a Date for today at reset time, using the timezone
-          const now = new Date();
-          const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
-          const resetDate = new Date(`${todayStr}T${String(resetHour24).padStart(2, '0')}:00:00`);
-          // Adjust for timezone offset by formatting back
-          const resetMs = resetDate.getTime() - now.getTime();
-          this.rateLimitRetryMs = resetMs > 0 ? resetMs : 60_000; // fallback 1 minute
-        } else {
-          this.rateLimitRetryMs = 5 * 60_000; // fallback: 5 minutes
-        }
-        console.log(`[AgentProcess] ${this.role} hit rate limit — retry in ${Math.round((this.rateLimitRetryMs ?? 0) / 1000)}s (session: ${this.lastSessionId})`);
+      if (textContent && AgentProcess.RATE_LIMIT_PATTERN.test(textContent)) {
+        this.markRateLimited(textContent);
       }
 
       // Accumulate token usage
@@ -250,7 +239,33 @@ export class AgentProcess {
         if (usage.output_tokens) this.tokensUsed.output += usage.output_tokens;
       }
     } catch {
-      // Not JSON or not a usage line — ignore
+      // Not JSON — check as plain text (stderr often emits plain-text errors)
+      if (AgentProcess.RATE_LIMIT_PATTERN.test(line)) {
+        this.markRateLimited(line);
+      }
     }
+  }
+
+  private markRateLimited(message: string): void {
+    if (this.rateLimited) return; // already flagged
+    this.rateLimited = true;
+    this.rateLimitMessage = message;
+
+    // Try to parse reset time from "resets 8pm (Europe/Stockholm)" pattern
+    const resetMatch = message.match(/resets\s+(\d{1,2})(am|pm)\s*\(([^)]+)\)/i);
+    if (resetMatch) {
+      const hour = parseInt(resetMatch[1], 10);
+      const isPm = resetMatch[2].toLowerCase() === 'pm';
+      const tz = resetMatch[3];
+      const resetHour24 = isPm && hour !== 12 ? hour + 12 : (!isPm && hour === 12 ? 0 : hour);
+      const now = new Date();
+      const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
+      const resetDate = new Date(`${todayStr}T${String(resetHour24).padStart(2, '0')}:00:00`);
+      const resetMs = resetDate.getTime() - now.getTime();
+      this.rateLimitRetryMs = resetMs > 0 ? resetMs : 60_000;
+    } else {
+      this.rateLimitRetryMs = 5 * 60_000;
+    }
+    console.log(`[AgentProcess] ${this.role} hit rate/usage limit — retry in ${Math.round((this.rateLimitRetryMs ?? 0) / 1000)}s (session: ${this.lastSessionId})`);
   }
 }
