@@ -222,16 +222,6 @@ export class AgentProcess {
         this.markRateLimited(data.error?.message ?? `API error: ${data.error.type}`);
       }
 
-      // Detect rate-limit messages in any text content
-      const textContent = typeof data.content === 'string'
-        ? data.content
-        : Array.isArray(data.content)
-          ? data.content.map((b: any) => b.text ?? '').join(' ')
-          : '';
-      if (textContent && AgentProcess.RATE_LIMIT_PATTERN.test(textContent)) {
-        this.markRateLimited(textContent);
-      }
-
       // Accumulate token usage
       if (data.usage) {
         const usage = data.usage;
