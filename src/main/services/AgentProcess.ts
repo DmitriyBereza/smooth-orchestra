@@ -18,9 +18,15 @@ export class AgentProcess {
   public rateLimitMessage: string = '';
   public maxTurnsReached = false;
   public lastSessionId: string | null = null;
+  public startedAt: number = 0;
+  public exitedAt: number = 0;
+  public lastStderrLines: string[] = [];
 
   private process: ChildProcess | null = null;
   private outputBuffer: string[] = [];
+
+  private static readonly FAST_CRASH_MS = 30_000;
+  private static readonly MAX_STDERR_LINES = 20;
 
   constructor(
     public readonly role: AgentRole,
@@ -49,6 +55,7 @@ export class AgentProcess {
 
     this.status = 'running';
     this.maxTurnsReached = false;
+    this.startedAt = Date.now();
 
     let args: string[];
 
@@ -117,6 +124,7 @@ export class AgentProcess {
     // Handle process exit
     this.process.on('exit', (code, signal) => {
       const exitCode = code ?? (signal ? 1 : 0);
+      this.exitedAt = Date.now();
       this.status = exitCode === 0 ? 'completed' : 'failed';
       this.process = null;
 
@@ -183,8 +191,32 @@ export class AgentProcess {
     return [...this.outputBuffer];
   }
 
+  /**
+   * True if the agent exited with code != 0 within FAST_CRASH_MS of starting,
+   * produced zero tokens, and no session ID was captured. This indicates the
+   * CLI itself failed (usage limit, auth error, network) rather than the agent
+   * doing work and failing.
+   */
+  get crashedFast(): boolean {
+    if (this.exitedAt === 0 || this.startedAt === 0) return false;
+    const runMs = this.exitedAt - this.startedAt;
+    return (
+      runMs < AgentProcess.FAST_CRASH_MS &&
+      this.status === 'failed' &&
+      this.tokensUsed.input === 0 &&
+      this.tokensUsed.output === 0
+    );
+  }
+
   private handleOutput(line: string, type: 'stdout' | 'stderr'): void {
     this.outputBuffer.push(line);
+
+    if (type === 'stderr') {
+      this.lastStderrLines.push(line);
+      if (this.lastStderrLines.length > AgentProcess.MAX_STDERR_LINES) {
+        this.lastStderrLines.shift();
+      }
+    }
 
     // Try to parse streaming JSON for token usage
     this.tryParseTokenUsage(line);

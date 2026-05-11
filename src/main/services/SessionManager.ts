@@ -833,9 +833,9 @@ export class SessionManager {
             agentId: agentId || '',
           });
         } else {
-          // Check if a subtask hit a rate limit — halt the whole pipeline
+          // Check if a subtask hit a rate limit or crashed fast — halt the whole pipeline
           const subtaskAgent = this.agentPool.getAgentById(agentId || '');
-          if (subtaskAgent?.rateLimited) {
+          if (subtaskAgent?.rateLimited || subtaskAgent?.crashedFast) {
             const retryMs = subtaskAgent.rateLimitRetryMs ?? 5 * 60_000;
             const retryAt = new Date(Date.now() + retryMs).toISOString();
             const retryCount = (this.currentSession.rateLimitRetries ?? 0) + 1;
@@ -985,6 +985,57 @@ export class SessionManager {
           }
 
           console.warn(`[SessionManager] Max continuations (${SessionManager.MAX_CONTINUATIONS}) reached for stage ${stage} — marking failed`);
+        }
+
+        // Fast crash heuristic: agent exited in <30s with zero tokens and no session ID.
+        // This indicates a CLI-level failure (usage limit, auth, network) rather than
+        // the agent doing work and failing. Treat as rate-limited with a 5-minute retry.
+        if (agent?.crashedFast) {
+          const stderrSnippet = agent.lastStderrLines.slice(-5).join(' ').trim();
+          const retryMs = 5 * 60_000;
+          const retryAt = new Date(Date.now() + retryMs).toISOString();
+          const retryCount = (this.currentSession.rateLimitRetries ?? 0) + 1;
+          const runMs = agent.exitedAt - agent.startedAt;
+
+          console.log(`[SessionManager] Fast crash for ${stage} (${runMs}ms, stderr: "${stderrSnippet.slice(0, 200)}") — treating as transient failure, retry #${retryCount} at ${retryAt}`);
+
+          this.currentSession.retryAt = retryAt;
+          this.currentSession.rateLimitedStage = stage;
+          this.currentSession.rateLimitRetries = retryCount;
+          await this.transitionTo('rate-limited');
+
+          eventBus.emit('session:rate-limited', {
+            sessionId: this.currentSession.id,
+            taskId,
+            stage,
+            retryAt,
+            retryCount,
+            message: stderrSnippet || `Agent crashed in ${runMs}ms with no output`,
+          });
+
+          this.rateLimitTimer = setTimeout(async () => {
+            this.rateLimitTimer = null;
+            if (!this.currentSession || this.currentSession.task.id !== taskId) return;
+            if (this.currentSession.currentStage === 'failed') return;
+
+            console.log(`[SessionManager] Fast-crash retry — restarting ${stage}`);
+            this.currentSession.retryAt = null;
+            this.currentSession.rateLimitedStage = null;
+            this.persistSession();
+
+            eventBus.emit('session:stage-resumed', {
+              sessionId: this.currentSession.id,
+              stage,
+            });
+
+            try {
+              await this.transitionTo(stage);
+            } catch (err) {
+              console.error(`[SessionManager] Failed to resume after fast crash:`, err);
+            }
+          }, retryMs);
+
+          return;
         }
 
         // Agent failed — halt pipeline

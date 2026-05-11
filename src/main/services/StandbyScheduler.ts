@@ -443,6 +443,7 @@ export class StandbyScheduler {
       });
       this.currentProcess = child;
       this.currentRole = role;
+      const spawnedAt = Date.now();
       let hitRateLimit = false;
       let rateLimitMessage = '';
 
@@ -487,6 +488,16 @@ export class StandbyScheduler {
             message: rateLimitMessage,
           });
           resolve();
+          return;
+        }
+
+        // Fast crash heuristic: exited non-zero in <30s — likely usage limit or infra error
+        if (code !== 0 && (Date.now() - spawnedAt) < 30_000) {
+          console.log(`[StandbyScheduler] ${role}/${project.name} crashed fast (${Date.now() - spawnedAt}ms) — treating as transient, pausing standby`);
+          const retryAt = new Date(Date.now() + 5 * 60_000).toISOString();
+          this.onRateLimitHit(retryAt);
+          resolve();
+          eventBus.emit('standby:tick-finished', { role, exitCode: code ?? 1 });
           return;
         }
 
