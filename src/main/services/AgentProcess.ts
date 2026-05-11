@@ -240,12 +240,20 @@ export class AgentProcess {
     try {
       const data = JSON.parse(line);
 
-      // Capture session ID and detect max-turns from the final result line
+      // Capture session ID and detect errors from the final result line
       if (data.type === 'result') {
         if (data.session_id) this.lastSessionId = data.session_id as string;
         if (data.subtype === 'error_max_turns') {
           this.maxTurnsReached = true;
           console.log(`[AgentProcess] ${this.role} hit max-turns (session: ${this.lastSessionId})`);
+        }
+        // Any error result that isn't max-turns could be a rate/usage limit
+        if (typeof data.subtype === 'string' && data.subtype.startsWith('error') && data.subtype !== 'error_max_turns') {
+          const resultText = typeof data.result === 'string' ? data.result : JSON.stringify(data.result ?? '');
+          console.log(`[AgentProcess] ${this.role} result error subtype: ${data.subtype} — "${resultText.slice(0, 200)}"`);
+          if (AgentProcess.RATE_LIMIT_PATTERN.test(resultText) || AgentProcess.RATE_LIMIT_PATTERN.test(data.subtype)) {
+            this.markRateLimited(resultText || data.subtype);
+          }
         }
       }
 

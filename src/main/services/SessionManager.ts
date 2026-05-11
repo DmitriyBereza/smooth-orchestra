@@ -910,6 +910,9 @@ export class SessionManager {
       if (exitCode !== 0) {
         const agent = this.agentPool.getAgentById(agentId || '');
 
+        // Always dump output on failure for diagnostics
+        if (agent) this.dumpAgentOutput(agent);
+
         // Check if this was a rate-limit exit — halt gracefully instead of failing
         if (agent?.rateLimited) {
           const retryMs = agent.rateLimitRetryMs ?? 5 * 60_000;
@@ -1456,5 +1459,36 @@ export class SessionManager {
 
   private isTerminalStage(stage: PipelineStage): boolean {
     return stage === 'done' || stage === 'failed';
+  }
+
+  /**
+   * Dump the last N output lines from a failed agent to disk for diagnostics.
+   */
+  private dumpAgentOutput(agent: { role: string; id: string; getOutput(): string[]; lastStderrLines: string[] }): void {
+    if (!this.currentSession) return;
+    const taskId = this.currentSession.task.id;
+    const dir = path.join(this.orchestraDir, 'tasks', taskId);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const tail = agent.getOutput().slice(-100);
+      const content = [
+        `# Agent Failure Diagnostics`,
+        `Agent: ${agent.role} (${agent.id})`,
+        `Timestamp: ${new Date().toISOString()}`,
+        ``,
+        `## Last stderr lines`,
+        '```',
+        ...agent.lastStderrLines,
+        '```',
+        ``,
+        `## Last 100 output lines`,
+        '```',
+        ...tail,
+        '```',
+      ].join('\n');
+      fs.writeFileSync(path.join(dir, `crash-${agent.role}-${Date.now()}.md`), content);
+    } catch (err) {
+      console.error(`[SessionManager] Failed to dump agent output:`, err);
+    }
   }
 }
