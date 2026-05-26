@@ -101,7 +101,9 @@ export class CursorAgentProcess implements AgentBackend {
       '--force',
     ];
 
-    if (options.model) {
+    if (options.model === 'cursor-auto') {
+      args.push('--model', 'auto');
+    } else if (options.model) {
       args.push('--model', options.model);
     }
 

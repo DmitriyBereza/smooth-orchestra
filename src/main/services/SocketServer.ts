@@ -612,8 +612,8 @@ export class SocketServer {
       socket.emit('session:snapshot', {
         session,
         agents: this.agentPool.getAllAgentInfo(),
-        agentOutputs: this.agentPool.getRecentOutputs(50),
-        history: this.sessionManager.getSessionHistory(),
+        agentOutputs: (this.agentPool as any).getRecentOutputs?.(50) ?? {},
+        history: (this.sessionManager as any).getSessionHistory?.() ?? [],
       });
 
       // Send cursor CLI availability on connect (AC2)
@@ -674,6 +674,11 @@ export class SocketServer {
         }
 
         eventBus.emit('command:create-task', data);
+      });
+
+      socket.on('command:restart-task', (data: { sessionId: string }) => {
+        console.log(`[SocketServer] Received command:restart-task`, data);
+        eventBus.emit('command:restart-task', data);
       });
 
       // Project management via socket (for real-time sync)

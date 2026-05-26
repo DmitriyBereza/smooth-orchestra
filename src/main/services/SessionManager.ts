@@ -332,6 +332,7 @@ export class SessionManager {
       subtasks: [],
       scheduledAt: isScheduled ? scheduledAt : null,
       models: models ?? {},
+      projectIds: projectIds ?? [],
       projectId: primary.id,
       projectName: projects.map((p) => p.name).join(', '),
       projectPath: primary.path,
@@ -1162,6 +1163,36 @@ export class SessionManager {
         await this.rejectMerge(feedback);
       } catch (err: any) {
         console.error('Failed to reject merge:', err.message);
+      }
+    });
+
+    eventBus.on('command:restart-task', async ({ sessionId }: { sessionId: string }) => {
+      try {
+        if (!this.currentSession || this.currentSession.id !== sessionId) {
+          throw new Error('No matching session to restart');
+        }
+        if (this.currentSession.currentStage !== 'failed') {
+          throw new Error(`Only failed tasks can be restarted (current: ${this.currentSession.currentStage})`);
+        }
+
+        const s = this.currentSession;
+        const projectIds = (s.projectIds && s.projectIds.length > 0)
+          ? s.projectIds
+          : (s.projectId ? [s.projectId] : undefined);
+
+        await this.createTask(
+          s.task.title,
+          s.task.description,
+          projectIds,
+          /* scheduledAt */ undefined,
+          s.models ?? {},
+          s.jiraIssueKey ?? undefined,
+          s.pipelineType ?? 'development',
+          s.autoApproveSpec ?? false,
+          s.autoSkipMerge ?? false,
+        );
+      } catch (err: any) {
+        console.error('Failed to restart task:', err.message);
       }
     });
   }

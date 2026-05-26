@@ -11,6 +11,7 @@ interface TaskCardProps {
   onReject?: (feedback: string) => void;
   onAnswerQuestions?: (answers: string) => void;
   onAbort?: () => void;
+  onRestart?: () => void;
   onRouteRejection?: (routing: 'send_to_dev' | 'escalate_to_po') => void;
   onApproveMerge?: (skipMerge?: boolean) => void;
   onRejectMerge?: (feedback: string) => void;
@@ -170,7 +171,7 @@ function useCountdown(targetIso: string | null | undefined): string | null {
   return remaining;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject, onAnswerQuestions, onAbort, onRouteRejection, onApproveMerge, onRejectMerge }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject, onAnswerQuestions, onAbort, onRestart, onRouteRejection, onApproveMerge, onRejectMerge }) => {
   const [feedback, setFeedback] = React.useState('');
   const [showReject, setShowReject] = React.useState(false);
   const [showAnswerQuestions, setShowAnswerQuestions] = React.useState(false);
@@ -220,6 +221,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
   const isAwaitingMergeApproval = session.currentStage === 'awaiting_merge_approval';
   const isScheduled = session.currentStage === 'scheduled';
   const isActive = !['done', 'failed', 'idle'].includes(session.currentStage);
+  const isFailed = session.currentStage === 'failed';
   const isNeedsAttention = isAwaitingReview || isAwaitingMergeApproval;
 
   const elapsedSeconds = getElapsedSeconds(session.startedAt);
@@ -536,6 +538,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ session, onApprove, onReject
       {isActive && (
         <button style={styles.abortBtn} onClick={onAbort}>
           abort
+        </button>
+      )}
+
+      {isFailed && (
+        <button
+          style={{ ...styles.approveBtn, backgroundColor: 'var(--brand-primary)' }}
+          onClick={onRestart}
+        >
+          ./restart
         </button>
       )}
     </div>

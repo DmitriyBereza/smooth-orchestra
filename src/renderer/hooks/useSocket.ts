@@ -242,6 +242,10 @@ export function useSocketCommands() {
     socket.emit('command:create-task', { title, description, projectIds, scheduledAt, models, jiraIssueKey, createJiraIssue, pipelineType: pipelineType ?? 'development', autoApproveSpec });
   }, []);
 
+  const restartTask = useCallback((sessionId: string) => {
+    socket?.emit('command:restart-task', { sessionId });
+  }, []);
+
   const approveSpec = useCallback((sessionId: string, pipeline?: string[]) => {
     socket?.emit('command:approve-spec', { sessionId, pipeline });
   }, []);
@@ -274,7 +278,7 @@ export function useSocketCommands() {
     socket?.emit('cursor:check-availability');
   }, []);
 
-  return { createTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge, refreshCursorAvailability };
+  return { createTask, restartTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge, refreshCursorAvailability };
 
 }
 

@@ -18,9 +18,10 @@ describe('model-helpers', () => {
       ]);
     });
 
-    it('Cursor group contains exactly composer-2.5', () => {
+    it('Cursor group contains auto and composer models', () => {
       const cursor = MODEL_GROUPS.find((g) => g.provider === 'Cursor')!;
       expect(cursor.options).toEqual([
+        { value: 'cursor-auto', label: 'Auto' },
         { value: 'composer-2.5', label: 'Composer' },
       ]);
     });

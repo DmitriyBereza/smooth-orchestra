@@ -95,6 +95,8 @@ export interface SessionState {
   retryAt?: string | null;
   rateLimitedStage?: PipelineStage | null;
   models?: Partial<Record<AgentRole, string>>;
+  /** IDs of all selected projects for this task (primary project is first). */
+  projectIds?: string[];
   projectId?: string;
   projectName?: string;
   projectPath?: string;
