@@ -8,6 +8,7 @@ import { TaskHistoryCard } from './TaskHistoryCard';
 import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { StandbyPanel } from '../Standby/StandbyPanel';
 import { useSocketCommands } from '../../hooks/useSocket';
+import { useCursorStore } from '../../store/cursorStore';
 import { JiraImportPanel, JiraIssue } from './JiraImportPanel';
 import { TelegramSettingsPanel } from './TelegramSettingsPanel';
 import { PipelineType } from '../../store/sessionStore';
@@ -58,6 +59,7 @@ export const TaskBoard: React.FC = () => {
   const projects = useProjectStore((s) => s.projects);
   const markPromoted = useStandbyStore((s) => s.markPromoted);
   const commands = useSocketCommands();
+  const cursorAvailable = useCursorStore((s) => s.cursorAvailable);
   const isMobile = useIsMobile();
 
   const [jiraImport, setJiraImport] = useState<{ title: string; description: string; key: string } | null>(null);
@@ -189,6 +191,7 @@ export const TaskBoard: React.FC = () => {
           initialPipelineType={pendingPromote?.pipelineType}
           focusModelsToken={focusModelsToken}
           banner={promoteBanner}
+          cursorAvailable={cursorAvailable}
         />
 
         {session && (

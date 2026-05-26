@@ -18,6 +18,7 @@ import { TelegramService, TelegramConfig } from './TelegramService';
 import { StandbyScheduler } from './StandbyScheduler';
 import { PoChatService } from './PoChatService';
 import { DeviceStore } from './DeviceStore';
+import { CursorDetector } from './CursorDetector';
 import { buildMobileRouter } from '../routes/mobile';
 
 // ─── Auth router ─────────────────────────────────────────────────────────────
@@ -184,6 +185,7 @@ function buildProjectRouter(projectStore: ProjectStore): Router {
 export class SocketServer {
   private io: SocketIOServer;
   private httpServer: http.Server;
+  private cursorDetector = new CursorDetector();
 
   constructor(
     private sessionManager: SessionManager,
@@ -614,6 +616,20 @@ export class SocketServer {
         history: this.sessionManager.getSessionHistory(),
       });
 
+      // Send cursor CLI availability on connect (AC2)
+      this.cursorDetector.isCursorAvailable().then((available) => {
+        socket.emit('cursor:availability', { available });
+      }).catch(() => {
+        socket.emit('cursor:availability', { available: false });
+      });
+
+      // Allow clients to refresh cursor availability
+      socket.on('cursor:check-availability', async () => {
+        this.cursorDetector.refresh();
+        const available = await this.cursorDetector.isCursorAvailable();
+        socket.emit('cursor:availability', { available });
+      });
+
       // Send project list on connect
       if (this.projectStore) {
         socket.emit('projects:list', this.projectStore.all());
@@ -630,6 +646,20 @@ export class SocketServer {
       // Route commands to EventBus
       socket.on('command:create-task', async (data: { title: string; description: string; projectIds?: string[]; scheduledAt?: string; models?: Record<string, string>; jiraIssueKey?: string; createJiraIssue?: boolean; autoApproveSpec?: boolean }) => {
         console.log(`[SocketServer] Received command:create-task`, data);
+
+        // AC6: Reject if any selected model requires Cursor but Cursor CLI is not available
+        if (data.models) {
+          const hasCursorModel = Object.values(data.models).some((v) => CursorDetector.isCursorModel(v));
+          if (hasCursorModel) {
+            const cursorAvailable = await this.cursorDetector.isCursorAvailable();
+            if (!cursorAvailable) {
+              const errorMsg = 'Cannot create task: Cursor CLI is not installed but a Cursor model was selected. Please select a different model or install Cursor.';
+              console.error(`[SocketServer] ${errorMsg}`);
+              socket.emit('session:failed', { taskId: '', error: errorMsg });
+              return;
+            }
+          }
+        }
 
         // If asked to create a new Jira issue (Orchestra → Jira direction)
         if (data.createJiraIssue && this.jiraService?.isConfigured() && !data.jiraIssueKey) {

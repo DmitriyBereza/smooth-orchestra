@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PipelineType } from '../../store/sessionStore';
 import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
-import { MODEL_GROUPS, getModelLabel } from '../../../shared/model-helpers';
+import { MODEL_GROUPS, CURSOR_PROVIDER, getModelLabel } from '../../../shared/model-helpers';
 import { Code, Megaphone, Palette } from '@phosphor-icons/react';
 
 type AgentRole = string;
@@ -29,6 +29,8 @@ interface NewTaskFormProps {
   focusModelsToken?: number;
   /** Banner to show above the form when a flow is in progress (e.g. promoting a backlog item). Set null to hide. */
   banner?: { text: string; tone?: 'info' | 'warn' } | null;
+  /** Whether the Cursor CLI is installed on the system. When false, Cursor model options are disabled. */
+  cursorAvailable?: boolean;
 }
 
 const MIXED_SENTINEL = '__mixed__';
@@ -53,7 +55,7 @@ function toLocalDatetimeValue(date: Date): string {
   return local.toISOString().slice(0, 16);
 }
 
-export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, jiraConfigured, initialPipelineType, focusModelsToken, banner }) => {
+export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, jiraConfigured, initialPipelineType, focusModelsToken, banner, cursorAvailable = true }) => {
   const isMobile = useIsMobile();
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
@@ -261,7 +263,9 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
 
         {showModels && (
           <div style={styles.modelPanel}>
-            <div style={styles.modelHint}>ℹ Composer requires Cursor backend</div>
+            {!cursorAvailable && (
+              <div style={styles.modelHint}>⚠ Cursor CLI not installed — Composer models disabled</div>
+            )}
 
             {/* Quick-set all */}
             <div style={styles.modelRow}>
@@ -278,9 +282,15 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
                 <option value="">Default</option>
                 {MODEL_GROUPS.map((group) => (
                   <optgroup key={group.provider} label={group.provider}>
-                    {group.options.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
+                    {group.options.map((opt) => {
+                      const isCursorOpt = group.provider === CURSOR_PROVIDER;
+                      const isDisabled = isCursorOpt && !cursorAvailable;
+                      return (
+                        <option key={opt.value} value={opt.value} disabled={isDisabled}>
+                          {opt.label}{isDisabled ? ' (not available)' : ''}
+                        </option>
+                      );
+                    })}
                   </optgroup>
                 ))}
               </select>
@@ -300,9 +310,15 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
                   <option value="">Default</option>
                   {MODEL_GROUPS.map((group) => (
                     <optgroup key={group.provider} label={group.provider}>
-                      {group.options.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
+                      {group.options.map((opt) => {
+                        const isCursorOpt = group.provider === CURSOR_PROVIDER;
+                        const isDisabled = isCursorOpt && !cursorAvailable;
+                        return (
+                          <option key={opt.value} value={opt.value} disabled={isDisabled}>
+                            {opt.label}{isDisabled ? ' (not available)' : ''}
+                          </option>
+                        );
+                      })}
                     </optgroup>
                   ))}
                 </select>
