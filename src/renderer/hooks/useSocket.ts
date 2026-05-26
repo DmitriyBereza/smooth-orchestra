@@ -4,6 +4,7 @@ import { useStore } from '../store/sessionStore';
 import { useAuthStore } from '../store/authStore';
 import { useStandbyStore, BacklogItem, StandbyState } from '../store/standbyStore';
 import { usePoChatStore, PoChatMessage } from '../store/poChatStore';
+import { useCursorStore } from '../store/cursorStore';
 
 // In dev, Vite proxy forwards /socket.io to the backend.
 // Use the current page origin so it works through tunnels too.
@@ -217,6 +218,11 @@ export function useSocket() {
       usePoChatStore.getState().reset();
     });
 
+    // Cursor CLI availability (AC2)
+    s.on('cursor:availability', (data: { available: boolean }) => {
+      useCursorStore.getState().setCursorAvailable(data.available);
+    });
+
     return () => {
       s.removeAllListeners();
       s.disconnect();
@@ -264,7 +270,11 @@ export function useSocketCommands() {
     socket?.emit('command:reject-merge', { sessionId, feedback });
   }, []);
 
-  return { createTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge };
+  const refreshCursorAvailability = useCallback(() => {
+    socket?.emit('cursor:check-availability');
+  }, []);
+
+  return { createTask, approveSpec, rejectSpec, answerQuestions, abortTask, routeRejection, approveMerge, rejectMerge, refreshCursorAvailability };
 
 }
 
