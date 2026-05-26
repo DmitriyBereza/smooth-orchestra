@@ -57,34 +57,57 @@ export class AgentProcess {
     this.maxTurnsReached = false;
     this.startedAt = Date.now();
 
+    const isCursorModel = model?.startsWith('cursor-') || model?.startsWith('composer-');
+    let binary: string;
     let args: string[];
 
-    if (resumeSessionId) {
-      // Resume an existing session — no need to re-supply prompts
-      args = [
-        '--resume', resumeSessionId,
-        '--output-format', 'stream-json',
-        '--max-turns', '200',
-        '--verbose',
-        '--dangerously-skip-permissions',
-      ];
-      console.log(`[AgentProcess] Resuming session ${resumeSessionId} for ${this.role}`);
+    if (isCursorModel) {
+      binary = 'agent';
+      if (resumeSessionId) {
+        args = [
+          '--resume', resumeSessionId,
+          '--output-format', 'stream-json',
+          '--force',
+        ];
+      } else {
+        args = [
+          '-p', taskPrompt,
+          '--output-format', 'stream-json',
+          '--force',
+        ];
+      }
+      if (model === 'cursor-auto') {
+        args.push('--model', 'auto');
+      } else if (model) {
+        args.push('--model', model);
+      }
     } else {
-      args = [
-        '-p', taskPrompt,
-        '--system-prompt', systemPrompt,
-        '--output-format', 'stream-json',
-        '--max-turns', '200',
-        '--verbose',
-        '--dangerously-skip-permissions',
-      ];
+      binary = 'claude';
+      if (resumeSessionId) {
+        args = [
+          '--resume', resumeSessionId,
+          '--output-format', 'stream-json',
+          '--max-turns', '200',
+          '--verbose',
+          '--dangerously-skip-permissions',
+        ];
+        console.log(`[AgentProcess] Resuming session ${resumeSessionId} for ${this.role}`);
+      } else {
+        args = [
+          '-p', taskPrompt,
+          '--system-prompt', systemPrompt,
+          '--output-format', 'stream-json',
+          '--max-turns', '200',
+          '--verbose',
+          '--dangerously-skip-permissions',
+        ];
+      }
+      if (model) {
+        args.push('--model', model);
+      }
     }
 
-    if (model) {
-      args.push('--model', model);
-    }
-
-    this.process = spawn('claude', args, {
+    this.process = spawn(binary, args, {
       cwd: workingDirectory,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },

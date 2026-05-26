@@ -117,7 +117,8 @@ describe('CursorDetector', () => {
       // After refresh, should re-detect
       detector.refresh();
       expect(await detector.isCursorAvailable()).toBe(false);
-      expect(mockExecFile).toHaveBeenCalledTimes(2);
+      // With agent fallback, the final detect path may probe both `cursor` and `agent`.
+      expect(mockExecFile).toHaveBeenCalledTimes(3);
     });
   });
 });

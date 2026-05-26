@@ -55,6 +55,7 @@ export interface OrchestraEventMap {
   'session:qa-rejection': (data: { sessionId: string; taskId: string; reason: string }) => void;
   'command:approve-merge': (data: { sessionId: string; skipMerge?: boolean }) => void;
   'command:reject-merge': (data: { sessionId: string; feedback: string }) => void;
+  'command:restart-task': (data: { sessionId: string }) => void;
 
   // PO Chat events
   'po-chat:response': (data: { projectId: string; content: string; messageId: string; done: boolean }) => void;

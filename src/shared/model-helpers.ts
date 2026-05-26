@@ -21,6 +21,7 @@ export const MODEL_GROUPS: ModelGroup[] = [
   {
     provider: 'Cursor',
     options: [
+      { value: 'cursor-auto', label: 'Auto' },
       { value: 'composer-2.5', label: 'Composer' },
     ],
   },

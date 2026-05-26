@@ -51,6 +51,15 @@ interface PendingPromote {
   awaitingSinceMs: number | null;
 }
 
+interface PendingRestart {
+  title: string;
+  body: string;
+  pipelineType: PipelineType;
+  projectIds: string[];
+  jiraIssueKey?: string | null;
+  models?: Record<string, string>;
+}
+
 export const TaskBoard: React.FC = () => {
   const session = useStore((s) => s.session);
   const connected = useStore((s) => s.connected);
@@ -64,6 +73,7 @@ export const TaskBoard: React.FC = () => {
 
   const [jiraImport, setJiraImport] = useState<{ title: string; description: string; key: string } | null>(null);
   const [pendingPromote, setPendingPromote] = useState<PendingPromote | null>(null);
+  const [pendingRestart, setPendingRestart] = useState<PendingRestart | null>(null);
   const [focusModelsToken, setFocusModelsToken] = useState(0);
   const lastSeenSessionId = useRef<string | null>(session?.id ?? null);
 
@@ -88,6 +98,7 @@ export const TaskBoard: React.FC = () => {
       }
     }
     setJiraImport(null);
+    setPendingRestart(null);
     setPendingPromote({
       backlogId: item.id,
       title: item.title,
@@ -96,6 +107,58 @@ export const TaskBoard: React.FC = () => {
       projectId: item.projectId,
       projectName: item.projectName ?? projects.find((p) => p.id === item.projectId)?.name,
       awaitingSinceMs: null,
+    });
+    setFocusModelsToken((t) => t + 1);
+  };
+
+  /**
+   * Start the "restart failed task" flow:
+   * prefill the New Task form from the failed session, restore the same project selection,
+   * and bump focusModelsToken so the user confirms model picks before submitting.
+   */
+  const startRestart = () => {
+    if (!session) return;
+    const projectIds = (session.projectIds && session.projectIds.length > 0)
+      ? session.projectIds
+      : (session.projectId ? [session.projectId] : []);
+    if (!projectIds.length) {
+      console.warn('[TaskBoard] cannot restart: session has no projectIds/projectId', session);
+      return;
+    }
+
+    // If selection doesn't match, replace it with the session's project selection.
+    const matchesSelection =
+      selectedProjectIds.length === projectIds.length &&
+      projectIds.every((id) => selectedProjectIds.includes(id));
+
+    if (!matchesSelection) {
+      // Toggle off any currently selected projects not in the desired set.
+      for (const id of selectedProjectIds) {
+        if (!projectIds.includes(id)) setSelectedProject(id); // toggle off
+      }
+      // Toggle on any missing desired projects.
+      for (const id of projectIds) {
+        if (!selectedProjectIds.includes(id)) setSelectedProject(id); // toggle on
+      }
+    }
+
+    setJiraImport(null);
+    setPendingPromote(null);
+    setPendingRestart({
+      title: session.task.title,
+      body: session.task.description,
+      pipelineType: session.pipelineType ?? session.task.pipelineType ?? 'development',
+      projectIds,
+      jiraIssueKey: session.jiraIssueKey ?? null,
+      // If we previously stored a paid-only Cursor model (e.g. composer-*),
+      // normalize it to "cursor-auto" so restart works on Free plans.
+      models: Object.fromEntries(
+        Object.entries((session.models ?? {}) as Record<string, string>).map(([role, value]) => {
+          if (typeof value !== 'string' || !value) return [role, value];
+          if (value.startsWith('composer-') && value !== 'cursor-auto') return [role, 'cursor-auto'];
+          return [role, value];
+        }),
+      ) as Record<string, string>,
     });
     setFocusModelsToken((t) => t + 1);
   };
@@ -121,6 +184,7 @@ export const TaskBoard: React.FC = () => {
   const handleJiraImport = (issue: JiraIssue) => {
     setJiraImport({ title: issue.summary, description: issue.description, key: issue.key });
     setPendingPromote(null); // jira import overrides any pending promote
+    setPendingRestart(null);
   };
 
   const isTaskInProgress = session && !['done', 'failed', 'idle'].includes(session.currentStage);
@@ -131,6 +195,13 @@ export const TaskBoard: React.FC = () => {
     ? {
         text: `Promoting "${pendingPromote.title}"${pendingPromote.projectName ? ` for ${pendingPromote.projectName}` : ''} — confirm models below, then ./run pipeline.`,
         tone: 'info' as const,
+      }
+    : null;
+
+  const restartBanner = pendingRestart
+    ? {
+        text: `Restarting "${pendingRestart.title}" — confirm models below, then ./run pipeline.`,
+        tone: 'warn' as const,
       }
     : null;
 
@@ -183,14 +254,18 @@ export const TaskBoard: React.FC = () => {
             if (pendingPromote) {
               setPendingPromote((p) => (p ? { ...p, awaitingSinceMs: Date.now() } : null));
             }
+            if (pendingRestart) {
+              setPendingRestart(null);
+            }
           }}
           disabled={formDisabled}
-          initialTitle={pendingPromote?.title ?? jiraImport?.title}
-          initialDescription={pendingPromote?.body ?? jiraImport?.description}
-          initialJiraKey={jiraImport?.key}
-          initialPipelineType={pendingPromote?.pipelineType}
+          initialTitle={pendingPromote?.title ?? pendingRestart?.title ?? jiraImport?.title}
+          initialDescription={pendingPromote?.body ?? pendingRestart?.body ?? jiraImport?.description}
+          initialJiraKey={jiraImport?.key ?? pendingRestart?.jiraIssueKey ?? undefined}
+          initialPipelineType={pendingPromote?.pipelineType ?? pendingRestart?.pipelineType}
           focusModelsToken={focusModelsToken}
-          banner={promoteBanner}
+          banner={pendingPromote ? promoteBanner : restartBanner}
+          initialModels={pendingRestart?.models}
           cursorAvailable={cursorAvailable}
         />
 
@@ -203,6 +278,7 @@ export const TaskBoard: React.FC = () => {
               onReject={(feedback) => commands.rejectSpec(session.id, feedback)}
               onAnswerQuestions={(answers) => commands.answerQuestions(session.id, answers)}
               onAbort={() => commands.abortTask(session.id)}
+              onRestart={startRestart}
               onRouteRejection={(routing) => commands.routeRejection(session.id, routing)}
               onApproveMerge={(skipMerge) => commands.approveMerge(session.id, skipMerge)}
               onRejectMerge={(feedback) => commands.rejectMerge(session.id, feedback)}

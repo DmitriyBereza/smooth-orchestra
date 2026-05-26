@@ -22,6 +22,8 @@ interface NewTaskFormProps {
   initialTitle?: string;
   initialDescription?: string;
   initialJiraKey?: string;
+  /** Prefills the per-role model dropdowns (used by restart flow). */
+  initialModels?: Record<string, string>;
   jiraConfigured?: boolean;
   /** When provided, sets the pipeline type on the form (e.g. when the form is pre-filled from a backlog promote). */
   initialPipelineType?: PipelineType;
@@ -55,7 +57,7 @@ function toLocalDatetimeValue(date: Date): string {
   return local.toISOString().slice(0, 16);
 }
 
-export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, jiraConfigured, initialPipelineType, focusModelsToken, banner, cursorAvailable = true }) => {
+export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, initialTitle = '', initialDescription = '', initialJiraKey, initialModels, jiraConfigured, initialPipelineType, focusModelsToken, banner, cursorAvailable = true }) => {
   const isMobile = useIsMobile();
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
@@ -86,10 +88,15 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   React.useEffect(() => {
     if (focusModelsToken == null) return;
     setShowModels(true);
+    if (initialModels) {
+      setModels(initialModels);
+    } else {
+      setModels({});
+    }
     requestAnimationFrame(() => {
       modelsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-  }, [focusModelsToken]);
+  }, [focusModelsToken, initialModels]);
 
   const pipelineConfig = SHARED_PIPELINE_CONFIGS[pipelineType];
   const agentRolesForPipeline = pipelineConfig.modelSelectorRoles;
@@ -107,6 +114,9 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
   };
 
   const setAllModels = (value: string) => {
+    if (value === MIXED_SENTINEL) {
+      return;
+    }
     if (!value) {
       setModels({});
     } else {
@@ -277,17 +287,20 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
                 disabled={disabled}
               >
                 {allSameModel === null && (
-                  <option value={MIXED_SENTINEL} disabled hidden>mixed</option>
+                  <option value={MIXED_SENTINEL} disabled>Mixed</option>
                 )}
                 <option value="">Default</option>
                 {MODEL_GROUPS.map((group) => (
                   <optgroup key={group.provider} label={group.provider}>
                     {group.options.map((opt) => {
                       const isCursorOpt = group.provider === CURSOR_PROVIDER;
-                      const isDisabled = isCursorOpt && !cursorAvailable;
+                      const requiresPaidCursorPlan = isCursorOpt && opt.value !== 'cursor-auto';
+                      const isDisabled = (isCursorOpt && !cursorAvailable) || requiresPaidCursorPlan;
                       return (
                         <option key={opt.value} value={opt.value} disabled={isDisabled}>
-                          {opt.label}{isDisabled ? ' (not available)' : ''}
+                          {opt.label}
+                          {isCursorOpt && !cursorAvailable ? ' (not available)' : ''}
+                          {requiresPaidCursorPlan ? ' (paid plan)' : ''}
                         </option>
                       );
                     })}
@@ -312,10 +325,13 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
                     <optgroup key={group.provider} label={group.provider}>
                       {group.options.map((opt) => {
                         const isCursorOpt = group.provider === CURSOR_PROVIDER;
-                        const isDisabled = isCursorOpt && !cursorAvailable;
+                        const requiresPaidCursorPlan = isCursorOpt && opt.value !== 'cursor-auto';
+                        const isDisabled = (isCursorOpt && !cursorAvailable) || requiresPaidCursorPlan;
                         return (
                           <option key={opt.value} value={opt.value} disabled={isDisabled}>
-                            {opt.label}{isDisabled ? ' (not available)' : ''}
+                            {opt.label}
+                            {isCursorOpt && !cursorAvailable ? ' (not available)' : ''}
+                            {requiresPaidCursorPlan ? ' (paid plan)' : ''}
                           </option>
                         );
                       })}

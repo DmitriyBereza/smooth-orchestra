@@ -11,8 +11,11 @@ export class CursorDetector {
   private pendingCheck: Promise<boolean> | null = null;
 
   /**
-   * Check if the `cursor` binary is available on the system PATH.
-   * Caches the result after the first check.
+   * Check if a Cursor CLI binary is available on the system PATH.
+   * We treat either the desktop-bundled `cursor` launcher or the standalone
+   * `agent` CLI as satisfying availability.
+   *
+   * Result is cached; call refresh() to force a re-check.
    */
   async isCursorAvailable(): Promise<boolean> {
     if (this.cachedResult !== null) {
@@ -42,7 +45,7 @@ export class CursorDetector {
    * Known Cursor model value prefixes. Used for server-side validation
    * without importing from src/shared (different tsconfig rootDir).
    */
-  private static readonly CURSOR_MODEL_PREFIXES = ['composer-'];
+  private static readonly CURSOR_MODEL_PREFIXES = ['cursor-', 'composer-'];
 
   /**
    * Returns true if the model value looks like a Cursor model.
@@ -52,13 +55,27 @@ export class CursorDetector {
   }
 
   private detect(): Promise<boolean> {
+    const home = process.env.HOME ?? '';
+    const extraPaths = [
+      `${home}/.local/bin`,
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+    ].join(':');
+    const env = {
+      ...process.env,
+      PATH: `${extraPaths}:${process.env.PATH ?? ''}`,
+    };
+
     return new Promise((resolve) => {
-      execFile('cursor', ['--version'], { timeout: 5000 }, (err) => {
-        if (err) {
-          resolve(false);
-        } else {
+      execFile('cursor', ['--version'], { timeout: 5000, env }, (cursorErr) => {
+        if (!cursorErr) {
           resolve(true);
+          return;
         }
+
+        execFile('agent', ['--version'], { timeout: 5000, env }, (agentErr) => {
+          resolve(!agentErr);
+        });
       });
     });
   }
