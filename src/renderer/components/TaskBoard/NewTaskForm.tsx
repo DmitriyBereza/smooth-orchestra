@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PipelineType } from '../../store/sessionStore';
 import { SHARED_PIPELINE_CONFIGS } from '../../../shared/pipeline-configs';
+import { MODEL_GROUPS, getModelLabel } from '../../../shared/model-helpers';
 import { Code, Megaphone, Palette } from '@phosphor-icons/react';
 
 type AgentRole = string;
@@ -30,13 +31,7 @@ interface NewTaskFormProps {
   banner?: { text: string; tone?: 'info' | 'warn' } | null;
 }
 
-const MODEL_OPTIONS = [
-  { value: '', label: 'Default' },
-  { value: 'claude-opus-4-7', label: 'Opus 4.7' },
-  { value: 'claude-opus-4-6', label: 'Opus 4.6' },
-  { value: 'claude-sonnet-4-6', label: 'Sonnet' },
-  { value: 'claude-haiku-4-5-20251001', label: 'Haiku' },
-];
+const MIXED_SENTINEL = '__mixed__';
 
 const DELAY_PRESETS = [
   { label: '5 min', minutes: 5 },
@@ -182,8 +177,7 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
     const count = Object.keys(models).length;
     if (count === 0) return 'default';
     if (allSameModel) {
-      const opt = MODEL_OPTIONS.find((m) => m.value === allSameModel);
-      return `all: ${opt?.label ?? allSameModel}`;
+      return `all: ${getModelLabel(allSameModel)}`;
     }
     return `${count} customized`;
   })();
@@ -267,25 +261,29 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
 
         {showModels && (
           <div style={styles.modelPanel}>
+            <div style={styles.modelHint}>ℹ Composer requires Cursor backend</div>
+
             {/* Quick-set all */}
             <div style={styles.modelRow}>
               <span style={{ ...styles.roleLabel, fontWeight: 'var(--weight-bold)' }}>all</span>
-              <div style={styles.modelButtons}>
-                {MODEL_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    style={{
-                      ...styles.modelBtn,
-                      ...(allSameModel === opt.value ? styles.modelBtnActive : {}),
-                    }}
-                    onClick={() => setAllModels(opt.value)}
-                    disabled={disabled}
-                  >
-                    {opt.label}
-                  </button>
+              <select
+                style={styles.modelSelect}
+                value={allSameModel ?? MIXED_SENTINEL}
+                onChange={(e) => setAllModels(e.target.value)}
+                disabled={disabled}
+              >
+                {allSameModel === null && (
+                  <option value={MIXED_SENTINEL} disabled hidden>mixed</option>
+                )}
+                <option value="">Default</option>
+                {MODEL_GROUPS.map((group) => (
+                  <optgroup key={group.provider} label={group.provider}>
+                    {group.options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </optgroup>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div style={styles.modelDivider} />
@@ -293,22 +291,21 @@ export const NewTaskForm: React.FC<NewTaskFormProps> = ({ onSubmit, disabled, in
             {agentRolesForPipeline.map(({ role, label, color }) => (
               <div key={role} style={styles.modelRow}>
                 <span style={{ ...styles.roleLabel, color }}>{label}</span>
-                <div style={styles.modelButtons}>
-                  {MODEL_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      style={{
-                        ...styles.modelBtn,
-                        ...((models[role] ?? '') === opt.value ? styles.modelBtnActive : {}),
-                      }}
-                      onClick={() => setModelForRole(role, opt.value)}
-                      disabled={disabled}
-                    >
-                      {opt.label}
-                    </button>
+                <select
+                  style={styles.modelSelect}
+                  value={models[role] ?? ''}
+                  onChange={(e) => setModelForRole(role, e.target.value)}
+                  disabled={disabled}
+                >
+                  <option value="">Default</option>
+                  {MODEL_GROUPS.map((group) => (
+                    <optgroup key={group.provider} label={group.provider}>
+                      {group.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </optgroup>
                   ))}
-                </div>
+                </select>
               </div>
             ))}
           </div>
@@ -565,27 +562,24 @@ const styles: Record<string, React.CSSProperties> = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
   },
-  modelButtons: {
-    display: 'flex',
-    gap: '4px',
+  modelSelect: {
     flex: 1,
-  },
-  modelBtn: {
-    padding: '3px 8px',
+    padding: '4px 8px',
     backgroundColor: 'var(--bg-tertiary)',
-    color: 'var(--text-muted)',
-    border: '1px solid transparent',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-input)',
     borderRadius: 'var(--radius-sm)',
     fontSize: 'var(--text-xs)',
     fontFamily: 'var(--font-mono)',
     cursor: 'pointer',
-    flex: 1,
-    textAlign: 'center' as const,
+    outline: 'none',
+    colorScheme: 'dark',
   },
-  modelBtnActive: {
-    backgroundColor: 'var(--brand-muted)',
-    color: 'var(--brand-primary)',
-    border: '1px solid var(--border-input)',
+  modelHint: {
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--text-muted)',
+    marginBottom: '2px',
   },
   modelDivider: {
     height: '1px',
